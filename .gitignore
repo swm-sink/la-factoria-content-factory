@@ -36,6 +36,7 @@ instance/
 .DS_Store
 Thumbs.db
 .cursor/
+!.cursor/rules/
 !.cursor/rules/project.mdc
 
 # Secrets and Credentials
