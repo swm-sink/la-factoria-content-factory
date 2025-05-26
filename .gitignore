@@ -1,0 +1,109 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+wheels/
+*.egg
+*.manifest
+*.spec
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+virtualenv/
+VIRTUAL_ENV/
+# Note: if your venv is not named .venv, add its name here
+
+# Instance folder (Flask)
+instance/
+!instance/.gitkeep
+
+# IDEs and Editors
+.idea/
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.sublime-workspace
+*.sublime-project
+.DS_Store
+Thumbs.db
+.cursor/
+!.cursor/rules/project.mdc
+
+# Secrets and Credentials
+*.env
+.env.*
+!.env.example
+secrets.yml
+*.pem
+*.key
+service-account-key.json
+service_account.json
+# Add any other files that may contain sensitive credentials
+
+# GCP / Terraform
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+*.tfvars
+# You might want to commit .terraform.lock.hcl
+
+# Docker
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+
+# Other
+*.swp
+*.swo
+*~
+
+# Ignore dependency management specific files
+pip-log.txt
+pip-delete-this-reason.txt
+poetry.lock
+
+# Ignore system files
+thumbs.db
+
+# Ignore GCP specific files (common patterns)
+*.gcloudignore
+.gcloud/
+
+# Ignore instance-specific data (adjust as needed)
+data/
+
+# Ignore environment variables file
+.flaskenv
+
+# Ignore secret keys/credentials (add specific filenames if known)
+secrets.py
+*.key
+*.pem
+
+# Ignore Flask specific files (if any beyond general Python)
+# e.g., instance specific config not tracked in VCS 
