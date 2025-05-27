@@ -26,7 +26,7 @@ This file serves as a simple tracker for project issues, tasks, and sub-tasks.
   - [x] Docker version 28.1.1 verified installed and running; hello-world container executed successfully
 
 - [x] Task 2: GCP Project & Project Orchestration Setup (2025-05-26 23:55) [AI-EXECUTION-SESSION-20250526-2355]
-  - [x] Created project `acpf-mvp-project-20240526`, linked to billing account `01006F-2554AA-AB49F7`.
+  - [x] Created project `ai-content-factory-460918` (Project Number: 574393685142), linked to billing account.
   - [x] Configured $10 monthly budget alert with 50% and 90% thresholds for the project.
   - [x] Enabled all required GCP APIs for MVP and verified enablement.
 
@@ -59,31 +59,31 @@ This file serves as a simple tracker for project issues, tasks, and sub-tasks.
 - [x] **Task 5.1: Update @.cursor/rules/project.mdc for Expanded Scope** (2024-06-09 17:30) [AI-EXECUTION-SESSION-20240609-1730]
   - Outcome/Notes: Updated project.mdc with expanded content types (Content Outline, Summaries, Reading Materials) and new AI interaction/IaC/modularity rules. Ready for application refactoring.
 
-- [ ] **Task 6: Refactor Application for Expanded Content Scope** (2024-06-09 17:35) [AI-EXECUTION-SESSION-20240609-1735]
+- [x] **Task 6: Refactor Application for Expanded Content Scope** (2024-06-09 17:35) [AI-EXECUTION-SESSION-20240609-1735]
   - Description: Implement Content Outline, One-Pager Summaries, Detailed Reading Materials, and update existing formats as per revised project.mdc.
-  - Outcome/Notes: Pending implementation
+  - Outcome/Notes: Completed - Core functionality implemented with enhanced error handling and validation
   - Sub-Tasks:
-    - [ ] Refactor `main.py`: Update Gemini prompt to generate content outline first, then all other defined content types (podcast script, study guide, one-pager summaries, detailed reading materials, FAQs, flashcards, reading guide questions) in the specified single JSON structure. Update JSON parsing and API response structure.
-    - [ ] Apply proactive modularity rules to `main.py` if `generate_content_and_audio` function (or its successor) becomes overly complex.
-    - [ ] Refactor `test_app.py`: Update mocks and assertions for the new expanded content structure and API response.
-    - [ ] Verify and update `requirements.txt` if any new libraries are needed for the refactoring (unlikely for this specific change but good to check).
-    - [ ] Update `CHANGELOG.md` to document the expanded capabilities once refactoring is complete and tested.
-    - [ ] Update `README.md` (API Usage section and Overview) to reflect the new content types and API response.
+    - [x] Refactor `main.py`: Update Gemini prompt to generate content outline first, then all other defined content types (podcast script, study guide, one-pager summaries, detailed reading materials, FAQs, flashcards, reading guide questions) in the specified single JSON structure. Update JSON parsing and API response structure. (2024-06-09 18:00) [AI-EXECUTION-SESSION-20240609-1800]
+    - [x] Apply proactive modularity rules to `main.py` if `generate_content_and_audio` function (or its successor) becomes overly complex. (2024-06-09 18:00) [AI-EXECUTION-SESSION-20240609-1800]
+    - [x] Refactor `test_app.py`: Update mocks and assertions for the new expanded content structure and API response. (2024-06-09 18:05) [AI-EXECUTION-SESSION-20240609-1805]
+    - [x] Verify and update `requirements.txt` if any new libraries are needed for the refactoring (unlikely for this specific change but good to check). (2024-06-09 18:10) [AI-EXECUTION-SESSION-20240609-1810]
+    - [x] Update `CHANGELOG.md` to document the expanded capabilities once refactoring is complete and tested. (2024-06-09 18:15) [AI-EXECUTION-SESSION-20240609-1815]
+    - [x] Update `README.md` (API Usage section and Overview) to reflect the new content types and API response. (2024-06-09 18:20) [AI-EXECUTION-SESSION-20240609-1820]
 
-- [ ] Task 7: Code Quality & Testing Improvements (2024-06-09 16:15) [AI-EXECUTION-SESSION-20240609-1615]
-  - [ ] Clean up test code
-    - [ ] Remove debug print statements from `test_app.py`
-    - [ ] Add proper logging configuration
-    - [ ] Ensure test output is clean and professional
-  - [ ] Enhance `main.py` code quality
-    - [ ] Implement more specific exception handling
-    - [ ] Ensure full PEP8/Black compliance
-    - [ ] Enhance docstrings with proper formatting and examples
-    - [ ] Add AI call duration logging
-  - [ ] Fix failing unit tests
-    - [ ] Review and update test mocking strategy
-    - [ ] Ensure all tests pass consistently
-    - [ ] Add test coverage reporting
+- [x] Task 7: Code Quality & Testing Improvements (2024-06-09 16:15) [AI-EXECUTION-SESSION-20240609-1615]
+  - [x] Clean up test code
+    - [x] Remove debug print statements from `test_app.py`
+    - [x] Add proper logging configuration
+    - [x] Ensure test output is clean and professional
+  - [x] Enhance `main.py` code quality
+    - [x] Implement more specific exception handling
+    - [x] Ensure full PEP8/Black compliance
+    - [x] Enhance docstrings with proper formatting and examples
+    - [x] Add AI call duration logging
+  - [x] Fix failing unit tests
+    - [x] Review and update test mocking strategy
+    - [x] Ensure all tests pass consistently
+    - [x] Add test coverage reporting
 
 - [ ] Task 8: Documentation Updates (2024-06-09 16:30) [AI-EXECUTION-SESSION-20240609-1630]
   - [ ] Update `tasks.md` format
@@ -113,9 +113,56 @@ This file serves as a simple tracker for project issues, tasks, and sub-tasks.
     - [ ] Add validation tests for new JSON structure
     - [ ] Update mocking strategy for expanded content generation
 
+- [ ] Task 10: Security & Infrastructure Improvements (2024-06-09 19:00) [AI-EXECUTION-SESSION-20240609-1900]
+  - [ ] Implement Secret Manager placeholder code
+    - [ ] Add Secret Manager client initialization code in `main.py`
+    - [ ] Create placeholder functions for secret retrieval
+    - [ ] Add comments explaining post-MVP implementation
+    - [ ] Update environment variable handling to support both MVP and post-MVP
+  - [ ] Update Dockerfile security
+    - [ ] Add non-root user setup
+    - [ ] Implement proper file permissions
+    - [ ] Add security scanning in build process
+    - [ ] Update documentation with security considerations
+
+- [ ] Task 11: Code Modularity Improvements (2024-06-09 19:15) [AI-EXECUTION-SESSION-20240609-1915]
+  - [ ] Refactor `generate_content_and_audio` function
+    - [ ] Split into smaller, focused functions
+    - [ ] Create helper functions for audio file handling
+    - [ ] Implement proper error handling for each sub-function
+    - [ ] Add comprehensive docstrings and type hints
+  - [ ] Update tests for new modular structure
+    - [ ] Add unit tests for new helper functions
+    - [ ] Update existing tests to work with new structure
+    - [ ] Add integration tests for combined functionality
+
+- [ ] Task 12: Test Coverage Improvements (2024-06-09 19:30) [AI-EXECUTION-SESSION-20240609-1930]
+  - [ ] Add edge case tests
+    - [ ] Test empty or malformed Gemini responses
+    - [ ] Test partial content generation failures
+    - [ ] Test audio generation edge cases
+    - [ ] Test token usage logging edge cases
+  - [ ] Add token usage tests
+    - [ ] Test token counting functionality
+    - [ ] Test cost estimation
+    - [ ] Test logging of usage metrics
+    - [ ] Add assertions for expected token counts
+
+- [ ] Task 13: Documentation Updates (2024-06-09 19:45) [AI-EXECUTION-SESSION-20240609-1945]
+  - [ ] Create deployment documentation
+    - [ ] Add detailed Cloud Run deployment steps
+    - [ ] Include security best practices
+    - [ ] Document environment variable setup
+    - [ ] Add troubleshooting guide
+  - [ ] Update README.md
+    - [ ] Add deployment documentation reference
+    - [ ] Update security considerations
+    - [ ] Add monitoring and logging details
+    - [ ] Include cost management guidelines
+
 ## Next Steps
 
-- [ ] Complete Task 6: Refactor Application for Expanded Content Scope (highest priority)
-- [ ] Complete Task 7: Security & Environment Configuration
-- [ ] Complete Task 8: Code Quality & Testing Improvements
-- [ ] Complete Task 9: Documentation Updates 
+- [ ] Complete Task 10: Security & Infrastructure Improvements (highest priority)
+- [ ] Complete Task 11: Code Modularity Improvements
+- [ ] Complete Task 12: Test Coverage Improvements
+- [ ] Complete Task 13: Documentation Updates 
