@@ -3,123 +3,442 @@ description:
 globs: 
 alwaysApply: false
 ---
-# AI Content & Podcast Factory - Cursor Project Directives (project.mdc)
+# Project: AI Content & Podcast Factory - MVP (Cursor Optimized)
+---
 
 ## A. Project Identity & Mission
-- **Project Name:** AI Content & Podcast Factory MVP [cite: 1072]
-- **Core Mission:** To build a simple web application that takes a piece of source knowledge (e.g., a structured syllabus, detailed topic outline, or raw informational text), uses AI (Vertex AI Gemini) to generate various content formats (e.g., summaries, podcast scripts, study guides), and (post-MVP) uses AI (e.g., ElevenLabs) for Text-to-Speech to create podcast audio. The MVP will focus on synchronous text generation via an API. [cite: 696, 719, 721, 1072]
-- **Target User (MVP):** Initially, the developer for testing and validation; then API consumers for the synchronous text generation. [cite: 1073]
-- **Success Metrics (MVP):**
-    - Operational Cloud Run service endpoint successfully serving requests. [cite: 727]
-    - Consistent and coherent generation of at least three distinct text-based content types from diverse inputs using Vertex AI Gemini. [cite: 728]
-    - Flask application successfully containerized with Docker and deployed to Cloud Run via Artifact Registry. [cite: 729]
-    - `/create-content` API endpoint processes valid requests and returns structured JSON responses (success and error cases). [cite: 730]
 
-## B. Core Technology Stack & Configuration SoT
-*(To be populated based on CMP Page 3 & 4, APCB Section 2.1.B, CMCAD Section 2.2.B)*
-- **Primary Language:** Python (3.9+ target, e.g., 3.11 or 3.12) [cite: 265, 767, 1074]
-- **Web Framework:** Flask (for MVP, synchronous) [cite: 718, 1074]
-- **Cloud Provider:** Google Cloud Platform (GCP) [cite: 1047, 1074]
-- **Key GCP Services (MVP):**
-    - Cloud Run (for serverless Flask app deployment) [cite: 718, 1074]
-    - Vertex AI (Gemini models for content generation, e.g., gemini-1.5-flash-001) [cite: 697, 724, 1074]
-    - Artifact Registry (for Docker images) [cite: 729]
-    - (Environment Variables for API keys in MVP, Secret Manager post-MVP for other keys) [cite: 741]
-- **Key GCP Services (Post-MVP Evolution):**
-    - Cloud Storage (for inputs and outputs like audio files) [cite: 735, 908, 1074]
-    - Pub/Sub (for asynchronous processing) [cite: 734, 750, 867]
-    - Firestore (for job status, metadata) [cite: 738, 750, 916]
-    - Secret Manager (for all sensitive credentials) [cite: 710, 750, 944]
-    - Cloud SQL (PostgreSQL, for structured metadata, user accounts - optional) [cite: 738, 750, 927]
-    - Identity Platform (for user authentication) [cite: 1002]
-- **Text-to-Speech API (Post-MVP):** ElevenLabs (or Google Cloud TTS) [cite: 740, 942, 1074]
-- **Code Editor & AI Assistant:** Cursor IDE [cite: 15, 1074]
-- **IaC Tool:** Terraform (Source of Truth for infrastructure) [cite: 2354]
-- **CI/CD:** GitHub Actions or Cloud Build [cite: 953]
-- **Project Naming Conventions:** (To be defined - e.g., `acpf-<env>-<service>-<region>`) [cite: 760, 761]
+**Mission:** To rapidly build an MVP of an AI-powered content and podcast factory. The core function is to transform textual input (e.g., a topic, syllabus) into a **comprehensive content outline**, which then drives the generation of a cohesive podcast script, a complementary study guide, **one-pager summaries, detailed reading materials,** and a suite of effective study aids (e.g., FAQs, flashcards, reading guide questions), then convert the script into high-quality audio.
+
+**Vision:** To democratize content creation and **enhance learning effectiveness** by empowering users to quickly generate engaging, multi-modal educational materials, **starting from a structured outline and expanding into various detailed formats** tailored for active study and comprehension.
+
+**Target Audience (MVP):** Content creators or educators seeking rapid prototyping of AI-generated educational materials.
+
+**Success Metrics (MVP):**
+    - Operational Cloud Run service endpoint successfully serving requests, verified by automated tests.
+    - Consistent and coherent generation of **a content outline, and based on it, all defined content types (podcast script, study guide, one-pager summaries, detailed reading materials, FAQs, flashcards, reading guide)** from diverse inputs using Vertex AI Gemini, validated by example inputs and outputs.
+    - Flask application successfully containerized with Docker, built without errors, and deployed to Cloud Run via Artifact Registry.
+    - `/generate-content` API endpoint processes valid requests (including edge cases for input validation) and returns structured JSON responses for both success and error cases, including **the content outline and all generated derivative content and study aids.**
+
+---
+
+## B. Core Technology Stack & Configuration Source of Truth (SoT)
+
+* **1. Python:**
+    * **Version:** Python 3.11+ (latest stable minor version preferred).
+    * **Dependency Management:** `pip` with `venv`. All dependencies in `requirements.txt` MUST be explicitly listed and pinned (`==X.Y.Z`).
+    * **Runtime:** `uvicorn` for FastAPI in production.
+
+* **2. FastAPI Framework:**
+    * **Version:** Latest stable FastAPI release.
+    * **Configuration:** All sensitive or environment-specific configurations MUST be sourced from **environment variables** with fallback to **Google Secret Manager**.
+    * **API Versioning:** All endpoints MUST use the `/api/v1` prefix.
+
+* **3. Google Cloud Platform (GCP):**
+    * **Core Services (MVP):** 
+        - Cloud Run (FastAPI service)
+        - Vertex AI (Gemini API)
+        - Firestore (job persistence)
+        - Cloud Tasks (async job queue)
+        - Cloud Workflows (multi-step orchestration)
+        - API Gateway (rate limiting & auth)
+        - Secret Manager (credentials)
+        - Cloud Monitoring & Logging
+    * **Post-MVP Evolution:** 
+        - Cloud SQL (PostgreSQL) if relational features needed
+        - Cloud Storage (for generated content)
+        - Pub/Sub (for event-driven features)
+        - Identity Platform (auth)
+    * **`gcloud CLI`:** Primary interaction tool.
+    * **Authentication:** ADC for local dev; Service Accounts for Cloud Run.
+
+* **4. Text-to-Speech API:** ElevenLabs (or Google Cloud TTS).
+
+* **5. Docker:** Containerization for Cloud Run. Adhere to Dockerfile best practices (Section C.2).
+
+* **6. Code Editor & AI Assistant:** Cursor IDE (operating in YOLO mode as directed).
+
+* **7. IaC Tool:** Terraform for GCP resource management.
+
+* **8. CI/CD:** GitHub Actions with `gcloud` deployment.
+
+* **9. Project Naming Conventions:** `acpf-mvp-<service-type>-<specific-name>` (e.g., `acpf-mvp-cr-apiserver`).
+
+---
 
 ## C. Coding Standards & Style Guide
-*(To be populated based on CMCAD Section 2.2.C, APCB Section 2.1.C)*
-- **PEP8 Adherence:** Mandatory.
-- **Formatter:** Black (configured for project).
-- **Linter:** Flake8 (configured for project).
-- **Type Hints:** Required for all function signatures and key variables. [cite: 2355]
-- **Docstrings:** Google-style, mandatory for all modules, classes, and functions. Explain purpose, args, returns, and any exceptions raised. [cite: 1076, 2355]
-- **Comments:** Explain complex logic; avoid obvious comments. "# TODO:" for follow-ups. [cite: 1075, 2355]
-- **Logging:** Use Python's `logging` module. Structured JSON logging for Cloud Run. Instrumentation Mandate: Log AI model calls (service, model, duration, input/output tokens/chars, cost if available), key pipeline steps, errors with tracebacks. [cite: 821, 965, 2355]
+
+All code generated or modified MUST strictly adhere to these standards.
+
+* **1. Python Specifics:**
+    * **PEP8 & Black:** Enforced. Use `flake8` for linting, `black` for formatting.
+    * **Google-style Docstrings:** Comprehensive for all modules, classes, methods, functions (purpose, args, returns, exceptions).
+        * **Example (Function - for stylistic guidance):**
+            ```python
+            def my_function(param1: str, param2: int) -> bool:
+                """Brief summary. Detailed explanation. Args: param1 (str): Desc. param2 (int): Desc. Returns: bool: Desc. Raises: ValueError: If invalid."""
+                pass 
+            ```
+    * **Type Hinting:** Mandatory for all function signatures and key variables.
+    * **Clear Naming:** Descriptive, unambiguous names.
+    * **Comments:** Explain *why* for complex logic. `# TODO: [Your Name/Date] Description` for follow-ups.
+    * **Logging:** Python's `logging` module. Basic console handler. Levels: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. **No sensitive info.** Log AI model calls (service, model, sanitized input summary, output summary, duration, **input/output tokens/characters used, and estimated cost if available from the API**), key pipeline steps, errors with tracebacks.
+    * **Error Handling:** Specific `try-except` blocks. Custom exceptions where appropriate.
+
+* **2. Dockerfile Best Practices:**
+    * Use specific, slim base images (e.g., `python:3.11-slim`).
+    * Multi-stage builds to reduce final image size.
+    * Run as non-root user.
+    * Minimize layers; copy only necessary files.
+    * Leverage build caching effectively (e.g., `COPY requirements.txt` then `RUN pip install` before `COPY .`).
+
+---
 
 ## D. Architectural Principles & Patterns
-*(To be populated based on CMP, APCB Section 2.1.D, CMCAD Section 2.2.D)*
-- **Modularity:** Design for reusable components. MVP: single `main.py`[cite: 797]; Post-MVP: services, blueprints.
-- **MVP Architecture:** Synchronous Flask API on Cloud Run. [cite: 718, 1079, 2356]
-- **Post-MVP Evolution:** Asynchronous, event-driven (Pub/Sub, worker services). [cite: 863, 2356]
-- **Configuration Management:** Environment variables (sourced from Secret Manager in Cloud Run post-MVP). [cite: 801, 1080, 2356] `.env` for local dev, with `.env.example` checked in. [cite: 783, 784]
-- **Statelessness:** Cloud Run services should be stateless where possible. [cite: 895, 2356]
+
+* **1. MVP Scope:** Single, synchronous FastAPI API on Cloud Run. Direct AI API calls. Temporary audio storage. **The `/generate-content` endpoint will first generate a content outline based on the input topic. Based on this outline, it will then produce the podcast script, study guide, one-pager summaries, detailed reading materials, FAQs, flashcards, and reading guide questions as textual outputs within a structured JSON response. The Gemini prompt within the application MUST be designed to request a single, well-structured JSON object as its output. This JSON object should have distinct top-level keys for 'content_outline', 'podcast_script', 'study_guide', 'one_pager_summary', 'detailed_reading_material', 'faqs', 'flashcards', and 'reading_guide_questions'.**
+
+* **2. Content Generation Flow:**
+    * **Mandatory Sequence:**
+        1. Content outline generation (required first)
+        2. Parallel generation of other content types
+        3. Audio generation (if requested)
+    * **Failure Handling:**
+        - If outline generation fails, abort all other generation
+        - If individual content type fails, continue with others
+        - Return partial results with appropriate status codes
+    * **Parallel Processing:**
+        - Content types can be generated in parallel after outline
+        - Implement proper error handling for parallel operations
+        - Track individual content type generation status
+
+* **3. Performance Targets:**
+    * **Response Times:**
+        - Content outline: < 10 seconds
+        - Individual content types: < 15 seconds each
+        - Audio generation: < 30 seconds
+        - Total response time: < 60 seconds
+    * **Timeouts:**
+        - Gemini API calls: 30 seconds
+        - ElevenLabs API calls: 45 seconds
+        - Overall request: 90 seconds
+    * **Rate Limiting:**
+        - Maximum 10 requests per minute per IP
+        - Maximum 100 requests per hour per API key
+        - Implement exponential backoff for retries
+
+* **4. Scalability Considerations:**
+    * **Future Microservices:**
+        - Content generation service
+        - Audio generation service
+        - Content storage service
+        - User management service
+    * **Data Flow:**
+        - Current: Synchronous, in-memory processing
+        - Future: Asynchronous with message queues
+    * **Caching Strategy:**
+        - Cache generated content outlines
+        - Cache frequently requested audio
+        - Implement cache invalidation rules
+
+---
 
 ## E. Security Mandates
-*(To be populated based on CMP, APCB Section 2.1.E, CMCAD Section 2.2.E)*
-- **Credential Management:** API keys and secrets exclusively via Google Cloud Secret Manager in deployed environments. [cite: 710, 944, 1077, 1332, 2357] No hardcoded secrets. [cite: 1081]
-- **IAM:** Principle of Least Privilege for all service accounts and user permissions. [cite: 710, 757, 975, 2357] Regular (e.g., quarterly) audits.
-- **Input Validation:** Robust server-side validation for all API inputs and user-provided data. [cite: 807, 978, 1082, 2357]
-- **Database Security:** (Post-MVP) Secure configurations for Firestore/Cloud SQL (security rules, RLS if multi-tenant). [cite: 925, 939, 2357]
-- **GCS Security:** (Post-MVP) Uniform bucket-level access, public access prevention by default, signed URLs for temporary access if needed. [cite: 909, 987, 2357]
-- **Dependency Auditing:** Regularly scan for vulnerabilities (e.g., `pip-audit`, Dependabot). [cite: 781, 1342, 2357]
-- **Cost Control Mandate:** Design for resource cost-effectiveness. Application-level cost ceilings/alerts for AI calls where feasible. [cite: 2357]
 
-## F. Testing Philosophy
-*(To be populated based on APCB Section 2.1.F, CMCAD Section 2.2.F)*
-- **Framework:** Pytest. [cite: 1083, 2358]
-- **Test Generation Mandate:** Unit tests for all new business logic, AI service interaction functions, and critical utility functions. [cite: 1083, 2358] Aim for high coverage of core logic.
-- **Test Types:** Unit tests (primary focus for MVP), basic integration tests (e.g., API endpoint tests).
-- **Mocking:** Use `pytest-mock` for external services (AI APIs, GCS, databases). [cite: 1209, 2358]
-- **Structure:** AAA (Arrange, Act, Assert) pattern for test readability. [cite: 2358]
-- **CI Integration:** All tests run automatically in CI pipeline. [cite: 956, 2358] Build fails on test failure or coverage drop.
-- **PR Checklist Requirement:** PRs must confirm tests written and passing. [cite: 2358]
+* **1. API Key & Secret Management:**
+    * **CRITICAL:** API keys/credentials **MUST NEVER** be hardcoded or committed.
+    * **MVP:** Source from **environment variables** with fallback to **Google Secret Manager**.
+    * **Post-MVP Mandate:** Retrieve from **Google Secret Manager** with local development fallback to environment variables.
+* **2. Input Validation:** Robust server-side validation for ALL API inputs (presence, type, format, length, range).
+* **3. Least Privilege (IAM):** Cloud Run service account with MINIMUM necessary permissions.
+* **4. Error Information Disclosure:** Public errors MUST be generic. Log detailed internal errors.
+* **5. Dependency Auditing (Post-MVP):** Regular scans (`pip-audit`).
 
-## G. Error Handling & Resilience
-*(To be populated based on CMCAD Section 2.2.G)*
-- **Try-Except Blocks:** Around all external service calls (APIs, DBs, file I/O). [cite: 821, 2359]
-- **Specific Exceptions:** Catch specific exceptions rather than generic `Exception`. [cite: 2359]
-- **Detailed Logging:** Log errors with tracebacks and relevant context (request ID, user ID if applicable). [cite: 821, 2359]
-- **User-Facing Errors:** Return standardized, user-friendly JSON error responses from API. [cite: 807, 811, 2359]
-- **Retry Mechanisms (Post-MVP Asynchronous):** For Pub/Sub tasks, use dead-letter queues (DLQs) and configure retry policies. [cite: 888, 893, 2359]
-- **Idempotency (Post-MVP):** Design asynchronous task handlers to be idempotent where possible. [cite: 2359]
+---
 
-## H. Documentation & Project Drift Mitigation
-*(To be populated based on CMCAD Section 2.2.H)*
-- **Auto-Update Mandate:** Key documents like `CHANGELOG.md`, `docs/ARCHITECTURE.md`, and this `project.mdc` file itself must be updated (can be prompted via Cursor) after significant changes are implemented with Cursor. [cite: 2360]
-- **README.md:** Comprehensive project overview, setup, and run instructions.
-- **CHANGELOG.md:** Chronological list of significant changes, features, bug fixes. [cite: 1220, 2382]
-- **docs/ARCHITECTURE.md:** High-level system design, component interactions, data flows. (To be developed) [cite: 2382]
+## F. Service Architecture
 
-## I. AI-Driven Task & Workflow Management
+* **1. Primary Services:**
+    * **EnhancedMultiStepContentGenerationService:** Primary service for content generation
+    * **JobManager:** Manages job lifecycle using Firestore and Cloud Tasks
+    * **ContentGenerationService:** Deprecated, maintained for backward compatibility
+    * **AudioGenerationService:** Handles text-to-speech conversion
+    * **ContentCacheService:** Manages content caching
+    * **ProgressTracker:** Tracks generation progress
+    * **ParallelProcessor:** Handles parallel content generation
+    * **QualityMetricsService:** Evaluates content quality
 
-1. **@tasks.md as the Task Authority:**
-   - The `tasks.md` file in the project root is the single source of truth for all project tasks, including their definitions, status (To Do, In Progress, Done), priorities, descriptions, importance (explaining the 'why' for the developer's learning), high-level objectives/deliverables, and any relevant notes.
-   - The content of `tasks.md` is primarily generated and managed by the external "AI Project Assistant (Gemini)". The developer is responsible for updating the physical file in the IDE with the content provided by Gemini.
+* **2. Core Components:**
+    * **Settings:** Centralized configuration management
+    * **Security:** Secret management and API key handling
+    * **Prompts:** Versioned AI prompt templates
+    * **Models:** Pydantic models for data validation
+    * **API Routes:** Modular endpoint definitions
+    * **Firestore Models:** Document models for job persistence
+    * **Cloud Tasks:** Task queue management
+    * **Workflow Definitions:** YAML-based workflow definitions for multi-step processes
 
-2. **AI Project Assistant (Gemini) & "Next Task" Flow:**
-   - When the developer is ready for a new task, they will signal this (e.g., by saying "next" or a similar cue) to the AI Project Assistant (Gemini).
-   - Gemini will consult `tasks.md`, identify the next pending main task, explain its purpose and importance in a beginner-friendly manner, and help the developer formulate the initial high-level prompt to Cursor for that task.
+* **3. Directory Structure:**
+    ```
+    app/
+    ├── api/                     # API layer
+    │   ├── routes/             # Modular route definitions
+    │   └── routes.py           # Route aggregator
+    ├── core/                   # Core components
+    │   ├── config/            # Configuration management
+    │   ├── security/          # Security utilities
+    │   ├── prompts/           # AI prompt templates
+    │   └── exceptions/        # Custom exceptions
+    ├── models/                # Data models
+    │   ├── pydantic/         # Pydantic models
+    │   └── firestore/        # Firestore document models
+    ├── services/             # Business logic
+    │   ├── job/             # Job management
+    │   │   ├── manager.py   # JobManager implementation
+    │   │   ├── tasks.py     # Cloud Tasks integration
+    │   │   └── firestore.py # Firestore operations
+    │   └── content/         # Content generation
+    ├── workflows/           # Cloud Workflows definitions
+    │   └── content_gen.yaml # Content generation workflow
+    └── utils/              # Utility functions
+    ```
 
-3. **Dynamic Task Breakdown by Cursor:**
-   - When a main task from `tasks.md` is initiated with Cursor, Cursor should be prompted to help break it down into more granular, actionable sub-tasks or coding steps.
-   - These dynamically defined sub-steps will guide the immediate development work session.
+---
 
-4. **Commit Message Standards (Referencing Tasks):**
-   - All commit messages must reference the relevant task or sub-task from `tasks.md` using the format: `type(TaskID/SubTaskID): Short, imperative-mood subject line`.
-   - The commit message body should include a blank line after the subject, then a detailed explanation of the *what* and *why* of the changes, explicitly mentioning how it contributes to the task/sub-task.
-   - Cursor will assist in drafting these detailed commit messages in the correct format.
+## G. Testing Philosophy
 
-5. **CHANGELOG.md Protocol (Referencing Tasks):**
-   - All significant features or task completions require an entry in `CHANGELOG.md`.
-   - Each entry must reference the corresponding Task ID(s) from `tasks.md`.
-   - Cursor will assist in generating these changelog entries.
+* **1. Unit Tests:**
+    * Mandatory for core business logic and API endpoints.
+    * Framework: `pytest`.
+    * **Mandate Mocking:** External services (AI APIs) MUST be mocked (`pytest-mock`).
+    * Aim for high coverage of core logic.
+* **2. API / End-to-End Tests (MVP):** Manual `curl`/`httpie` for deployment verification.
+* **3. Structure:** AAA (Arrange, Act, Assert) pattern.
 
-6. **AI Explanation Style (For Both Gemini & Cursor):**
-   - All AI-generated explanations (from Gemini or Cursor) must be tailored for a non-technical beginner.
-   - Explanations should define technical terms simply, clearly explain the 'why' behind suggestions or code, avoid unnecessary jargon, and relate information back to the project's overall goals and the specific task at hand.
+---
 
-7. **Updating tasks.md (Status Changes, Completions):**
-   - After a task or sub-task is confirmed complete by the developer, the AI Project Assistant (Gemini) will generate the updated text block for `tasks.md` (reflecting the new status, checked-off items, etc.).
-   - The developer is responsible for updating the actual `tasks.md` file in the IDE with this Gemini-provided content.
+## H. Error Handling & Resilience
+
+* **1. HTTP Status Codes:**
+    * **Success:**
+        - 200: Complete success
+        - 202: Partial success (some content types failed)
+    * **Client Errors:**
+        - 400: Invalid input
+        - 401: Authentication failed
+        - 403: Authorization failed
+        - 404: Resource not found
+        - 429: Rate limit exceeded
+    * **Server Errors:**
+        - 500: Internal server error
+        - 503: Service unavailable
+        - 504: Gateway timeout
+
+* **2. Error Response Structure:**
+    ```json
+    {
+        "error": "User-friendly message",
+        "code": "ERROR_CODE",
+        "details": "Specifics about validation failure...", // Only for 4xx errors
+        "content_status": {
+            "outline": "success|failed|partial",
+            "podcast_script": "success|failed|partial",
+            // ... other content types
+        }
+    }
+    ```
+
+* **3. Content Generation Errors:**
+    * **Outline Generation:**
+        - OUTLINE_GEN_FAILED: Failed to generate content outline
+        - OUTLINE_INVALID: Generated outline is invalid
+    * **Content Type Errors:**
+        - CONTENT_GEN_FAILED: Failed to generate specific content
+        - CONTENT_INVALID: Generated content is invalid
+    * **Audio Generation:**
+        - AUDIO_GEN_FAILED: Failed to generate audio
+        - AUDIO_INVALID: Generated audio is invalid
+
+* **4. User-Facing Errors:** Standardized, user-friendly JSON error responses. All API error responses MUST include at least an `"error": "User-friendly message"` key. Optionally, for `4xx` errors, a `"details": "Specifics about the validation failure..."` key can be included. For `5xx` errors, details MUST only be logged and not exposed to the client, as per Section E.4.
+
+---
+
+## I. Documentation & Auditability
+
+* **1. `.cursor/rules/project.mdc` (This File):** The **SINGLE SOURCE OF TRUTH** for AI project rules. MUST be kept up-to-date. If significant rule or architectural changes are needed, you (Cursor) MUST prompt for an update to THIS FILE before proceeding.
+* **2. `tasks.md`:**
+    * **Purpose:** Detailed checklist for tasks, sub-tasks, issues. Primary AI development audit tool.
+    * **Mandate:** For EVERY significant action or sub-task you undertake, you MUST update the corresponding entry in `tasks.md`.
+    * **Format:** Status (`- [ ]`, `- [x]`, `-[!]`, `- [~]`), Description, Timestamp (`(YYYY-MM-DD HH:MM)`), AI Interaction Reference (`[AI-EXECUTION-SESSION-YYYYMMDD-HHMM]`), Outcome/Notes.
+    * **Issues Log:** Dedicated section in `tasks.md` for issues (ID, Description, Timestamp, Related Task, Status, Resolution).
+* **3. `CHANGELOG.md`:** High-level log of releases/major changes. You MUST prompt for an update upon completion of major features/tasks.
+* **4. Code as Documentation:** Core principle. Clear names, explanatory comments (the *why*), comprehensive Google-style docstrings. Code MUST be readable and understandable.
+* **5. `README.md`:** Project overview, setup, usage.
+* **6. `docs/ARCHITECTURE.md`:** High-level design. You MUST prompt for its creation/update if significant architectural changes occur.
+
+---
+
+## J. AI Interaction Guidelines (For Cursor)
+* **1. Strict Rule Adherence:** You MUST strictly adhere to ALL rules in this `project.mdc`. This is your primary directive.
+* **2. Proactive Clarification:** If any instruction is ambiguous, or if fulfilling a request would violate a rule herein, you MUST halt and ask for clarification. DO NOT proceed with assumptions on critical paths or rule violations.
+* **3. Atomic Task Execution & Decomposition:** Execute tasks step-by-step as outlined in the prompts. If a task is complex, propose a sub-task breakdown for clarity before proceeding.
+* **4. Meticulous Audit Trail Maintenance:** Immediately after completing (or failing) any atomic sub-task, you MUST update `tasks.md` as per Section H.2, including status, current timestamp, a detailed outcome note (e.g., "Installed Python 3.11 successfully," or "Failed to install Git, error: ..."), and an AI interaction reference. If a task is blocked, log it in the "Issues Log" in `tasks.md`.
+* **5. Code & Configuration Generation:**
+    * Generated code/configs MUST conform to Sections C, D, E.
+    * When generating files, ALWAYS use the exact filenames specified.
+    * When modifying files, operate on the existing file in the project context.
+    * If asked to generate example snippets, ensure they are minimal, illustrative of the style/structure, and clearly marked as examples.
+    * `**IaC Preparedness:** When asked to generate \`gcloud\` CLI commands for creating or modifying GCP resources, you (Cursor) MUST ALSO provide the equivalent Terraform HCL resource block(s) as a commented-out section immediately following the \`gcloud\` command, or in a separate clearly marked block. This HCL should use placeholders for user-defined names where appropriate and be well-formatted. This applies to resources like GCS buckets, Secret Manager secrets (definition, not version), Cloud Run services, etc.`
+    * `**Content Generation Quality Mandate:** When formulating prompts for Vertex AI Gemini to generate any content (content outline, podcast scripts, study guides, summaries, reading materials, FAQs, flashcards, reading questions), you (Cursor) MUST ensure the prompt explicitly instructs Gemini to:
+        a. Derive content directly from the provided 'content_outline' (once generated) or the initial 'syllabus_text'.
+        b. Focus on clarity, accuracy, engagement, and suitability for the target audience (educators, learners).
+        c. Adhere to any specified structural requirements for each content type (e.g., JSON format for FAQs/flashcards, specific sections for scripts/guides).
+        d. For study aids (FAQs, flashcards, reading questions), prompts should emphasize questions that test understanding of core concepts and encourage critical thinking.`
+    * `**Proactive Modularity & Helper Functions:** If a piece of logic is likely to be used in more than one place, or if a function becomes overly complex (e.g., exceeding 50-70 lines or handling multiple distinct responsibilities as judged by you, Cursor), you MUST proactively suggest or, if appropriate, create helper functions to improve modularity, readability, and testability. This applies even within a single \`main.py\` file during the MVP phase. Clearly explain the rationale for such refactoring.`
+* **6. Command Execution (YOLO Mode):**
+    * Before executing ANY terminal command, internally verify it against your configured YOLO Allow/Deny lists.
+    * If a command is on the deny list, you MUST NOT execute it. Instead, attempt to autonomously find an allowed alternative.
+    * If no allowed alternative exists to complete a critical atomic task, you MUST halt, report the conflict (detailing the command and the rule it violates), log it as an issue in `tasks.md`, and explicitly prompt me for guidance or permission to add to the allow list.
+* **7. Confidence Threshold & Halting Conditions (Critical):**
+    * For every atomic task's execution plan, you MUST internally achieve a 95% confidence level of success *before* attempting execution.
+    * If this confidence cannot be met due to missing information (not inferable from this `project.mdc` or current project files), anticipated failure, or if *any* internal validation (e.g., linting code with `flake8` and `black --check`, `docker build --no-cache .`, or parsing an expected API response structure) fails, **you MUST halt execution. Then, you MUST report the full error, the reason for low confidence, or the missing information. You MUST also log this as a new issue in the "Issues Log" section of `tasks.md` (with ID, description, timestamp, related task, and status `- [!] Blocked`) BEFORE explicitly prompting me for intervention or clarification.**
+* **8. Iterative Refinement:** If your output for a sub-task is not accepted (e.g., if I provide feedback), understand the feedback in the context of these rules and attempt to refine your output accordingly.
+* **9. Focus & Brevity:** When providing final summaries, be concise. Focus on task completion and readiness for the next step. Avoid conversational filler.
+
+* **10. Content Quality Standards:**
+    * **Minimum Length Requirements:**
+        - Content outline: 200-500 words
+        - Podcast script: 1000-2000 words
+        - Study guide: 800-1500 words
+        - One-pager summary: 300-500 words
+        - Detailed reading: 1500-3000 words
+        - FAQs: 5-10 questions
+        - Flashcards: 10-20 cards
+        - Reading questions: 5-10 questions
+    * **Quality Check Points:**
+        - Validate content structure
+        - Check for completeness
+        - Verify content relevance
+        - Ensure proper formatting
+    * **Content Validation:**
+        - Check for PII
+        - Verify factual accuracy
+        - Ensure proper citations
+        - Validate against syllabus
+
+* **11. Monitoring & Observability:**
+    * **Required Metrics:**
+        - API response times
+        - Content generation times
+        - Error rates by type
+        - Token usage
+        - Cost per request
+    * **Alert Thresholds:**
+        - Response time > 60 seconds
+        - Error rate > 5%
+        - Cost per request > $0.50
+        - Token usage > 1000 per request
+    * **Monitoring Dashboards:**
+        - Real-time request monitoring
+        - Error tracking
+        - Cost tracking
+        - Performance metrics
+
+* **12. Cost Management:**
+    * **Token Usage Limits:**
+        - Maximum 1000 tokens per content type
+        - Maximum 5000 tokens per request
+        - Alert at 80% of limits
+    * **Cost Tracking:**
+        - Track per-request costs
+        - Monitor daily/weekly/monthly totals
+        - Set budget alerts
+    * **Optimization:**
+        - Cache frequent requests
+        - Optimize prompt length
+        - Use appropriate model sizes
+        - Implement request batching
+
+## F. Code Quality & Development Standards
+
+F.1. Code Organization
+- Keep functions focused and single-purpose
+- Use clear, descriptive function and variable names
+- Document all public functions and classes
+- Group related functionality into modules
+- Maintain consistent code style (PEP 8)
+
+F.2. Testing Requirements
+- Unit tests for all content generation functions
+- Integration tests for API endpoints
+- Mock external API calls in tests
+- Test edge cases and error conditions
+- Maintain test coverage above 80%
+
+F.3. Performance Considerations
+- Implement caching where appropriate
+- Monitor API call durations
+- Track token usage and costs
+- Optimize response times
+- Handle concurrent requests efficiently
+
+---
+
+## G. Documentation Standards
+
+G.1. Code Documentation
+- Use Google-style docstrings
+- Include type hints
+- Document all parameters and return values
+- Provide usage examples
+- Explain complex algorithms
+
+G.2. API Documentation
+- Document all endpoints
+- Include request/response examples
+- List all possible error codes
+- Provide rate limiting information
+- Include authentication requirements
+
+G.3. User Documentation
+- Clear setup instructions
+- Environment variable documentation
+- Deployment guides
+- Troubleshooting guides
+- Best practices
+
+---
+
+## H. Security Guidelines
+
+H.1. API Security
+- Validate all input data
+- Sanitize output data
+- Implement rate limiting
+- Use secure headers
+- Follow OWASP guidelines
+
+H.2. Data Handling
+- Never log sensitive data
+- Encrypt sensitive information
+- Implement proper error handling
+- Follow data retention policies
+- Use secure storage methods
+
+H.3. Authentication & Authorization
+- Implement proper API key handling
+- Use secure session management
+- Follow principle of least privilege
+- Implement proper access controls
+- Monitor for suspicious activity
+
+## K. AI Assistant Interaction & Task Management Guidelines
+
+* **1. Task File (`tasks.md`) Management:**
+    *   **Source of Truth**: `tasks.md` is the central and authoritative tracker for all project tasks, including historical sprints, completed work, current focus, and future plans.
+    *   **Preservation of History**: When updating `tasks.md` (e.g., adding new sprints, phases, or tasks), ALL existing content, especially historical sprints, completed tasks, and detailed notes, MUST be preserved.
+    *   **Logical Ordering**: New sprints or major phases should be integrated logically within the existing structure. Typically, new active sprints follow previously completed ones.
+    *   **AI Responsibility**: The AI assistant MUST read and understand the full context of `tasks.md` before proposing changes. Edits should be merges or careful integrations, not overwrites that lose information.
+    *   **Verification**: If a large restructuring or addition is made to `tasks.md` by the AI, the USER should be prompted to quickly verify that no historical data was lost and the order is correct.
+
+* **2. Iterative Development:** Prefer small, incremental changes and verifications.

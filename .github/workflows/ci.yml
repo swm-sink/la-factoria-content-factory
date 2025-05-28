@@ -1,0 +1,64 @@
+name: Python CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r backend/requirements.txt
+        pip install flake8 mypy # Install linters and type checker
+
+    - name: Lint with Flake8
+      run: |
+        flake8 backend/app --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 backend/app --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      working-directory: . # Run from root, but specify backend/app path
+
+    - name: Type check with MyPy
+      run: |
+        mypy backend/app
+      working-directory: . # Run from root, but specify backend/app path
+
+    - name: Test with Pytest
+      env:
+        API_KEY: test-ci-api-key # Set a dummy API_KEY for tests
+        GOOGLE_CLOUD_PROJECT: test-gcp-project
+        ELEVENLABS_API_KEY: test-elevenlabs-key
+      run: |
+        pytest backend/app/tests -v
+      working-directory: . # Run from root, but specify backend/app/tests path
+
+    # Frontend Build (Optional - if you want to ensure it builds in CI)
+    # - name: Setup Node.js
+    #   uses: actions/setup-node@v3
+    #   with:
+    #     node-version: '18'
+    #     cache: 'npm'
+    #     cache-dependency-path: frontend/package-lock.json
+
+    # - name: Install frontend dependencies
+    #   run: npm ci
+    #   working-directory: ./frontend
+
+    # - name: Build frontend
+    #   run: npm run build
+    #   working-directory: ./frontend 
