@@ -1,142 +1,62 @@
-# AI Content Factory - Architecture Documentation
+# AI Content Factory - Architecture Overview
 
-## Project Structure
+This document provides a high-level overview of the AI Content Factory's architecture. For a more detailed, dynamically updated map of components and data flows, please refer to [`docs/architecture-map.md`](./architecture-map.md). The comprehensive architectural principles, patterns, and technology stack are defined in the project's single source of truth for rules: `/.cursor/rules/project.mdc`.
 
-The AI Content Factory follows a modern, modular architecture designed for scalability, maintainability, and clear separation of concerns.
+## Core Philosophy
 
-```
-ai-content-factory/
-├── app/                          # Main application package
-│   ├── __init__.py              # Package initialization
-│   ├── main.py                  # Application entry point
-│   ├── api/                     # API layer
-│   │   ├── __init__.py
-│   │   └── routes.py            # API route definitions
-│   ├── core/                    # Core application components
-│   │   ├── __init__.py
-│   │   ├── config/              # Configuration management
-│   │   │   ├── __init__.py
-│   │   │   └── settings.py      # Application settings
-│   │   ├── exceptions/          # Custom exceptions
-│   │   │   └── __init__.py
-│   │   └── prompts/             # AI prompt templates
-│   │       ├── __init__.py
-│   │       └── v1/              # Version 1 prompts
-│   │           ├── __init__.py
-│   │           ├── content_generation.py
-│   │           └── multi_step_prompts.py
-│   ├── models/                  # Data models
-│   │   ├── __init__.py
-│   │   └── content_version.py   # Content versioning models
-│   ├── services/                # Business logic services
-│   │   ├── __init__.py
-│   │   ├── audio_generation.py  # Audio generation service
-│   │   ├── content_cache.py     # Content caching service
-│   │   ├── content_generation.py # Content generation service
-│   │   ├── multi_step_content_generation.py # Enhanced content service
-│   │   ├── parallel_processor.py # Parallel processing service
-│   │   ├── progress_tracker.py  # Progress tracking service
-│   │   └── quality_metrics.py   # Quality evaluation service
-│   └── utils/                   # Utility functions
-│       └── __init__.py
-├── tests/                       # Test suite
-│   ├── __init__.py
-│   ├── unit/                    # Unit tests
-│   │   ├── __init__.py
-│   │   ├── test_app.py
-│   │   └── test_elevenlabs.py
-│   ├── integration/             # Integration tests
-│   │   └── __init__.py
-│   └── e2e/                     # End-to-end tests
-│       └── __init__.py
-├── scripts/                     # Utility scripts
-│   └── debug_import.py
-├── docs/                        # Documentation
-│   ├── api/                     # API documentation
-│   ├── user/                    # User guides
-│   └── developer/               # Developer documentation
-├── deployment/                  # Deployment configurations
-│   ├── docker/                  # Docker configurations
-│   ├── k8s/                     # Kubernetes manifests
-│   └── terraform/               # Infrastructure as Code
-├── .cursor/                     # Cursor IDE configuration
-│   └── rules/
-├── .vscode/                     # VS Code configuration
-├── requirements.txt             # Python dependencies
-├── tasks.md                     # Project task tracker
-└── README.md                    # Project overview
-```
+The application is built with a modular, scalable, and maintainable design, emphasizing a clear separation of concerns. It leverages a modern tech stack centered around Python (FastAPI) for the backend, React/TypeScript for the frontend, and Google Cloud Platform (GCP) for serverless deployment and services.
 
-## Architecture Principles
+## Key Architectural Aspects
 
-### 1. **Separation of Concerns**
-- **API Layer** (`app/api/`): Handles HTTP requests and responses
-- **Business Logic** (`app/services/`): Contains core application logic
-- **Data Models** (`app/models/`): Defines data structures and relationships
-- **Configuration** (`app/core/config/`): Manages application settings
-- **Prompts** (`app/core/prompts/`): AI prompt templates with versioning
+1.  **Outline-Driven Content Generation:**
+    *   The core AI functionality revolves around first generating a master content outline from user input.
+    *   This outline then serves as the foundation for generating various derivative content types (podcast scripts, study guides, etc.) in parallel.
+    *   This approach ensures consistency and modularity in content creation.
 
-### 2. **Modular Design**
-- Each service is self-contained with clear interfaces
-- Services can be easily tested, replaced, or extended
-- Dependency injection for better testability
+2.  **Asynchronous Job Processing:**
+    *   Content generation tasks are handled as asynchronous jobs.
+    *   The system uses Google Cloud Firestore for job persistence and Google Cloud Tasks for queuing and triggering job execution.
+    *   This allows the API to respond quickly to user requests while long-running generation tasks are processed in the background.
 
-### 3. **Scalability**
-- Parallel processing capabilities
-- Caching layer for performance
-- Progress tracking for long-running operations
-- Quality metrics for content evaluation
+3.  **Service-Oriented Backend (`app/`):**
+    *   **API Layer (`app/api/routes/`):** Exposes RESTful endpoints for frontend interaction (e.g., job creation, status polling, user authentication, feedback).
+    *   **Service Layer (`app/services/`):** Encapsulates business logic, including:
+        *   `EnhancedMultiStepContentGenerationService`: Orchestrates the AI content generation pipeline.
+        *   `JobManager`: Manages the lifecycle of asynchronous jobs.
+        *   `PromptService`: Loads and manages AI prompt templates from external files.
+        *   Services for audio generation, text cleanup, etc.
+    *   **Core Components (`app/core/`):** Provides shared utilities for configuration (`settings.py`), security (JWTs, hashing), and externalized AI prompts (`app/core/prompts/v1/`).
+    *   **Data Models (`app/models/pydantic/`):** Pydantic models define the structure for API requests/responses and internal data, ensuring validation and type safety.
 
-### 4. **Maintainability**
-- Clear naming conventions
-- Comprehensive documentation
-- Version control for prompts
-- Structured testing approach
+4.  **React Frontend (`frontend/`):**
+    *   Provides the user interface for submitting content generation requests, managing jobs, viewing results, and providing feedback.
+    *   Uses TypeScript for type safety and modern React features (Context API, hooks) for state management.
 
-## Key Components
+5.  **GCP Native Deployment:**
+    *   **Cloud Run:** Hosts the containerized FastAPI application.
+    *   **Firestore:** Provides a NoSQL database for job persistence and other application data.
+    *   **Cloud Tasks:** Manages the asynchronous execution of content generation tasks.
+    *   **Secret Manager:** Securely stores API keys and other sensitive configurations.
+    *   **Artifact Registry:** Stores Docker container images.
+    *   **API Gateway:** (Optional, for managing API access, rate limiting, etc.)
+    *   **Cloud Workflows:** (For orchestrating more complex multi-step processes, if needed).
 
-### Services Layer
-- **ContentGenerationService**: Basic content generation using Gemini
-- **EnhancedMultiStepContentGenerationService**: Advanced multi-step content generation
-- **AudioGenerationService**: Text-to-speech conversion using ElevenLabs
-- **ContentCacheService**: LRU caching with TTL support
-- **ProgressTracker**: Real-time progress monitoring
-- **ParallelProcessor**: Concurrent task execution
-- **QualityMetricsService**: Content quality evaluation
+6.  **Infrastructure as Code (IaC):**
+    *   Terraform (`iac/`) is used to define and manage all GCP resources, ensuring reproducible and version-controlled infrastructure.
 
-### Models Layer
-- **ContentVersion**: Version control for generated content
-- **ContentVersionManager**: Manages content versions and history
+7.  **CI/CD:**
+    *   GitHub Actions (`.github/workflows/`) automate testing, linting, Docker image building, and deployment to GCP.
 
-### Core Components
-- **Settings**: Environment-based configuration management
-- **Prompts**: Versioned AI prompt templates
+## Further Details
 
-## Development Guidelines
+For specific details on:
+-   **Technology Stack:** See Section B in `/.cursor/rules/project.mdc`.
+-   **Coding Standards & Style:** See Section C in `/.cursor/rules/project.mdc`.
+-   **Detailed Architectural Principles & Patterns:** See Section D in `/.cursor/rules/project.mdc`.
+-   **Security Mandates:** See Section E in `/.cursor/rules/project.mdc`.
+-   **Project File Structure:** See Section F in `/.cursor/rules/project.mdc` and `README.md`.
+-   **Testing Philosophy:** See Section G in `/.cursor/rules/project.mdc`.
+-   **Error Handling & Resilience:** See Section H in `/.cursor/rules/project.mdc`.
+-   **Deployment Process:** See `docs/DEPLOYMENT.md` and relevant CI/CD workflow files.
 
-### Adding New Features
-1. Create services in `app/services/`
-2. Add models in `app/models/`
-3. Update API routes in `app/api/routes.py`
-4. Add tests in appropriate test directories
-5. Update documentation
-
-### Testing Strategy
-- **Unit Tests**: Test individual components in isolation
-- **Integration Tests**: Test component interactions
-- **End-to-End Tests**: Test complete user workflows
-
-### Configuration Management
-- Use environment variables for configuration
-- Validate settings on application startup
-- Support different environments (dev, staging, prod)
-
-## Deployment Architecture
-
-The application is designed to be deployed as:
-- **Container**: Docker-based deployment
-- **Kubernetes**: Scalable orchestration
-- **Cloud Run**: Serverless deployment option
-- **Infrastructure**: Terraform for IaC
-
-This architecture supports horizontal scaling, monitoring, and observability while maintaining code quality and developer productivity. 
+This document aims to provide a starting point for understanding the system's architecture. Always refer to `/.cursor/rules/project.mdc` and `docs/architecture-map.md` for the most current and detailed information.

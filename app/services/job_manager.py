@@ -1,11 +1,13 @@
 """
-Job manager service for handling asynchronous content generation jobs.
+Enhanced job manager service with Firestore persistence and Cloud Tasks integration.
 
 This module provides the core functionality for managing job lifecycle,
-including creation, monitoring, and cleanup of asynchronous jobs.
+including creation, monitoring, and cleanup of asynchronous jobs using
+Firestore for persistence and Cloud Tasks for async processing.
 """
 
 import asyncio
+import uuid
 from datetime import datetime
 from typing import Dict, List, Optional, Union
 from uuid import UUID
@@ -13,267 +15,365 @@ from uuid import UUID
 from fastapi import Depends
 from pydantic import ValidationError
 
-from app.core.schemas.job import Job, JobCreate, JobList, JobStatus, JobUpdate, JobProgress, JobError, JobErrorCode
+from app.core.schemas.job import (
+    Job,
+    JobCreate,
+    JobList,
+    JobStatus,
+    JobUpdate,
+    JobProgress,
+    JobError,
+    JobErrorCode,
+)
 from app.core.config.settings import get_settings
-from app.services.multi_step_content_generation import EnhancedMultiStepContentGenerationService
-from app.api.routes.content import ContentRequest # Assuming ContentRequest is the input for the service
+from app.services.job.firestore_client import (
+    get_job_from_firestore,
+    create_or_update_job_in_firestore,
+    update_job_field_in_firestore,
+)
+from app.services.job.tasks_client import get_cloud_tasks_client
+from app.models.pydantic.content import ContentRequest
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class JobManager:
-    """Service for managing asynchronous content generation jobs."""
-    
+    """Enhanced service for managing asynchronous content generation jobs with Firestore and Cloud Tasks."""
+
     def __init__(self):
         """Initialize the job manager."""
-        self._jobs: Dict[UUID, Job] = {}
         self._settings = get_settings()
-        self._content_service = EnhancedMultiStepContentGenerationService()
-    
-    async def create_job(self, job_creation_data: ContentRequest) -> Job:
+        self._tasks_client = get_cloud_tasks_client()
+        self._collection_name = "jobs"
+
+    async def create_job(self, content_request: ContentRequest) -> Job:
         """
-        Create a new job.
-        
+        Create a new job and enqueue it for processing.
+
         Args:
-            job_creation_data: The content generation request data.
-            
+            content_request: The content generation request data.
+
         Returns:
             Created job instance
         """
-        # Store the request data directly in metadata for the processor to use
-        job = Job(metadata=job_creation_data.model_dump()) 
-        self._jobs[job.id] = job
-        
-        # Start job processing in background
-        asyncio.create_task(self._process_job(job.id))
-        
-        return job
-    
+        logger.info("Creating new content generation job")
+
+        # Create job with unique ID
+        job_id = str(uuid.uuid4())
+        now = datetime.utcnow()
+
+        # Create job data for Firestore
+        job_data = {
+            "id": job_id,
+            "status": JobStatus.PENDING.value,
+            "created_at": now.isoformat(),
+            "updated_at": now.isoformat(),
+            "completed_at": None,
+            "error": None,
+            "progress": {
+                "current_step": "Job created, queuing for processing",
+                "total_steps": 7,
+                "completed_steps": 1,
+                "percentage": 10.0,
+            },
+            "result": None,
+            "request_data": content_request.model_dump(),  # Store request for worker
+            "metadata": {
+                "syllabus_length": len(content_request.syllabus_text),
+                "target_format": content_request.target_format,
+                "use_parallel": content_request.use_parallel,
+                "use_cache": content_request.use_cache,
+            },
+        }
+
+        try:
+            # Store job in Firestore
+            await create_or_update_job_in_firestore(
+                job_id, job_data, self._collection_name
+            )
+            logger.info(f"Job {job_id} created in Firestore")
+
+            # Enqueue job for processing via Cloud Tasks
+            enqueue_success = await self._tasks_client.enqueue_content_generation_job(
+                job_id
+            )
+
+            if enqueue_success:
+                # Update job status to indicate it's queued
+                await update_job_field_in_firestore(
+                    job_id,
+                    "progress.current_step",
+                    "Queued for processing",
+                    self._collection_name,
+                )
+                await update_job_field_in_firestore(
+                    job_id, "progress.percentage", 15.0, self._collection_name
+                )
+                logger.info(f"Job {job_id} successfully enqueued for processing")
+            else:
+                # Failed to enqueue, update job with error
+                error_data = {
+                    "code": JobErrorCode.JOB_PROCESSING_ERROR.value,
+                    "message": "Failed to enqueue job for processing",
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+                await update_job_field_in_firestore(
+                    job_id, "status", JobStatus.FAILED.value, self._collection_name
+                )
+                await update_job_field_in_firestore(
+                    job_id, "error", error_data, self._collection_name
+                )
+                logger.error(f"Failed to enqueue job {job_id}")
+
+            # Convert Firestore data to Job model
+            job_data["id"] = UUID(job_id)
+            job_data["created_at"] = now
+            job_data["updated_at"] = now
+            job_data["status"] = JobStatus(job_data["status"])
+
+            if job_data["progress"]:
+                job_data["progress"] = JobProgress(**job_data["progress"])
+
+            job = Job(**job_data)
+            return job
+
+        except Exception as e:
+            logger.error(f"Failed to create job: {e}", exc_info=True)
+            raise RuntimeError(f"Failed to create job: {str(e)}")
+
     async def get_job(self, job_id: UUID) -> Optional[Job]:
         """
-        Get a job by ID.
-        
+        Get a job by ID from Firestore.
+
         Args:
             job_id: Job identifier
-            
+
         Returns:
             Job instance if found, None otherwise
         """
-        return self._jobs.get(job_id)
-    
+        try:
+            job_data = await get_job_from_firestore(str(job_id), self._collection_name)
+            if not job_data:
+                return None
+
+            # Convert Firestore data to Job model
+            return self._firestore_to_job_model(job_data)
+
+        except Exception as e:
+            logger.error(f"Failed to get job {job_id}: {e}")
+            return None
+
     async def list_jobs(
-        self,
-        status: Optional[JobStatus] = None,
-        page: int = 1,
-        page_size: int = 10
+        self, status: Optional[JobStatus] = None, page: int = 1, page_size: int = 10
     ) -> JobList:
         """
         List jobs with optional filtering and pagination.
-        
+
+        Note: This is a simplified implementation. For production,
+        implement proper Firestore querying with pagination cursors.
+
         Args:
             status: Optional status filter
             page: Page number (1-based)
             page_size: Number of items per page
-            
+
         Returns:
             Paginated list of jobs
         """
-        # Filter jobs by status if specified
-        jobs = [
-            job for job in self._jobs.values()
-            if status is None or job.status == status
-        ]
-        
-        # Calculate pagination
-        total = len(jobs)
-        start_idx = (page - 1) * page_size
-        end_idx = start_idx + page_size
-        total_pages = (total + page_size - 1) // page_size
-        
-        # Get page of jobs
-        page_jobs = jobs[start_idx:end_idx]
-        
-        return JobList(
-            jobs=page_jobs,
-            total=total,
-            page=page,
-            page_size=page_size,
-            total_pages=total_pages
-        )
-    
+        try:
+            # For MVP, we'll implement a simple approach
+            # In production, use Firestore queries with proper pagination
+
+            # This is a placeholder implementation
+            # TODO: Implement proper Firestore collection querying
+            jobs = []
+            total = 0
+            total_pages = 0
+
+            logger.warning(
+                "list_jobs is not fully implemented for Firestore. Returning empty results."
+            )
+
+            return JobList(
+                jobs=jobs,
+                total=total,
+                page=page,
+                page_size=page_size,
+                total_pages=total_pages,
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to list jobs: {e}")
+            return JobList(
+                jobs=[], total=0, page=page, page_size=page_size, total_pages=0
+            )
+
     async def update_job(self, job_id: UUID, update: JobUpdate) -> Optional[Job]:
         """
-        Update a job.
-        
+        Update a job in Firestore.
+
         Args:
             job_id: Job identifier
             update: Job update data
-            
+
         Returns:
             Updated job instance if found, None otherwise
         """
-        job = self._jobs.get(job_id)
-        if not job:
+        try:
+            # Check if job exists
+            existing_job = await get_job_from_firestore(
+                str(job_id), self._collection_name
+            )
+            if not existing_job:
+                return None
+
+            # Prepare update data
+            update_data = update.model_dump(exclude_unset=True)
+            update_data["updated_at"] = datetime.utcnow().isoformat()
+
+            # Update each field in Firestore
+            for field, value in update_data.items():
+                if field == "status" and isinstance(value, JobStatus):
+                    value = value.value
+                elif field == "error" and isinstance(value, JobError):
+                    value = value.model_dump()
+                elif field == "progress" and isinstance(value, JobProgress):
+                    value = value.model_dump()
+
+                await update_job_field_in_firestore(
+                    str(job_id), field, value, self._collection_name
+                )
+
+            # Get updated job
+            updated_job_data = await get_job_from_firestore(
+                str(job_id), self._collection_name
+            )
+            if updated_job_data:
+                return self._firestore_to_job_model(updated_job_data)
+
             return None
-        
-        # Update job fields
-        update_data = update.model_dump(exclude_unset=True)
-        for field, value in update_data.items():
-            setattr(job, field, value)
-        
-        job.updated_at = datetime.utcnow()
-        return job
-    
+
+        except Exception as e:
+            logger.error(f"Failed to update job {job_id}: {e}")
+            return None
+
     async def delete_job(self, job_id: UUID) -> bool:
         """
-        Delete a job.
-        
+        Delete a job from Firestore.
+
         Args:
             job_id: Job identifier
-            
+
         Returns:
             True if job was found and deleted, False otherwise
         """
-        if job_id in self._jobs:
-            del self._jobs[job_id]
-            return True
-        return False
-    
-    async def _process_job(self, job_id: UUID) -> None:
-        """
-        Process a job in the background.
-        This involves calling the EnhancedMultiStepContentGenerationService.
-        
-        Args:
-            job_id: Job identifier
-        """
-        job = self._jobs.get(job_id)
-        if not job:
-            # Log this scenario, though it shouldn't happen if create_job is the only entry point
-            print(f"ERROR: Job {job_id} not found for processing.") # Replace with proper logging
-            return
-        
         try:
-            job.status = JobStatus.PROCESSING
-            job.updated_at = datetime.utcnow()
-            
-            # Define the stages of content generation with their approximate time distribution
-            stages = [
-                ("Initializing and Validating Request", 5),    # 5% - Initial setup and validation
-                ("Checking Content Cache", 10),                # 10% - Cache lookup
-                ("Analyzing Syllabus and Topic Decomposition", 15),  # 15% - Topic analysis
-                ("Generating Content Sections", 40),           # 40% - Main content generation
-                ("Assembling and Structuring Content", 15),    # 15% - Content assembly
-                ("Quality Assessment and Versioning", 10),     # 10% - Quality checks
-                ("Finalizing and Storing Results", 5)          # 5% - Final steps
-            ]
-            
-            total_stages = len(stages)
-            current_percentage = 0
-            
-            def _update_job_progress(stage_name: str, stage_percentage: int):
-                nonlocal current_percentage
-                current_percentage += stage_percentage
-                job.progress = JobProgress(
-                    current_step=stage_name,
-                    total_steps=total_stages,
-                    completed_steps=len([s for s, _ in stages if s == stage_name or stages.index((s, _)) < stages.index((stage_name, stage_percentage))]),
-                    percentage=current_percentage
-                )
-                self._jobs[job.id] = job # Ensure update is reflected in the in-memory store
+            # For MVP, we'll just mark as deleted rather than actually deleting
+            # This preserves audit trail
 
-            # Stage 1: Initialize and validate
-            _update_job_progress(*stages[0])
-            request_data = ContentRequest(**job.metadata)
-
-            # Stage 2: Cache check
-            _update_job_progress(*stages[1])
-
-            # Stage 3: Topic decomposition
-            _update_job_progress(*stages[2])
-
-            # Stage 4: Content generation (main processing)
-            _update_job_progress(*stages[3])
-
-            # Call the content generation service
-            generated_content_tuple = await asyncio.to_thread(
-                self._content_service.generate_long_form_content,
-                request_data.syllabus_text,
-                request_data.target_format,
-                target_duration=request_data.target_duration,
-                target_pages=request_data.target_pages,
-                use_cache=request_data.use_cache,
-                use_parallel=request_data.use_parallel
+            existing_job = await get_job_from_firestore(
+                str(job_id), self._collection_name
             )
-            
-            generated_data, status_code, _ = generated_content_tuple
+            if not existing_job:
+                return False
 
-            if status_code == 200:
-                # Stage 5: Assembly
-                _update_job_progress(*stages[4])
-                
-                # Stage 6: Quality assessment
-                _update_job_progress(*stages[5])
-                
-                # Stage 7: Finalization
-                _update_job_progress(*stages[6])
-                
-                job.status = JobStatus.COMPLETED
-                job.result = generated_data
-            else:
-                job.status = JobStatus.FAILED
-                job.error = JobError(
-                    code=JobErrorCode.CONTENT_GENERATION_FAILED,
-                    message=generated_data.get("error", "Unknown error from content service")
-                )
-                # Update progress to reflect failure at the current stage
-                failed_step = job.progress.current_step if job.progress else stages[3][0]
-                job.progress = JobProgress(
-                    current_step=f"Failed during {failed_step}: {generated_data.get('error', 'Unknown')}",
-                    total_steps=total_stages,
-                    completed_steps=job.progress.completed_steps if job.progress else 3,
-                    percentage=current_percentage
-                )
-
-        except ValidationError as ve:
-            job.status = JobStatus.FAILED
-            job.error = JobError(code=JobErrorCode.INVALID_REQUEST_METADATA, message=str(ve))
-            job.progress = JobProgress(
-                current_step="Failed during request validation",
-                total_steps=total_stages,
-                completed_steps=0,
-                percentage=0.0
+            # Mark as deleted
+            await update_job_field_in_firestore(
+                str(job_id), "status", "deleted", self._collection_name
             )
+            await update_job_field_in_firestore(
+                str(job_id),
+                "deleted_at",
+                datetime.utcnow().isoformat(),
+                self._collection_name,
+            )
+
+            logger.info(f"Job {job_id} marked as deleted")
+            return True
+
         except Exception as e:
-            # Log the full exception
-            print(f"ERROR: Exception during job {job_id} processing: {e}") # Replace with proper logging
-            job.status = JobStatus.FAILED
-            job.error = JobError(code=JobErrorCode.JOB_PROCESSING_ERROR, message=str(e))
-            if job.progress:
-                job.progress.current_step = f"Failed during {job.progress.current_step}"
-            else:
-                job.progress = JobProgress(
-                    current_step="Failed during initialization",
-                    total_steps=total_stages,
-                    completed_steps=0,
-                    percentage=0.0
-                )
-        
-        finally:
-            job.completed_at = datetime.utcnow() # Mark completion/failure time
-            job.updated_at = datetime.utcnow()
-            self._jobs[job.id] = job # Ensure final state is saved
+            logger.error(f"Failed to delete job {job_id}: {e}")
+            return False
+
+    def _firestore_to_job_model(self, firestore_data: Dict) -> Job:
+        """Convert Firestore data to Job model.
+
+        Args:
+            firestore_data: Raw data from Firestore
+
+        Returns:
+            Job model instance
+        """
+        # Convert string dates to datetime objects
+        if "created_at" in firestore_data and isinstance(
+            firestore_data["created_at"], str
+        ):
+            firestore_data["created_at"] = datetime.fromisoformat(
+                firestore_data["created_at"]
+            )
+        if "updated_at" in firestore_data and isinstance(
+            firestore_data["updated_at"], str
+        ):
+            firestore_data["updated_at"] = datetime.fromisoformat(
+                firestore_data["updated_at"]
+            )
+        if "completed_at" in firestore_data and firestore_data["completed_at"]:
+            firestore_data["completed_at"] = datetime.fromisoformat(
+                firestore_data["completed_at"]
+            )
+
+        # Convert string ID to UUID
+        if "id" in firestore_data and isinstance(firestore_data["id"], str):
+            firestore_data["id"] = UUID(firestore_data["id"])
+
+        # Convert status string to enum
+        if "status" in firestore_data and isinstance(firestore_data["status"], str):
+            firestore_data["status"] = JobStatus(firestore_data["status"])
+
+        # Convert nested objects
+        if "error" in firestore_data and firestore_data["error"]:
+            firestore_data["error"] = JobError(**firestore_data["error"])
+
+        if "progress" in firestore_data and firestore_data["progress"]:
+            firestore_data["progress"] = JobProgress(**firestore_data["progress"])
+
+        return Job(**firestore_data)
+
+    async def get_job_statistics(self) -> Dict[str, int]:
+        """Get job statistics.
+
+        Returns:
+            Dictionary with job counts by status
+        """
+        try:
+            # TODO: Implement proper Firestore aggregation queries
+            # For now, return placeholder data
+            logger.warning("get_job_statistics not fully implemented for Firestore")
+            return {
+                "total": 0,
+                "pending": 0,
+                "processing": 0,
+                "completed": 0,
+                "failed": 0,
+            }
+        except Exception as e:
+            logger.error(f"Failed to get job statistics: {e}")
+            return {"error": "Failed to retrieve statistics"}
 
 
 # Dependency for getting job manager instance
 _job_manager: Optional[JobManager] = None
 
+
 async def get_job_manager() -> JobManager:
     """
     Get or create job manager instance.
-    
+
     Returns:
         Job manager instance
     """
     global _job_manager
     if _job_manager is None:
         _job_manager = JobManager()
-    return _job_manager 
+    return _job_manager

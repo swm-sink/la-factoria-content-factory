@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.schemas.job import Job, JobCreate, JobList, JobStatus, JobUpdate
 from app.services.job_manager import JobManager, get_job_manager
-from app.api.routes.content import ContentRequest
+from app.models.pydantic.content import ContentRequest  # Corrected import path
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -26,11 +26,11 @@ async def create_job(
     """
     Create a new content generation job.
     The request body should match the ContentRequest schema.
-    
+
     Args:
         content_request: Content generation request data, conforming to ContentRequest schema.
         job_manager: Job manager service
-        
+
     Returns:
         Created job instance
     """
@@ -46,13 +46,13 @@ async def list_jobs(
 ) -> JobList:
     """
     List all jobs with optional filtering and pagination.
-    
+
     Args:
         status: Optional status filter
         page: Page number (1-based)
         page_size: Number of items per page
         job_manager: Job manager service
-        
+
     Returns:
         Paginated list of jobs
     """
@@ -66,14 +66,14 @@ async def get_job(
 ) -> Job:
     """
     Get a specific job by ID.
-    
+
     Args:
         job_id: Job identifier
         job_manager: Job manager service
-        
+
     Returns:
         Job instance
-        
+
     Raises:
         HTTPException: If job not found
     """
@@ -91,15 +91,15 @@ async def update_job(
 ) -> Job:
     """
     Update a job's status, progress, or metadata.
-    
+
     Args:
         job_id: Job identifier
         job_update: Job update data
         job_manager: Job manager service
-        
+
     Returns:
         Updated job instance
-        
+
     Raises:
         HTTPException: If job not found or update invalid
     """
@@ -116,14 +116,14 @@ async def delete_job(
 ) -> None:
     """
     Delete a job.
-    
+
     Args:
         job_id: Job identifier
         job_manager: Job manager service
-        
+
     Raises:
         HTTPException: If job not found
     """
     if not await job_manager.delete_job(job_id):
         raise HTTPException(status_code=404, detail="Job not found")
-    return JSONResponse(status_code=204, content=None) 
+    return JSONResponse(status_code=204, content=None)

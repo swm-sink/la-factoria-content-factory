@@ -1,4 +1,4 @@
-import { useQuery } from 'react-query'
+import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import { Link } from 'react-router-dom'
 
@@ -21,15 +21,15 @@ interface ContentHistory {
 }
 
 export default function History() {
-  const { data: history, isLoading, error } = useQuery<ContentHistory[]>(
-    'content-history',
-    async () => {
+  const { data: history, isPending, error } = useQuery<ContentHistory[]>({
+    queryKey: ['content-history'],
+    queryFn: async () => {
       const response = await axios.get('/api/content-history')
       return response.data
     }
-  )
+  })
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-lg text-gray-600">Loading history...</div>

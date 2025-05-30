@@ -1,0 +1,72 @@
+name: Terraform Apply IaC
+
+on:
+  push:
+    branches:
+      - main # Trigger on push to main
+    paths:
+      - 'iac/**' # Only run if IaC code changes
+      - '.github/workflows/terraform-apply.yml'
+  
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  terraform-apply:
+    name: 'Terraform Apply'
+    runs-on: ubuntu-latest
+    # Add dependency on backend-ci test job and docker-build-push if they must complete first
+    # needs: [test-and-lint, build-and-push] 
+    
+    permissions:
+      contents: 'read'
+      id-token: 'write' # Required for Workload Identity Federation
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: "1.5.7" # Specify your desired Terraform version
+        # terraform_wrapper: true # If you want to use the wrapper
+
+    - name: Authenticate to Google Cloud (Workload Identity Federation)
+      uses: 'google-github-actions/auth@v2'
+      with:
+        workload_identity_provider: 'projects/${{ secrets.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/${{ secrets.GCP_WIF_POOL_ID }}/providers/${{ secrets.GCP_WIF_PROVIDER_ID }}'
+        service_account: '${{ secrets.GCP_TERRAFORM_SA_EMAIL }}' # Dedicated SA for Terraform with necessary permissions
+
+    - name: Terraform Init
+      id: init
+      working-directory: ./iac
+      run: terraform init -backend-config="bucket=${{ secrets.GCP_TERRAFORM_STATE_BUCKET }}" -backend-config="prefix=env/${{ github.ref_name }}" # Example prefix for environment isolation
+
+    - name: Terraform Validate
+      id: validate
+      working-directory: ./iac
+      run: terraform validate -no-color
+
+    - name: Terraform Plan
+      id: plan
+      working-directory: ./iac
+      run: terraform plan -no-color -var="gcp_project_id=${{ secrets.GCP_PROJECT_ID }}" -var="gcp_region=${{ secrets.GCP_ARTIFACT_REGISTRY_REGION }}" -var="environment=${{ github.ref_name }}" -var="image_tag=${{ github.sha }}" -var="storage_bucket_name=${{ secrets.GCP_STORAGE_BUCKET_NAME_MVP }}" # Added image_tag and storage_bucket_name
+      # continue-on-error: true # If you want to see the plan even if it errors
+
+    # Optional: Add a step for manual approval of the plan here if desired
+    # - name: Manual approval of Terraform plan
+    #   if: steps.plan.outputs.stdout != '' # Only run if plan is not empty
+    #   uses: trstringer/manual-approval@v1
+    #   with:
+    #     secret: ${{ secrets.GITHUB_TOKEN }}
+    #     approvers: your-github-username # Comma-separated list of approvers
+    #     minimum-approvals: 1
+    #     issue-title: "Terraform Plan Approval for main branch"
+    #     issue-body: "Terraform plan requires approval to apply to the main environment. Please review the plan output above."
+    #     exclude-workflow-initiator-as-approver: false
+
+    - name: Terraform Apply
+      id: apply
+      working-directory: ./iac
+      # if: steps.plan.outputs.stdout != '' && success() # Only apply if plan exists and previous steps (like approval) succeeded
+      run: terraform apply -auto-approve -no-color -var="gcp_project_id=${{ secrets.GCP_PROJECT_ID }}" -var="gcp_region=${{ secrets.GCP_ARTIFACT_REGISTRY_REGION }}" -var="environment=${{ github.ref_name }}" -var="image_tag=${{ github.sha }}" -var="storage_bucket_name=${{ secrets.GCP_STORAGE_BUCKET_NAME_MVP }}" # Added image_tag and storage_bucket_name 

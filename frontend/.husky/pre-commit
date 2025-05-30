@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "Running frontend pre-commit hooks..."
+cd "$(dirname -- "$0")/../.." # Navigate to the project root from .husky/_
+cd frontend # Navigate into the frontend directory
+npx lint-staged

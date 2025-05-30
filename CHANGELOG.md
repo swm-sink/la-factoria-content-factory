@@ -1,100 +1,74 @@
 # Changelog
 
-All notable changes to the AI Content & Podcast Factory MVP will be documented in this file.
+All notable changes to this project will be documented in this file.
 
-## [0.3.0] - 2025-05-28 (Foundational Refactoring & Enhancements)
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
 ### Added
-- **Settings Management & Security**:
-  - Consolidated all application settings into a single source of truth (`app/core/config/settings.py`) using Pydantic V2.
-  - Implemented loading of sensitive settings (API keys) from Google Secret Manager, with a fallback to environment variables.
-  - Removed insecure default API keys and enforced mandatory API key validation.
-  - Added robust validation for critical settings (Gemini model name, API prefix, ElevenLabs Voice ID, GCP Project ID).
-- **API & Routing**:
-  - Refactored API routing to be modular, with endpoint logic moved from `app/main.py` to `app/api/routes/content.py`.
-  - Centralized API router aggregation in `app/api/routes.py`.
-  - Ensured consistent usage of the API version prefix (`/api/v1`) from settings.
-  - Cleaned up `app/main.py` to focus on application setup and top-level router inclusion.
-- **Service Strategy**:
-  - Formally designated `EnhancedMultiStepContentGenerationService` as the primary service for the main content generation endpoint (`/api/v1/generate-content`).
-  - Deprecated the older, simpler `ContentGenerationService`.
-  - Created `app/core/docs/service_architecture.md` to document service roles.
-- **Dependency Management**:
-  - Resolved version conflicts for `pytest` and `pydantic-settings`.
-  - Standardized `pytest` usage, ensuring it's only in development dependencies (`requirements-dev.txt`).
-  - Cleaned `requirements.txt` to primarily contain production runtime dependencies, moving relevant development tools to `requirements-dev.txt`.
-- **Developer Experience**:
-  - Created `generate_ai_context_dump.py` script to automate the generation of `ai_context_dump.md` for providing context to LLMs.
-- **Asynchronous Job System**:
-  - Implemented a robust asynchronous job system for long-running content generation tasks.
-  - Added job management endpoints for creating, monitoring, and managing content generation jobs.
-  - Created Pydantic models for job status tracking, progress monitoring, and error handling.
-  - Integrated job system with the existing content generation service.
-  - Added background job processing with real-time progress updates.
+- `python-json-logger` for structured JSON logging.
+- Updated `app/main.py` to use `JsonFormatter`.
+- Deprecation notice to `docs/DEPLOYMENT.md`.
+- Notes about CI/CD automation to `docs/operational/deployment_checklist.md`.
 
 ### Changed
-- **Error Handling**: Defined a `JobErrorCode` Enum in `app/core/schemas/job.py` for more granular job error reporting. The `JobError` model now uses this enum for its `code` field. `JobManager` has been updated to use initial set of these codes.
-- **Job Creation**: The `/jobs` endpoint for creating new asynchronous jobs now accepts a `ContentRequest` payload directly, mirroring the synchronous content generation endpoint, instead of a generic metadata dictionary. The `JobManager` service has been updated to process this `ContentRequest` to perform content generation.
-- **Settings Loading**: Application now attempts to load secrets from Google Secret Manager before falling back to environment variables.
-- **API Structure**: Endpoints are now served via a more organized router structure within `app/api/`.
-- **Logging**: Improved logging in settings loading and `app/main.py`.
-- **Backend Structure & Docker Configuration (Major Refactor)**:
-    - Consolidated all backend Python code from the legacy `backend/app/` directory into the unified `app/` directory at the project root.
-    - Updated the root `Dockerfile` to build the application from the `app/` directory, including multi-stage builds for frontend and backend.
-    - Modified `docker-compose.yml` to reflect the new application structure, removing references to the old `backend/` service and adjusting volume mounts and build context to use the root `Dockerfile` and the `app/` directory.
+- Logging setup in `app/main.py` to use `python-json-logger`.
+
+## [1.0.0-MVP-RC1] - 2025-05-30 
+### Added
+- PII avoidance instructions to all AI content generation prompts.
+- Retry logic using `tenacity` for core AI model calls to improve resilience.
+- Logging for token usage exceeding 80% or 100% of `max_total_tokens`.
+- `google-cloud-storage`, `google-cloud-secretmanager`, `google-cloud-tasks`, `tenacity` to `requirements.txt`.
+- Pip dependency caching to `backend-ci.yml`.
+- `permissions: read-all` to CI workflow jobs (`backend-ci.yml`, `frontend-ci.yml`).
+- Global API Key authentication to all `/api/v1/*` routes via `app/api/routes.py`.
+- `/healthz` unauthenticated endpoint in `app/main.py` for GCP health checks.
+- Health probes (startup and liveness) to Cloud Run service definition in `iac/modules/cloud_run_service/main.tf`, pointing to `/healthz`.
+- `VITE_API_BASE_URL` environment variable usage in `frontend/src/api.ts`.
+- Type definitions for `import.meta.env` in `frontend/src/vite-env.d.ts`.
+- UI fields and payload parameters for `target_pages`, `use_parallel`, `use_cache` in `frontend/src/components/ContentGeneratorForm.tsx`.
+
+### Changed
+- Dockerfile and Nginx configuration to correctly run as non-root user, with Nginx listening on a configurable port (default 8080 via `${PORT}` env var from Cloud Run) and proxying to Uvicorn on an internal port (default 8000).
+- `start.sh` to use `envsubst` for Nginx configuration and manage distinct Nginx/Uvicorn ports.
+- Updated `README.md` with corrected Docker Compose access info, `tenacity` dependency, accurate API request examples for `/jobs`, and restored truncated content.
+- Updated `docs/operational/deployment_checklist.md` with correct Secret Manager secret names.
+- Updated `app/services/audio_generation.py` to upload generated audio to GCS and return a public URL.
+- Updated `iac/main.tf` to correctly mount secrets as environment variables in Cloud Run, dynamically set `GCP_JOB_WORKER_ENDPOINT`, and use `var.image_tag`.
+- Aligned Docker image name in `.github/workflows/build-push-docker.yml` to `acpf-mvp`.
+- API integration tests in `tests/integration/test_api.py` rewritten to target `POST /api/v1/jobs` and mock `JobManager`.
+- Enabled `gzip on;` in `docker/nginx/nginx.conf`.
+- Extended title consistency Pydantic validation in `app/models/pydantic/content.py`.
+- `app/core/config/settings.py` to load `CORS_ORIGINS` from environment and include `correlation_id` in `log_format`.
 
 ### Fixed
-- Corrected inconsistent `pytest` versions between production and development requirements.
-- Aligned `pydantic-settings` versions.
+- Erroneous Python code injection in `faq_collection.md` and `flashcards.md` prompts.
+- Hardcoded API key in `.env.example` (User action was required).
+- Placeholder `openapi.yaml` updated with a basic structure including security schemes (User action required to replace with actual spec).
 
-### Removed
-- Redundant settings files (`backend/app/core/config.py`, `backend/app/core/settings.py`, `app/core/config/config.py`).
-- `pytest` and other development-specific dependencies from the production `requirements.txt`.
-- The entire `backend/` directory structure and its contents, following a backup to `backend_backup/`.
-- All `__pycache__` directories and `.pyc` files from the `app/` directory structure to ensure a clean state after refactoring.
+### Created
+- Initial versions of `docs/learn-as-you-go.md`, `test/auto-validation.txt`, `reports/user-flow.summary`, `reports/error-analysis.md`.
+- `.dockerignore` file.
 
-## [0.2.0] - 2024-06-09
+### Security
+- Applied API key authentication globally to `/api/v1` routes.
+- Addressed hardcoded secret in `.env.example` (manual user fix was required).
+- Updated Nginx to run as non-root user.
+- Added `permissions: read-all` or more specific WIF permissions to GitHub Actions workflows.
 
+## [0.1.0] - 2025-05-29
 ### Added
-- Expanded content generation capabilities:
-  - Content outline generation as the primary structure
-  - One-pager summaries for quick reference
-  - Detailed reading materials for in-depth study
-  - FAQs for common questions and misconceptions
-  - Flashcards for key terms and concepts
-  - Reading guide questions for critical thinking
-- Enhanced Gemini prompt engineering for structured JSON output
-- Improved error handling with detailed error messages
-- Token usage and cost tracking for Gemini API calls
-- Modular code structure with helper functions
-- Comprehensive test coverage for new content types
+- Initial project structure.
+- Core FastAPI backend with Pydantic models.
+- Basic AI content generation service.
+- Frontend setup with Vite and React.
+- Dockerfile and Docker Compose for local development.
+- Basic CI/CD workflows for linting and testing.
+- Terraform IaC for GCP resources (Cloud Run, Firestore, etc.).
+- Comprehensive project rules in `.cursor/rules/project.mdc`.
 
-### Changed
-- Refactored `/generate-content` endpoint to return all content types
-- Updated API response structure to include all generated content
-- Enhanced error responses to include partial content when available
-- Improved logging with token usage metrics
-
-## [0.1.0] - 2024-02-19
-
-### Added
-- Initial MVP release with core functionality
-- Flask application with `/generate-content` endpoint
-- Integration with Vertex AI Gemini for content generation
-- Integration with ElevenLabs for text-to-speech conversion
-- Docker containerization with optimized Dockerfile
-- Basic unit tests with pytest
-- Comprehensive error handling and logging
-- Input validation for API endpoints
-- Environment variable configuration for API keys
-
-### Known Issues
-- Audio files are stored temporarily (to be moved to Cloud Storage) - *Partially addressed by planning for GCS in settings, but implementation pending.*
-- No authentication/authorization implemented
-- Limited error recovery for external API failures - *Improved by retry planning, but full implementation pending.*
-- No rate limiting or request throttling - *Planned in SaaS enhancements.*
-- No monitoring or alerting setup - *Basic Prometheus metrics exist, advanced setup pending.*
-
-### Security Notes
-- Sensitive configuration now managed via Google Secret Manager or environment variables.
-- No authentication required for MVP endpoints. 
+[Unreleased]: https://github.com/your-repo/ai-content-factory/compare/v1.0.0-MVP-RC1...HEAD
+[1.0.0-MVP-RC1]: https://github.com/your-repo/ai-content-factory/compare/v0.1.0...v1.0.0-MVP-RC1
+[0.1.0]: https://github.com/your-repo/ai-content-factory/tree/v0.1.0
