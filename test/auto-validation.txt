@@ -1,0 +1,12 @@
+# Automated Validation Outputs
+
+This file is intended to store more raw, but still somewhat readable, outputs from automated checks and validation scripts.
+
+Examples might include:
+- Detailed output from specific linting or static analysis runs (if not fully captured elsewhere).
+- Results from automated API contract tests.
+- Outputs from specific data validation scripts.
+
+---
+
+*(No automated outputs currently configured to be piped here.)* 

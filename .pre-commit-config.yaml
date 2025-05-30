@@ -1,0 +1,30 @@
+\# Pre-commit Configuration
+# ------------------------------------------------------------------------------
+# This file configures pre-commit hooks to run linters, formatters, and type
+# checkers automatically before each commit. This helps maintain code quality
+# and consistency across the project.
+#
+# To use:
+# 1. Install pre-commit: pip install pre-commit
+# 2. Install hooks: pre-commit install
+# 3. Run on all files: pre-commit run --all-files
+# ------------------------------------------------------------------------------
+
+repos:
+-   repo: https://github.com/psf/black
+    rev: 23.3.0 # Or a newer stable version
+    hooks:
+    -   id: black
+        language_version: python3.11
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version should be kept in sync with project dependencies if ruff is also a direct dev dependency.
+    rev: v0.1.8 # Or a newer stable version
+    hooks:
+    -   id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.1 # Or a newer stable version
+    hooks:
+    -   id: mypy
+        additional_dependencies: [\"pydantic>=2.0\", \"types-python-jose\", \"types-passlib\"] # Add types for libraries mypy needs to check
+        # exclude: ^(tests/unit/test_app.py) # Example: Mypy can be strict, exclude problematic files initially

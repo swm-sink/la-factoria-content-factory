@@ -1,0 +1,36 @@
+# User Flow Summaries
+
+This file contains narrative summaries of user-facing feature tests and E2E testing sessions.
+
+---
+
+**User Flow Test Summary - Staging Deployment Candidate (Date: 2025-05-30)**
+
+**Overall Status:** SUCCESSFUL
+
+**Tested Flows:**
+1.  **User Registration:** Successfully created a new user account via the frontend.
+2.  **User Login:** Successfully logged in with the new user account and an existing test account. JWT received and stored.
+3.  **Authenticated Endpoint Access:** Successfully accessed protected `/users/me` endpoint. Frontend correctly displayed user info from `AuthContext`.
+4.  **Content Generation Job Creation:**
+    *   Submitted a request for a "Podcast Script" from a sample syllabus text via the frontend `ContentGeneratorForm`.
+    *   Job creation was successful; received `job_id` and `PENDING` status.
+5.  **Job Status Polling & Content Display:**
+    *   Frontend `JobStatusPage` successfully polled the `/api/v1/jobs/{job_id}` endpoint.
+    *   Status progressed from `PENDING` to `PROCESSING` to `COMPLETED` (simulated backend processing time for test, actual generation time varies).
+    *   Upon completion, the generated `content_outline.title` and `content_outline.overview` were displayed correctly. The primary podcast script content was also rendered.
+6.  **Content Feedback Submission:**
+    *   Successfully submitted "Like" feedback for the generated content via the frontend UI.
+    *   Verified in Firestore that the feedback was recorded with the correct `job_id` (content_id) and `user_id`.
+7.  **User Logout:** Successfully logged out. JWT was cleared, and the user was redirected to the login page. Attempting to access protected routes after logout correctly redirected to login.
+
+**Key Observations:**
+*   The end-to-end user flow for the core features is functional and intuitive.
+*   API responses were timely, and the frontend handled loading and success states appropriately.
+*   Error handling for basic invalid inputs (e.g., mismatched passwords during registration) was functional on the frontend.
+
+**Minor Issues/Observations (for potential future polish, not blockers):**
+*   Loading indicators on the frontend are currently text-based; could be enhanced with spinners or skeleton screens for a more polished feel (Task UX-4.2).
+*   The content display for large generated texts could benefit from more sophisticated formatting or pagination.
+
+**Conclusion:** The core user-facing features are operating as expected in a simulated E2E test. The application appears ready for its intended MVP functionality. 

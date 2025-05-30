@@ -1,14 +1,9 @@
-import create, { SetState } from 'zustand';
+import { create } from 'zustand';
 
-interface ApiKeyState {
-  apiKey: string;
-  setApiKey: (key: string) => void;
-}
-
-export const useApiKeyStore = create<ApiKeyState>((set: SetState<ApiKeyState>) => ({
+export const useApiKeyStore = create((set: any) => ({
   apiKey: localStorage.getItem('apiKey') || '',
   setApiKey: (key: string) => {
     localStorage.setItem('apiKey', key);
     set({ apiKey: key });
   },
-})); 
+}));

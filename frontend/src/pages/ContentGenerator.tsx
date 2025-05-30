@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useMutation } from 'react-query'
+import { useMutation } from '@tanstack/react-query'
 import axios from 'axios'
 
 interface ContentRequest {
@@ -31,12 +31,12 @@ export default function ContentGenerator() {
     length: 'medium',
   })
 
-  const generateContent = useMutation<ContentResponse, Error, ContentRequest>(
-    async (data) => {
+  const generateContent = useMutation<ContentResponse, Error, ContentRequest>({
+    mutationFn: async (data: ContentRequest) => {
       const response = await axios.post('/api/generate-content', data)
       return response.data
     }
-  )
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -143,10 +143,10 @@ export default function ContentGenerator() {
             <div className="flex justify-end">
               <button
                 type="submit"
-                disabled={generateContent.isLoading}
+                disabled={generateContent.isPending}
                 className="ml-3 inline-flex justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
               >
-                {generateContent.isLoading ? 'Generating...' : 'Generate Content'}
+                {generateContent.isPending ? 'Generating...' : 'Generate Content'}
               </button>
             </div>
           </div>

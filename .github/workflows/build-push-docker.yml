@@ -1,0 +1,57 @@
+name: Docker Build and Push to Artifact Registry
+
+on:
+  push:
+    branches:
+      - main # Trigger on push to main
+    # Optionally, add paths filter if you only want to build on specific code changes
+    # paths:
+    #   - 'app/**'
+    #   - 'Dockerfile'
+    #   - 'start.sh'
+    #   - 'requirements.txt'
+
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    # Add dependency on the backend-ci test job if it's in a separate workflow
+    # or make sure this workflow only runs if CI-1.1 (tests) has passed if combined.
+    # For now, assuming it runs on direct push to main after PR checks have passed.
+    
+    permissions:
+      contents: 'read'
+      id-token: 'write' # Required for Workload Identity Federation
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Authenticate to Google Cloud (Workload Identity Federation)
+      uses: 'google-github-actions/auth@v2'
+      with:
+        workload_identity_provider: 'projects/${{ secrets.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/${{ secrets.GCP_WIF_POOL_ID }}/providers/${{ secrets.GCP_WIF_PROVIDER_ID }}' # These secrets need to be set in GitHub repo
+        service_account: '${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL_FOR_CI }}' # SA with Artifact Registry Writer role
+
+    - name: Configure Docker to use gcloud credential helper
+      run: |
+        gcloud auth configure-docker ${{ secrets.GCP_ARTIFACT_REGISTRY_REGION }}-docker.pkg.dev
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: |
+          ${{ secrets.GCP_ARTIFACT_REGISTRY_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_ARTIFACT_REGISTRY_REPO_ID }}/acpf-mvp:${{ github.sha }}
+          ${{ secrets.GCP_ARTIFACT_REGISTRY_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_ARTIFACT_REGISTRY_REPO_ID }}/acpf-mvp:latest
+        # build-args: | # If you have build arguments
+        #   arg1=value1
+        #   arg2=value2
+        cache-from: type=gha
+        cache-to: type=gha,mode=max 
