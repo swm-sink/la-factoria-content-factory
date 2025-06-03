@@ -22,5 +22,5 @@ resource "google_cloud_tasks_queue" "default" {
   #   sampling_ratio = 1.0 # Log all task attempts
   # }
 
-  labels = var.labels
-} 
+  # labels = var.labels # Labels are not directly supported on google_cloud_tasks_queue resource
+}

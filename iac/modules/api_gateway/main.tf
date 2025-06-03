@@ -27,7 +27,7 @@ resource "google_api_gateway_api_config" "default" {
   gateway_config {
     backend_config {
       # This should be the fully qualified name of the Cloud Run service
-      google_cloud_run_service = var.cloud_run_service_name 
+      google_cloud_run_service = var.cloud_run_service_name
     }
   }
   lifecycle {
@@ -44,4 +44,4 @@ resource "google_api_gateway_gateway" "default" {
   api_config    = google_api_gateway_api_config.default.id
   display_name  = var.gateway_display_name
   labels        = var.labels
-} 
+}

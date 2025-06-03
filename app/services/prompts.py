@@ -5,8 +5,8 @@ This service provides a centralized way to access versioned prompt templates,
 which are stored as Markdown files. It includes caching for loaded prompts.
 """
 
-import os
 import logging
+import os
 from functools import lru_cache
 from typing import Dict
 
@@ -33,7 +33,7 @@ class PromptService:
         "reading_guide_questions": "reading_guide_questions.md",
     }
 
-    def __init__(self, base_path: str = None):
+    def __init__(self, base_path: Optional[str] = None):
         """
         Initializes the PromptService.
 
@@ -51,27 +51,16 @@ class PromptService:
     def _load_prompt_from_file(self, file_path: str) -> str:
         """
         Loads a single prompt template from a file.
-
-        Args:
-            file_path (str): The full path to the prompt file.
-
-        Returns:
-            str: The content of the prompt file.
-
-        Raises:
-            FileNotFoundError: If the prompt file cannot be found.
-            IOError: If there is an error reading the file.
+        Assumes file_path is relative to the project root.
         """
         try:
-            # Ensure the path is absolute or correctly relative to the project root
-            # For this project, paths are relative to the root where Cline operates.
-            full_path = os.path.join(os.getcwd(), file_path)
-
-            if not os.path.exists(full_path):
-                logger.error(f"Prompt file not found at path: {full_path}")
+            # file_path is assumed to be like "app/core/prompts/v1/prompt_file.md"
+            # This path should be resolvable from where the application is run (project root)
+            if not os.path.exists(file_path):
+                logger.error(f"Prompt file not found at path: {file_path}")
                 raise FileNotFoundError(f"Prompt file not found: {file_path}")
 
-            with open(full_path, "r", encoding="utf-8") as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 prompt_content = f.read()
             logger.info(f"Successfully loaded prompt from: {file_path}")
             return prompt_content

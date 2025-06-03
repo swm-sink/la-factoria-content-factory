@@ -3,6 +3,12 @@ variable "gcp_project_id" {
   type        = string
 }
 
+variable "gcp_region" {
+  description = "The GCP region for replication policy if not automatic."
+  type        = string
+  default     = null # Optional, as replication can be automatic
+}
+
 variable "secret_names" {
   description = "A list of secret names (IDs) to create in Secret Manager."
   type        = list(string)
@@ -31,4 +37,4 @@ variable "labels" {
   description = "A map of labels to assign to the secrets."
   type        = map(string)
   default     = {}
-} 
+}

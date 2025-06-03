@@ -2,12 +2,12 @@
 Content versioning models for tracking generated content versions.
 """
 
-import json
 import hashlib
+import json
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Dict, Any, Optional, List
-from dataclasses import dataclass, asdict
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class ContentStatus(Enum):

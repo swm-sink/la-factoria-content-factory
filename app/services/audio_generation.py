@@ -4,11 +4,13 @@ Audio generation service for converting text to speech using ElevenLabs.
 
 import logging
 import os
-from typing import Dict, Any, Tuple
-from elevenlabs import generate, set_api_key
-from prometheus_client import Counter, Histogram
-from google.cloud import storage
 import uuid
+from typing import Any, Dict, Tuple
+
+from elevenlabs import set_api_key
+from elevenlabs.api import generate
+from google.cloud import storage
+from prometheus_client import Counter, Histogram
 
 from app.core.config.settings import get_settings
 
@@ -32,10 +34,14 @@ class AudioGenerationService:
             self.gcs_client = storage.Client(project=self.settings.gcp_project_id)
             self.gcs_bucket_name = self.settings.storage_bucket
             if not self.gcs_bucket_name:
-                logging.error("GCS_STORAGE_BUCKET_NAME not configured. Audio upload will fail.")
-                self.gcs_client = None # Disable GCS if bucket name missing
+                logging.error(
+                    "GCS_STORAGE_BUCKET_NAME not configured. Audio upload will fail."
+                )
+                self.gcs_client = None  # Disable GCS if bucket name missing
         except Exception as e:
-            logging.error(f"Failed to initialize Google Cloud Storage client: {e}", exc_info=True)
+            logging.error(
+                f"Failed to initialize Google Cloud Storage client: {e}", exc_info=True
+            )
             self.gcs_client = None
 
     def generate_audio(self, text: str) -> Tuple[Dict[str, Any], int]:
@@ -80,32 +86,40 @@ class AudioGenerationService:
             logging.info(f"Audio temporarily saved to {temp_audio_path}")
 
             # Upload to GCS
-            audio_url_for_response = temp_audio_path # Default to local path if GCS fails
+            audio_url_for_response = (
+                temp_audio_path  # Default to local path if GCS fails
+            )
             if self.gcs_client and self.gcs_bucket_name:
                 try:
                     bucket = self.gcs_client.bucket(self.gcs_bucket_name)
                     # Create a unique blob name
                     blob_name = f"audio_outputs/{uuid.uuid4()}.mp3"
                     blob = bucket.blob(blob_name)
-                    
+
                     blob.upload_from_filename(temp_audio_path)
                     # Make the blob publicly readable for simplicity in MVP
                     # For production, consider signed URLs or more robust ACLs
                     blob.make_public()
                     audio_url_for_response = blob.public_url
                     logging.info(f"Audio uploaded to GCS: {audio_url_for_response}")
-                    
+
                     # Clean up local temp file after successful upload
                     if os.path.exists(temp_audio_path):
                         os.remove(temp_audio_path)
-                        logging.info(f"Cleaned up temporary audio file: {temp_audio_path}")
+                        logging.info(
+                            f"Cleaned up temporary audio file: {temp_audio_path}"
+                        )
 
                 except Exception as e:
                     logging.error(f"Failed to upload audio to GCS: {e}", exc_info=True)
                     # Fallback to local path if GCS upload fails, but this won't work in Cloud Run
-                    logging.warning("GCS upload failed. Audio URL will be local path, which is not suitable for Cloud Run.")
+                    logging.warning(
+                        "GCS upload failed. Audio URL will be local path, which is not suitable for Cloud Run."
+                    )
             else:
-                logging.warning("GCS client or bucket not configured. Audio URL will be local path, not suitable for Cloud Run.")
+                logging.warning(
+                    "GCS client or bucket not configured. Audio URL will be local path, not suitable for Cloud Run."
+                )
 
             # Log character count and estimated cost if enabled
             if self.settings.enable_cost_tracking:

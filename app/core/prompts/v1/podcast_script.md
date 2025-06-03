@@ -34,4 +34,28 @@ Ensure the tone is conversational and suitable for a podcast.
 
 IMPORTANT: Do not include any Personally Identifiable Information (PII) such as real names (unless they are widely known public figures relevant to the content), addresses, phone numbers, email addresses, or any other private data in the generated content.
 
+---
+CRITICAL OUTPUT REQUIREMENTS:
+1. Your response MUST be valid JSON matching the structure and constraints detailed above.
+   Ensure all field names, types, and nesting are exactly as specified.
+   Do not include any text before or after the JSON object.
+   Do not wrap the JSON in markdown code blocks (e.g., ```json ... ```).
+
+2. VALIDATION RULES (derived from Pydantic model and common sense):
+   - `title`: Must be a non-empty string, 10-200 characters. Should align with the outline's title.
+   - `introduction`: Must be a non-empty string, 100-2000 characters.
+   - `main_content`: Must be a non-empty string, 800-10000 characters. It should clearly reflect the structure of the provided Content Outline.
+   - `conclusion`: Must be a non-empty string, 100-1000 characters.
+   - The combined length of `introduction`, `main_content`, and `conclusion` must be between 1000 and 12000 characters.
+   - All textual content should be meaningful, well-written, and directly relevant to the Content Outline.
+   - The script should be engaging and maintain a conversational tone suitable for a podcast.
+
+3. QUALITY CHECKS (Before responding, internally verify these):
+   ✓ All required fields (title, introduction, main_content, conclusion) are populated with valid data meeting length constraints.
+   ✓ The script's content directly expands upon the provided Content Outline, covering its sections and key points.
+   ✓ The tone is consistently conversational and engaging.
+   ✓ `speaker_notes` (if provided) are relevant and helpful.
+   ✓ `estimated_duration_minutes` (if provided) is a plausible positive number.
+---
+
 Generate the JSON object now.

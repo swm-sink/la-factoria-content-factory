@@ -7,7 +7,7 @@ on:
     paths:
       - 'iac/**' # Only run if IaC code changes
       - '.github/workflows/terraform-apply.yml'
-  
+
   workflow_dispatch: # Allows manual triggering
 
 jobs:
@@ -15,8 +15,8 @@ jobs:
     name: 'Terraform Apply'
     runs-on: ubuntu-latest
     # Add dependency on backend-ci test job and docker-build-push if they must complete first
-    # needs: [test-and-lint, build-and-push] 
-    
+    # needs: [test-and-lint, build-and-push]
+
     permissions:
       contents: 'read'
       id-token: 'write' # Required for Workload Identity Federation
@@ -69,4 +69,4 @@ jobs:
       id: apply
       working-directory: ./iac
       # if: steps.plan.outputs.stdout != '' && success() # Only apply if plan exists and previous steps (like approval) succeeded
-      run: terraform apply -auto-approve -no-color -var="gcp_project_id=${{ secrets.GCP_PROJECT_ID }}" -var="gcp_region=${{ secrets.GCP_ARTIFACT_REGISTRY_REGION }}" -var="environment=${{ github.ref_name }}" -var="image_tag=${{ github.sha }}" -var="storage_bucket_name=${{ secrets.GCP_STORAGE_BUCKET_NAME_MVP }}" # Added image_tag and storage_bucket_name 
+      run: terraform apply -auto-approve -no-color -var="gcp_project_id=${{ secrets.GCP_PROJECT_ID }}" -var="gcp_region=${{ secrets.GCP_ARTIFACT_REGISTRY_REGION }}" -var="environment=${{ github.ref_name }}" -var="image_tag=${{ github.sha }}" -var="storage_bucket_name=${{ secrets.GCP_STORAGE_BUCKET_NAME_MVP }}" # Added image_tag and storage_bucket_name

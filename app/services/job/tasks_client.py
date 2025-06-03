@@ -2,8 +2,12 @@
 
 import json
 import logging
+import os
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
+from google.auth import compute_engine, default
+from google.auth.transport import requests
 from google.cloud import tasks_v2
 from google.protobuf import timestamp_pb2
 
@@ -20,7 +24,12 @@ class CloudTasksClient:
         """Initialize the Cloud Tasks client."""
         self.project_id = settings.gcp_project_id
         self.location = settings.gcp_location
-        self.queue_name = "content-generation-queue"
+        self.queue_name = settings.tasks_queue_name
+        self.worker_base_url = settings.tasks_worker_service_url
+
+        # Initialize credentials for OIDC token generation
+        self._credentials = None
+        self._auth_request = None
 
         # Initialize the client only if we have project info
         self.client = None
@@ -33,6 +42,14 @@ class CloudTasksClient:
                 logger.info(
                     f"Cloud Tasks client initialized for queue: {self.queue_path}"
                 )
+
+                # Initialize authentication components
+                try:
+                    self._credentials, _ = default()
+                    self._auth_request = requests.Request()
+                except Exception as auth_e:
+                    logger.warning(f"Failed to initialize auth components: {auth_e}")
+
             except Exception as e:
                 logger.error(f"Failed to initialize Cloud Tasks client: {e}")
                 self.client = None
@@ -71,21 +88,29 @@ class CloudTasksClient:
                 "worker_endpoint": worker_endpoint,
             }
 
-            # Create the task
+            # Construct the full URL
+            if self.worker_base_url:
+                task_url = f"{self.worker_base_url}{worker_endpoint}"
+            else:
+                # Default Cloud Run URL format
+                service_name = (
+                    "acpf-mvp-cr-apiserver"  # Adjust based on your service name
+                )
+                task_url = f"https://{service_name}-{self.project_id}.a.run.app{worker_endpoint}"
+
+            # Create the task with OIDC token
             task = {
                 "http_request": {
                     "http_method": tasks_v2.HttpMethod.POST,
-                    "url": f"https://{settings.gcp_project_id}.run.app{worker_endpoint}",
+                    "url": task_url,
                     "headers": {
                         "Content-Type": "application/json",
-                        # Add OIDC token for authentication to Cloud Run
-                        "Authorization": (
-                            "Bearer " + self._get_oidc_token()
-                            if hasattr(self, "_get_oidc_token")
-                            else ""
-                        ),
                     },
                     "body": json.dumps(task_payload).encode(),
+                    "oidc_token": {
+                        "service_account_email": self._get_service_account_email(),
+                        "audience": task_url,
+                    },
                 }
             }
 
@@ -121,6 +146,33 @@ class CloudTasksClient:
         except Exception as e:
             logger.error(f"Failed to enqueue job {job_id}: {e}", exc_info=True)
             return False
+
+    def _get_service_account_email(self) -> str:
+        """Get the service account email for OIDC token generation.
+
+        Returns:
+            Service account email for the Cloud Tasks to use
+        """
+        # First, check if a specific service account is configured
+        tasks_service_account = os.getenv("CLOUD_TASKS_SERVICE_ACCOUNT")
+        if tasks_service_account:
+            return tasks_service_account
+
+        # Otherwise, use the default compute service account
+        try:
+            # For Cloud Run, this will be the service account the Cloud Run service is running as
+            if hasattr(compute_engine, "Credentials"):
+                # Try to get the default service account
+                project_number = (
+                    self.project_id
+                )  # This needs to be the project number, not ID
+                return f"{project_number}-compute@developer.gserviceaccount.com"
+        except Exception as e:
+            logger.warning(f"Could not determine service account: {e}")
+
+        # Fallback to a constructed service account email
+        # You should set CLOUD_TASKS_SERVICE_ACCOUNT env var in production
+        return f"cloud-tasks@{self.project_id}.iam.gserviceaccount.com"
 
     async def get_queue_info(self) -> Optional[Dict[str, Any]]:
         """Get information about the Cloud Tasks queue.

@@ -20,11 +20,11 @@ main:
         next: generate_outline # Placeholder for next step
 
     - generate_outline:
-        call: http.post # Example: Call an internal Cloud Run service or an external API
+        call: http.post
         args:
-          url: "YOUR_OUTLINE_GENERATION_ENDPOINT" # Replace with actual endpoint
+          url: "YOUR_OUTLINE_GENERATION_ENDPOINT"
           auth:
-            type: OIDC # If calling a service that requires OIDC token from the workflow's SA
+            type: OIDC
           body:
             syllabus: ${input_syllabus}
             format: ${target_format}
@@ -36,7 +36,7 @@ main:
           - condition: ${outline_result.code >= 400}
             next: handle_error
         next: process_outline
-    
+
     - process_outline:
         call: sys.log
         args:
@@ -52,4 +52,4 @@ main:
         next: end # Should not be reached if raise is used
 
     - final_step:
-        return: "Workflow completed successfully with outline." 
+        return: "Workflow completed successfully with outline."

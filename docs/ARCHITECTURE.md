@@ -1,6 +1,10 @@
 # AI Content Factory - Architecture Overview
 
+**⚠️ CURRENT STATUS: In Development - Significant Issues Remain ⚠️**
+
 This document provides a high-level overview of the AI Content Factory's architecture. For a more detailed, dynamically updated map of components and data flows, please refer to [`docs/architecture-map.md`](./architecture-map.md). The comprehensive architectural principles, patterns, and technology stack are defined in the project's single source of truth for rules: `/.cursor/rules/project.mdc`.
+
+**For the latest project status and known issues, please see [docs/CURRENT_STATUS.md](docs/CURRENT_STATUS.md).**
 
 ## Core Philosophy
 

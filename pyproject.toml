@@ -1,0 +1,3 @@
+[tool.bandit]
+# Bandit configuration can go here if needed in the future.
+# For now, this empty file satisfies the pre-commit hook.

@@ -64,4 +64,4 @@ const features = [
     name: 'Content History',
     description: 'Access your previously generated content and audio files anytime, anywhere.',
   },
-] 
+]

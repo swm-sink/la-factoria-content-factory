@@ -15,7 +15,7 @@ AI-executable tasks are defined in `tasks/atomic_tasks.yaml`.
 ## 2. Canonical Location for `user_input_required.md` (Admin/Process)
    - **Context:** During previous autonomous sprints, `user_input_required.md` was created at the project root, while a `tasks/user_input_required.md` also existed (and might still).
    - **Issue:** Potential for confusion regarding the authoritative file for issues logged by AI that need human attention.
-   - **Decision Needed:** 
+   - **Decision Needed:**
         1.  **Choose One Location:** Decide if future AI-logged human-review items should go to the root `user_input_required_final.md` (this file) or if the `tasks/` directory should house such a file.
         2.  **Consolidate/Archive:** Review `user_input_required.md` (root) and `tasks/user_input_required.md` (if it exists and contains different info) and merge any unique, still relevant human-only items into this `user_input_required_final.md`. Archive or delete the others to avoid confusion.
         3.  **Update Rules (Optional):** If desired, clarify the chosen location in `.cursor/rules/project.mdc` (Section I or K).

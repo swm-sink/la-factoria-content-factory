@@ -1,66 +1,149 @@
-# Architecture Map
+# AI Content Factory - Architecture Map
 
-This document provides a high-level, simplified overview of the project's main components and how they interact.
+## High-Level System Overview
 
-## Core Backend Services (FastAPI - `app/` directory)
+The AI Content Factory is a microservices-based application that transforms textual input into comprehensive educational content using AI. Here's how the main components work together:
 
--   **API Routes (`app/api/routes/`)**:
-    -   `auth.py`: Handles user registration, login (JWT generation), and `/users/me`.
-    -   `jobs.py`: Manages asynchronous content generation jobs (creation, status polling). Interacts with `JobManager`.
-    -   `feedback.py`: Handles user feedback submission for content.
-    -   `worker.py`: Internal endpoint (`/internal/v1/process-generation-task`) for Cloud Tasks to trigger synchronous content generation.
--   **Services (`app/services/`)**:
-    -   `multi_step_content_generation.py` (`EnhancedMultiStepContentGenerationService`): Orchestrates the main outline-driven content generation.
-        -   Uses `PromptService` for loading AI prompts.
-        -   Interacts with Vertex AI Gemini for text generation.
-        -   Uses `text_cleanup.py` for grammar/style correction.
-        -   Tracks token usage and costs.
-    -   `prompts.py` (`PromptService`): Loads AI prompt templates from `.md` files located in `app/core/prompts/v1/`.
-        -   *Note (Cleanup)*: Old Python-based prompt files (`app/core/prompts/v1/content_generation.py`, `app/core/prompts/v1/multi_step_prompts.py`) and the deprecated service `app/services/content_generation.py` have been removed.
-    -   `audio_generation.py` (`AudioGenerationService`): Handles text-to-speech conversion (e.g., using ElevenLabs).
-    -   `job_manager.py` (`JobManager`): Manages the lifecycle of content generation jobs, interacting with Firestore and Cloud Tasks.
-    -   Other services for caching, progress tracking, quality metrics, etc.
--   **Core Components (`app/core/`)**:
-    -   `config/settings.py`: Application configuration.
-    -   `security/`: Handles password hashing, JWT token creation/validation.
-    -   `prompts/v1/`: Directory containing `.md` prompt templates.
--   **Models (`app/models/pydantic/`)**: Pydantic models for API request/response validation and data structuring (e.g., `content.py`, `user.py`, `job.py`, `feedback.py`).
--   **Core Schemas (`app/core/schemas/`)**: Pydantic schemas primarily for job management (e.g., `job.py`).
--   **Models (`app/models/pydantic/`)**: Pydantic models for API request/response validation and content structures (e.g., `content.py`, `user.py`, `feedback.py`).
+```mermaid
+graph TB
+    User[👤 User/Client] --> Gateway[🚪 API Gateway<br/>Rate Limiting & Auth]
+    Gateway --> CloudRun[☁️ Cloud Run<br/>FastAPI Application]
 
-## Frontend (React - `frontend/` directory)
+    CloudRun --> API[🔌 API Routes<br/>/api/v1/*]
+    API --> Auth[🔐 Authentication<br/>API Key Validation]
+    API --> ContentGen[🎯 Content Generation<br/>Orchestration Service]
 
--   **API Client (`frontend/src/api.ts`):** Axios instance configured for backend communication. Includes interceptors for API key and JWT.
--   **Contexts (`frontend/src/contexts/`)**:
-    -   `AuthContext.tsx`: Manages user authentication state, login/registration logic, token handling.
-    -   `ErrorContext.tsx`: Provides global error message state.
--   **Components (`frontend/src/components/`)**: Reusable UI elements.
-    -   `Auth/`: Login and Registration forms.
-    -   `Content/ContentGeneratorForm.tsx`: Form for submitting content generation requests.
-    -   `Job/JobStatusDisplay.tsx`: Displays status and results of generation jobs.
-    -   `Content/ContentDisplay.tsx`: Displays generated content and includes feedback UI.
--   **Pages (`frontend/src/pages/`)**: Top-level views for different routes.
--   **Types (`frontend/src/types/content.ts`):** TypeScript interfaces for API data structures.
+    ContentGen --> Outline[📋 Outline Service<br/>Master Content Structure]
+    ContentGen --> Derivative[🔄 Derivative Service<br/>Parallel Content Generation]
+    ContentGen --> Quality[✅ Quality Service<br/>Validation & Refinement]
 
-## Data Flow (Simplified for Content Generation)
+    Outline --> LLM[🤖 LLM Client Service<br/>Vertex AI Integration]
+    Derivative --> LLM
+    Quality --> LLM
 
-1.  **User (Frontend)** submits syllabus via `ContentGeneratorForm.tsx`.
-2.  **Frontend** sends request to `POST /api/v1/jobs` (FastAPI backend).
-3.  **`jobs.py` (API Route)** uses `JobManager` to:
-    a.  Create a job record in Firestore (status: PENDING).
-    b.  Enqueue a task to Google Cloud Tasks, pointing to the internal worker endpoint (`POST /internal/v1/process-generation-task`).
-    c.  Returns job ID and initial status to Frontend.
-4.  **Frontend** (e.g., `JobStatusPage.tsx`) **polls** `GET /api/v1/jobs/{job_id}` for updates (not using Server-Sent Events (SSE) in current MVP).
-5.  **Google Cloud Task** triggers `POST /internal/v1/process-generation-task` (FastAPI `worker.py`).
-6.  **`worker.py`** fetches job details from Firestore, then calls `EnhancedMultiStepContentGenerationService`.
-7.  **`EnhancedMultiStepContentGenerationService`**:
-    a.  Generates master `ContentOutline` using `PromptService` and Vertex AI.
-    b.  Generates derivative content types (podcast script, study guide, etc.) in parallel, using the master outline and specific prompts via `PromptService` and Vertex AI.
-    c.  Applies grammar/style correction.
-    d.  Aggregates results into `GeneratedContent` model.
-8.  **`worker.py`** validates the `GeneratedContent` and updates the job record in Firestore with results and status (COMPLETED/FAILED).
-9.  **Frontend** polling eventually shows completed status and displays results.
-10. **User (Frontend)** can submit feedback via `ContentDisplay.tsx` to `POST /api/v1/feedback/content/{content_id}/feedback`.
-11. **`feedback.py` (API Route)** stores feedback in Firestore.
+    LLM --> VertexAI[🔮 Vertex AI<br/>Gemini Models]
 
----
+    ContentGen --> Cache[💾 Content Cache<br/>Redis Storage]
+    ContentGen --> Jobs[📋 Job Management<br/>Cloud Tasks & Firestore]
+
+    Jobs --> Worker[⚙️ Background Worker<br/>/internal/* endpoints]
+    Jobs --> Firestore[🗄️ Firestore<br/>Job Persistence]
+
+    Worker --> CloudTasks[📬 Cloud Tasks<br/>Async Job Queue]
+```
+
+## Component Descriptions
+
+### User-Facing Layer
+
+**API Gateway (Optional for MVP)**
+- Rate limiting and basic authentication
+- Traffic management and routing
+- Currently bypassed in MVP, API key auth handled in application
+
+**FastAPI Application (Cloud Run)**
+- Main application entry point
+- RESTful API endpoints under `/api/v1/`
+- Health checks and monitoring endpoints
+- Internal worker endpoints under `/internal/`
+
+### Core Service Architecture
+
+**Content Generation Orchestration Service**
+- Main coordinator for the content generation workflow
+- Manages the sequence: Outline → Derivative Content → Quality Validation
+- Handles caching decisions and job status updates
+- Integrates with all specialized services
+
+**Outline Generation Service**
+- Creates the master content outline from user input (syllabus text)
+- Uses specialized prompts for structured content planning
+- Validates outline completeness and coherence
+- Foundation for all derivative content
+
+**Derivative Generation Orchestrator**
+- Generates specific content types in parallel (when enabled)
+- Supports: Podcast Scripts, Study Guides, One-Pagers, FAQs, Flashcards, etc.
+- Each content type has dedicated validation rules
+- Handles partial generation failures gracefully
+
+**Quality Validation Service**
+- Comprehensive content quality assessment
+- Iterative refinement based on quality metrics
+- Configurable quality thresholds for caching
+- Integration with content enhancement tools
+
+**LLM Client Service**
+- Centralized Vertex AI Gemini integration
+- Handles prompt optimization and refinement
+- Token limit checking and cost tracking
+- Retry logic with intelligent prompt adjustments
+- Prometheus metrics for monitoring
+
+### Data & Storage Layer
+
+**Content Cache (Redis)**
+- High-quality content caching for performance
+- TTL-based expiration and LRU eviction
+- Conditional caching based on quality scores
+- Reduces AI API costs for repeated requests
+
+**Job Management (Firestore + Cloud Tasks)**
+- Persistent job tracking and status updates
+- Asynchronous processing for long-running operations
+- Job history and metadata storage
+- Integration with monitoring and alerting
+
+**Background Worker System**
+- Internal-only endpoints for job processing
+- Triggered by Cloud Tasks for async operations
+- Secure service-to-service communication
+- Status reporting back to job management
+
+## Content Generation Flow
+
+### Synchronous Flow (Fast Response)
+1. **User Request** → API endpoint with content parameters
+2. **Authentication** → API key validation
+3. **Content Generation** → Direct orchestration service call
+4. **Cache Check** → Return cached content if available and high-quality
+5. **AI Generation** → Create outline, then derivative content in parallel
+6. **Quality Validation** → Assess and potentially refine content
+7. **Response** → Return complete content package to user
+
+### Asynchronous Flow (Complex Content)
+1. **Job Creation** → Create job record in Firestore
+2. **Queue Task** → Submit to Cloud Tasks for background processing
+3. **Job Processing** → Worker processes job using same content generation flow
+4. **Status Updates** → Periodic updates stored in Firestore
+5. **Completion** → Final results stored and user notified
+
+## Key Design Principles
+
+**Modularity**: Each service has a single, well-defined responsibility
+**Resilience**: Graceful degradation and comprehensive error handling
+**Observability**: Structured logging, metrics, and tracing throughout
+**Scalability**: Parallel processing and caching for performance
+**Quality**: Multiple validation layers ensure educational content standards
+**Cost Optimization**: Token limit monitoring and intelligent caching
+
+## Technology Stack
+
+- **Runtime**: Python 3.11+ with FastAPI
+- **AI Platform**: Google Cloud Vertex AI (Gemini models)
+- **Storage**: Firestore (jobs), Redis (cache)
+- **Compute**: Google Cloud Run (auto-scaling containers)
+- **Queue**: Google Cloud Tasks for async processing
+- **Monitoring**: Prometheus metrics, structured JSON logging
+- **Infrastructure**: Terraform for infrastructure as code
+
+## Security Model
+
+**API Authentication**: API key-based authentication for external endpoints
+**Internal Security**: Network-level isolation for `/internal/*` endpoints
+**Service Accounts**: Minimal-privilege Google Cloud service accounts
+**Secret Management**: Google Secret Manager for sensitive configuration
+**Input Validation**: Comprehensive Pydantic model validation
+**Error Handling**: Generic error messages with detailed internal logging
+
+This architecture ensures reliable, scalable, and cost-effective generation of high-quality educational content while maintaining security and operational excellence.

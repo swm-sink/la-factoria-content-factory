@@ -7,7 +7,7 @@ on:
       - completed
     branches:
       - main
-  
+
   workflow_dispatch: # Allows manual triggering
 
 jobs:
@@ -15,7 +15,7 @@ jobs:
     name: 'Deploy to Cloud Run'
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }} # Only run if the triggering workflows succeeded
-    
+
     permissions:
       contents: 'read'
       id-token: 'write' # Required for Workload Identity Federation
@@ -46,4 +46,4 @@ jobs:
 
     - name: 'Output Cloud Run service URL'
       run: |
-        echo "Cloud Run Service URL: ${{ steps.deploy.outputs.url }}" 
+        echo "Cloud Run Service URL: ${{ steps.deploy.outputs.url }}"

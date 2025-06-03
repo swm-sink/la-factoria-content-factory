@@ -7,4 +7,4 @@ export const useJob = (jobId: string) => {
     queryFn: () => api.get(`/progress/${jobId}`).then((r: any) => r.data),
     refetchInterval: 2000,
   });
-}; 
+};

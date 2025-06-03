@@ -19,7 +19,7 @@ const JobStatusPage: React.FC = () => {
           </p>
         )}
       </header>
-      
+
       {jobId ? (
         <JobStatusDisplay jobId={jobId} />
       ) : (

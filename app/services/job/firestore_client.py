@@ -2,8 +2,11 @@
 
 import logging
 import os
-from typing import Optional, Dict, Any, List
-from google.cloud import firestore_async  # type: ignore # Handle potential import linting if type stubs not perfect
+from typing import Any, Dict, List, Optional
+
+from google.cloud.firestore import (  # type: ignore # Use the async Firestore client
+    AsyncClient,
+)
 
 from app.core.config.settings import get_settings
 
@@ -14,10 +17,10 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # Global client instance, initialized once
-_db_client: Optional[firestore_async.AsyncClient] = None
+_db_client: Optional[AsyncClient] = None
 
 
-def get_firestore_client() -> firestore_async.AsyncClient:
+def get_firestore_client() -> AsyncClient:
     """Initializes and returns the Firestore AsyncClient.
 
     Ensures that the client is initialized only once.
@@ -33,9 +36,7 @@ def get_firestore_client() -> firestore_async.AsyncClient:
                     "GCP_PROJECT_ID is not set and FIRESTORE_EMULATOR_HOST is not set. Firestore client might not connect to the correct project."
                 )
 
-            _db_client = firestore_async.AsyncClient(
-                project=project_id if project_id else None
-            )
+            _db_client = AsyncClient(project=project_id if project_id else None)
             logger.info(
                 f"Firestore AsyncClient initialized for project: {project_id or 'default (emulator?)'}"
             )
@@ -47,55 +48,188 @@ def get_firestore_client() -> firestore_async.AsyncClient:
     return _db_client
 
 
-async def get_job_from_firestore(
-    job_id: str, collection_name: str = "jobs"
+async def get_document_from_firestore(
+    document_id: str, collection_name: str = "jobs"
 ) -> Optional[Dict[str, Any]]:
-    """Fetches a job document from Firestore by its ID."""
+    """Fetches a document from Firestore by its ID from the given collection."""
     client = get_firestore_client()
     logger.debug(
-        f"Fetching job '{job_id}' from Firestore collection '{collection_name}'."
+        f"Fetching document '{document_id}' from Firestore collection '{collection_name}'."
     )
-    doc_ref = client.collection(collection_name).document(job_id)
+    doc_ref = client.collection(collection_name).document(document_id)
     doc = await doc_ref.get()
     if doc.exists:
-        logger.info(f"Job '{job_id}' found in Firestore.")
+        logger.info(
+            f"Document '{document_id}' found in Firestore collection '{collection_name}'."
+        )
         return doc.to_dict()
     logger.warning(
-        f"Job '{job_id}' not found in Firestore collection '{collection_name}'."
+        f"Document '{document_id}' not found in Firestore collection '{collection_name}'."
     )
     return None
 
 
-async def create_or_update_job_in_firestore(
-    job_id: str, job_data: Dict[str, Any], collection_name: str = "jobs"
+async def create_or_update_document_in_firestore(
+    document_id: str, data: Dict[str, Any], collection_name: str = "jobs"
 ) -> None:
-    """Creates or updates a job document in Firestore."""
+    """Creates or updates a document in Firestore in the given collection."""
     client = get_firestore_client()
     logger.info(
-        f"Creating/Updating job '{job_id}' in Firestore collection '{collection_name}' with data: {job_data}"
+        f"Creating/Updating document '{document_id}' in Firestore collection '{collection_name}' with data: {data}"
     )
-    # Ensure complex objects like error/progress are serializable if they are Pydantic models passed in
-    # For example, if job_data contains Pydantic models, they should be .model_dump()'d before this call.
-    await client.collection(collection_name).document(job_id).set(
-        job_data, merge=True
-    )  # merge=True for updates
-    logger.info(f"Job '{job_id}' created/updated in Firestore.")
+    await client.collection(collection_name).document(document_id).set(data, merge=True)
+    logger.info(
+        f"Document '{document_id}' created/updated in Firestore collection '{collection_name}'."
+    )
 
 
-async def update_job_field_in_firestore(
-    job_id: str, field_path: str, value: Any, collection_name: str = "jobs"
+async def update_document_field_in_firestore(
+    document_id: str, field_path: str, value: Any, collection_name: str = "jobs"
 ) -> None:
-    """Updates a specific field or nested field in a job document using dot notation.
+    """Updates a specific field or nested field in a document using dot notation.
     Example: field_path = "status", value = "COMPLETED"
              field_path = "results.final_url", value = "http://..."
     """
     client = get_firestore_client()
     logger.info(
-        f"Updating job '{job_id}' field '{field_path}' to '{value}' in Firestore collection '{collection_name}'."
+        f"Updating document '{document_id}' field '{field_path}' to '{value}' in Firestore collection '{collection_name}'."
     )
-    doc_ref = client.collection(collection_name).document(job_id)
+    doc_ref = client.collection(collection_name).document(document_id)
     await doc_ref.update({field_path: value})
-    logger.info(f"Job '{job_id}' field '{field_path}' updated in Firestore.")
+    logger.info(
+        f"Document '{document_id}' field '{field_path}' updated in Firestore collection '{collection_name}'."
+    )
 
 
-# Add other specific CRUD operations as needed, e.g., for querying jobs by status, etc.
+# Backward compatibility aliases
+get_job_from_firestore = get_document_from_firestore
+create_or_update_job_in_firestore = create_or_update_document_in_firestore
+update_job_field_in_firestore = update_document_field_in_firestore
+
+
+async def query_jobs_by_status(
+    status: Optional[str] = None,
+    limit: int = 10,
+    offset: int = 0,
+    collection_name: str = "jobs",
+) -> List[Dict[str, Any]]:
+    """Query jobs by status with pagination support.
+
+    Args:
+        status: Optional status filter (e.g., 'PENDING', 'PROCESSING')
+        limit: Number of documents to return
+        offset: Number of documents to skip
+        collection_name: Firestore collection name
+
+    Returns:
+        List of job documents
+    """
+    client = get_firestore_client()
+    query = client.collection(collection_name)
+
+    if status:
+        query = query.where("status", "==", status)
+
+    # Add ordering for consistent pagination
+    query = query.order_by("created_at", direction="DESCENDING")
+
+    # Apply pagination
+    query = query.offset(offset).limit(limit)
+
+    # Execute query
+    docs = await query.get()
+
+    results = []
+    for doc in docs:
+        data = doc.to_dict()
+        data["id"] = doc.id  # Include document ID
+        results.append(data)
+
+    logger.info(
+        f"Found {len(results)} jobs with status={status}, offset={offset}, limit={limit}"
+    )
+    return results
+
+
+async def count_jobs_by_status(
+    status: Optional[str] = None, collection_name: str = "jobs"
+) -> int:
+    """Count jobs by status.
+
+    Args:
+        status: Optional status filter
+        collection_name: Firestore collection name
+
+    Returns:
+        Count of matching documents
+    """
+    client = get_firestore_client()
+    query = client.collection(collection_name)
+
+    if status:
+        query = query.where("status", "==", status)
+
+    # For counting, we can use a more efficient approach
+    # by selecting only the document ID
+    query = query.select([])
+
+    count = 0
+    async for _ in query.stream():
+        count += 1
+
+    logger.info(f"Counted {count} jobs with status={status}")
+    return count
+
+
+async def get_all_job_statuses(collection_name: str = "jobs") -> Dict[str, int]:
+    """Get count of jobs grouped by status.
+
+    This is a more efficient implementation that gets all statuses in one query.
+
+    Args:
+        collection_name: Firestore collection name
+
+    Returns:
+        Dictionary mapping status to count
+    """
+    client = get_firestore_client()
+
+    # Get all documents but only select status field for efficiency
+    query = client.collection(collection_name).select(["status"])
+
+    status_counts = {}
+    async for doc in query.stream():
+        data = doc.to_dict()
+        status = data.get("status", "UNKNOWN")
+        status_counts[status] = status_counts.get(status, 0) + 1
+
+    logger.info(f"Job status counts: {status_counts}")
+    return status_counts
+
+
+async def delete_job_from_firestore(
+    document_id: str, collection_name: str = "jobs"
+) -> bool:
+    """Delete a job document from Firestore.
+
+    Args:
+        document_id: ID of the document to delete
+        collection_name: Firestore collection name
+
+    Returns:
+        True if document was deleted, False if not found
+    """
+    client = get_firestore_client()
+
+    # Check if document exists first
+    doc_ref = client.collection(collection_name).document(document_id)
+    doc = await doc_ref.get()
+
+    if not doc.exists:
+        logger.warning(f"Document '{document_id}' not found for deletion")
+        return False
+
+    # Delete the document
+    await doc_ref.delete()
+    logger.info(f"Document '{document_id}' deleted from collection '{collection_name}'")
+    return True

@@ -11,4 +11,4 @@ output "gateway_id" {
 output "api_config_id" {
   description = "The ID of the API Config used by the gateway."
   value       = google_api_gateway_gateway.default.api_config
-} 
+}

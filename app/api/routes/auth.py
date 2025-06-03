@@ -3,26 +3,24 @@ API routes for user authentication (registration, login).
 """
 
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm  # For login form
 from pydantic import BaseModel
 
-from app.models.pydantic.user import (
-    UserCreate,
-    User as UserResponse,
-)  # User is the response model
-from app.core.security.hashing import PasswordHashing
-from app.services.job.firestore_client import (
-    get_job_from_firestore,
-    create_or_update_job_in_firestore,
-)
-from app.core.security.tokens import create_access_token, TokenData  # New imports
 from app.api.deps import get_current_active_user  # Import the dependency
-from fastapi.security import OAuth2PasswordRequestForm  # For login form
+from app.core.security.hashing import PasswordHashing
+from app.core.security.tokens import create_access_token
+from app.models.pydantic.user import User as UserResponse  # User is the response model
+from app.models.pydantic.user import UserCreate
+from app.services.job.firestore_client import (
+    create_or_update_document_in_firestore,
+    get_document_from_firestore,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
-    prefix="/api/v1/auth",
     tags=["Authentication"],
 )
 
@@ -40,7 +38,7 @@ async def register_new_user(user_in: UserCreate) -> Any:
     logger.info(f"Registration attempt for email: {user_in.email}")
 
     # Check if user already exists
-    existing_user_data = await get_job_from_firestore(
+    existing_user_data = await get_document_from_firestore(
         user_in.email, collection_name=USER_COLLECTION
     )  # Using email as ID for simplicity
     if existing_user_data:
@@ -64,9 +62,9 @@ async def register_new_user(user_in: UserCreate) -> Any:
     }
 
     try:
-        await create_or_update_job_in_firestore(
-            job_id=user_in.email,  # Using email as document ID
-            job_data=new_user_data_db,
+        await create_or_update_document_in_firestore(
+            document_id=user_in.email,  # Using email as document ID
+            data=new_user_data_db,
             collection_name=USER_COLLECTION,
         )
         logger.info(f"User {user_in.email} registered successfully.")
@@ -103,7 +101,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     """Processes user login and returns an access token."""
     logger.info(f"Login attempt for username: {form_data.username}")
     # form_data.username is typically email in our case
-    user_data = await get_job_from_firestore(
+    user_data = await get_document_from_firestore(
         form_data.username, collection_name=USER_COLLECTION
     )
 

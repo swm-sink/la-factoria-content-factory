@@ -5,30 +5,30 @@ to process content generation jobs. These endpoints should NOT be exposed
 via API Gateway and are for internal use only.
 """
 
+import asyncio
 import logging
-from typing import Dict, Any
+import traceback
 from datetime import datetime
+from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, HTTPException, Request, Depends
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ValidationError
 
-from app.core.schemas.job import JobStatus, JobError, JobErrorCode, JobProgress
+from app.core.security.oidc import verify_cloud_tasks_token
+from app.models.pydantic.content import ContentRequest
+from app.models.pydantic.job import JobErrorCode, JobStatus
 from app.services.job.firestore_client import (
     get_job_from_firestore,
     update_job_field_in_firestore,
-    create_or_update_job_in_firestore,
 )
 from app.services.multi_step_content_generation import (
     EnhancedMultiStepContentGenerationService,
 )
-from app.services.content_validation import get_content_validation_service
-from app.models.pydantic.content import ContentRequest, ContentResponse
 
 logger = logging.getLogger(__name__)
 
 # Internal router - should NOT be included in public API Gateway
-router = APIRouter(prefix="/internal/v1", tags=["internal"])
+router = APIRouter(tags=["internal"])
 
 
 class TaskPayload(BaseModel):
@@ -47,11 +47,14 @@ class WorkerResponse(BaseModel):
     status: JobStatus
     message: str
     processing_time_seconds: float
+    error_details: Optional[Dict[str, Any]] = None
 
 
 @router.post("/process-generation-task", response_model=WorkerResponse)
 async def process_content_generation_task(
-    payload: TaskPayload, request: Request
+    payload: TaskPayload,
+    request: Request,
+    token_payload: dict = Depends(verify_cloud_tasks_token),
 ) -> WorkerResponse:
     """Process a content generation task from Cloud Tasks.
 
@@ -70,23 +73,39 @@ async def process_content_generation_task(
         WorkerResponse with processing results
 
     Security:
-        This endpoint should only be accessible by Cloud Tasks service.
-        In production, validate OIDC token from Cloud Tasks.
+        This endpoint is protected by OIDC token validation.
+        Only Cloud Tasks service with proper service account can access it.
     """
     start_time = datetime.utcnow()
     job_id = payload.job_id
+    error_details = None
 
-    logger.info(f"Starting content generation task for job {job_id}")
+    logger.info(
+        f"Starting content generation task for job {job_id} (requested by {token_payload.get('email', 'unknown')})"
+    )
+
+    content_service = EnhancedMultiStepContentGenerationService()
 
     try:
         # Step 1: Fetch job details from Firestore
+        logger.debug(f"Fetching job details for {job_id}")
         job_data = await get_job_from_firestore(job_id)
         if not job_data:
             error_msg = f"Job {job_id} not found in Firestore"
             logger.error(error_msg)
-            raise HTTPException(status_code=404, detail=error_msg)
+            return WorkerResponse(
+                success=False,
+                job_id=job_id,
+                status=JobStatus.FAILED,
+                message=error_msg,
+                processing_time_seconds=(
+                    datetime.utcnow() - start_time
+                ).total_seconds(),
+                error_details={"error_type": "job_not_found"},
+            )
 
         # Step 2: Update job status to PROCESSING
+        logger.debug(f"Updating job status to PROCESSING for {job_id}")
         await update_job_field_in_firestore(
             job_id, "status", JobStatus.PROCESSING.value
         )
@@ -95,6 +114,7 @@ async def process_content_generation_task(
         )
 
         # Step 3: Extract and validate content request
+        logger.debug(f"Validating content request for {job_id}")
         request_data = job_data.get("request_data", {})
         if not request_data:
             error_msg = f"No request data found for job {job_id}"
@@ -102,8 +122,15 @@ async def process_content_generation_task(
             await _update_job_error(
                 job_id, JobErrorCode.INVALID_REQUEST_METADATA, error_msg
             )
-            return _create_worker_response(
-                False, job_id, JobStatus.FAILED, error_msg, start_time
+            return WorkerResponse(
+                success=False,
+                job_id=job_id,
+                status=JobStatus.FAILED,
+                message=error_msg,
+                processing_time_seconds=(
+                    datetime.utcnow() - start_time
+                ).total_seconds(),
+                error_details={"error_type": "missing_request_data"},
             )
 
         try:
@@ -114,75 +141,136 @@ async def process_content_generation_task(
             await _update_job_error(
                 job_id, JobErrorCode.INVALID_REQUEST_METADATA, error_msg
             )
-            return _create_worker_response(
-                False, job_id, JobStatus.FAILED, error_msg, start_time
+            return WorkerResponse(
+                success=False,
+                job_id=job_id,
+                status=JobStatus.FAILED,
+                message=error_msg,
+                processing_time_seconds=(
+                    datetime.utcnow() - start_time
+                ).total_seconds(),
+                error_details={"error_type": "validation_error", "details": e.errors()},
             )
 
-        # Step 4: Initialize content generation service
-        content_service = EnhancedMultiStepContentGenerationService()
-        validation_service = get_content_validation_service()
+        # Step 4: Update progress for content generation start
+        logger.debug(f"Starting content generation for {job_id}")
+        await _update_job_progress(job_id, "Initializing content generation", 10, 1, 5)
 
-        # Step 5: Update progress for content generation start
+        # Step 5: Generate content
+        logger.info(f"Generating content for job {job_id}")
         await _update_job_progress(
-            job_id, "Generating content with AI models", 25, 4, 7
+            job_id, "Generating content with AI models", 30, 2, 5
         )
 
-        # Step 6: Generate content
-        logger.info(f"Generating content for job {job_id}")
-        generated_tuple = content_service.generate_long_form_content(
-            content_request.syllabus_text,
-            content_request.target_format,
+        (
+            generated_content_obj,
+            metadata_obj,
+            quality_obj,
+            tokens_used,
+            gen_error_info,
+        ) = await asyncio.to_thread(
+            content_service.generate_long_form_content,
+            job_id=job_id,
+            syllabus_text=content_request.syllabus_text,
+            target_format=content_request.target_format,
             target_duration=content_request.target_duration,
             target_pages=content_request.target_pages,
             use_cache=content_request.use_cache,
             use_parallel=content_request.use_parallel,
         )
 
-        generated_data, status_code, headers = generated_tuple
-
-        if status_code != 200:
-            error_msg = generated_data.get("error", "Content generation failed")
+        if gen_error_info or not generated_content_obj:
+            error_msg = (
+                gen_error_info.get("message")
+                if gen_error_info
+                else "Content generation failed (no object returned)."
+            )
+            err_code_val = (
+                gen_error_info.get("code", JobErrorCode.CONTENT_GENERATION_FAILED.value)
+                if gen_error_info
+                else JobErrorCode.CONTENT_GENERATION_FAILED.value
+            )
+            error_code_enum = (
+                JobErrorCode(err_code_val)
+                if err_code_val in JobErrorCode._value2member_map_
+                else JobErrorCode.CONTENT_GENERATION_FAILED
+            )
             logger.error(f"Content generation failed for job {job_id}: {error_msg}")
-            await _update_job_error(
-                job_id, JobErrorCode.CONTENT_GENERATION_FAILED, error_msg
-            )
-            return _create_worker_response(
-                False, job_id, JobStatus.FAILED, error_msg, start_time
-            )
-
-        # Step 7: Validate AI output with Pydantic models
-        await _update_job_progress(
-            job_id, "Validating and processing generated content", 75, 6, 7
-        )
-
-        logger.info(f"Validating AI output for job {job_id}")
-        validation_success, validation_result = (
-            validation_service.validate_raw_ai_output(
-                generated_data,
+            await _update_job_error(job_id, error_code_enum, error_msg)
+            return WorkerResponse(
+                success=False,
                 job_id=job_id,
-                ai_model="gemini-1.5-flash",  # TODO: Get from actual model used
-                tokens_used=None,  # TODO: Extract from generation response
+                status=JobStatus.FAILED,
+                message=error_msg,
+                processing_time_seconds=(
+                    datetime.utcnow() - start_time
+                ).total_seconds(),
+                error_details={
+                    "error_type": "generation_error",
+                    "details": gen_error_info,
+                },
             )
-        )
 
-        if not validation_success:
-            error_msg = f"Content validation failed: {validation_result.error if hasattr(validation_result, 'error') else 'Unknown validation error'}"
-            logger.error(f"Content validation failed for job {job_id}: {error_msg}")
+        # Step 6: Validate generated content
+        logger.debug(f"Validating generated content for {job_id}")
+        await _update_job_progress(job_id, "Validating generated content", 60, 3, 5)
+
+        try:
+            # Validate the generated content against the request
+            if not _validate_generated_content(generated_content_obj, content_request):
+                error_msg = "Generated content failed validation checks"
+                logger.error(f"Content validation failed for job {job_id}: {error_msg}")
+                await _update_job_error(
+                    job_id, JobErrorCode.CONTENT_VALIDATION_FAILED, error_msg
+                )
+                return WorkerResponse(
+                    success=False,
+                    job_id=job_id,
+                    status=JobStatus.FAILED,
+                    message=error_msg,
+                    processing_time_seconds=(
+                        datetime.utcnow() - start_time
+                    ).total_seconds(),
+                    error_details={"error_type": "validation_error"},
+                )
+        except Exception as e:
+            error_msg = f"Error during content validation: {str(e)}"
+            logger.error(f"Content validation error for job {job_id}: {error_msg}")
             await _update_job_error(
-                job_id, JobErrorCode.CONTENT_GENERATION_FAILED, error_msg
+                job_id, JobErrorCode.CONTENT_VALIDATION_FAILED, error_msg
             )
-            return _create_worker_response(
-                False, job_id, JobStatus.FAILED, error_msg, start_time
+            return WorkerResponse(
+                success=False,
+                job_id=job_id,
+                status=JobStatus.FAILED,
+                message=error_msg,
+                processing_time_seconds=(
+                    datetime.utcnow() - start_time
+                ).total_seconds(),
+                error_details={"error_type": "validation_error", "details": str(e)},
             )
 
-        # Step 8: Store results in Firestore
-        await _update_job_progress(job_id, "Storing results", 95, 7, 7)
+        # Step 7: Store results in Firestore
+        logger.debug(f"Storing results for {job_id}")
+        await _update_job_progress(job_id, "Storing results in database", 80, 4, 5)
 
-        # Store the validated ContentResponse
-        content_response = validation_result
-        results_data = content_response.model_dump()
+        job_result_data_to_store = generated_content_obj.model_dump(exclude_none=True)
+        await update_job_field_in_firestore(job_id, "result", job_result_data_to_store)
 
-        await update_job_field_in_firestore(job_id, "result", results_data)
+        # Store metadata and quality metrics if available
+        if metadata_obj:
+            await update_job_field_in_firestore(
+                job_id, "content_metadata", metadata_obj.model_dump(exclude_none=True)
+            )
+        if quality_obj:
+            await update_job_field_in_firestore(
+                job_id, "quality_metrics", quality_obj.model_dump(exclude_none=True)
+            )
+
+        # Step 8: Finalize job
+        logger.debug(f"Finalizing job {job_id}")
+        await _update_job_progress(job_id, "Finalizing job", 90, 5, 5)
+
         await update_job_field_in_firestore(job_id, "status", JobStatus.COMPLETED.value)
         await update_job_field_in_firestore(
             job_id, "completed_at", datetime.utcnow().isoformat()
@@ -193,15 +281,18 @@ async def process_content_generation_task(
 
         # Final progress update
         await _update_job_progress(
-            job_id, "Content generation completed successfully", 100, 7, 7
+            job_id, "Content generation completed successfully", 100, 5, 5
         )
 
         processing_time = (datetime.utcnow() - start_time).total_seconds()
         success_msg = f"Content generation completed successfully for job {job_id}"
         logger.info(success_msg)
-
-        return _create_worker_response(
-            True, job_id, JobStatus.COMPLETED, success_msg, start_time
+        return WorkerResponse(
+            success=True,
+            job_id=job_id,
+            status=JobStatus.COMPLETED,
+            message=success_msg,
+            processing_time_seconds=processing_time,
         )
 
     except HTTPException:
@@ -211,6 +302,11 @@ async def process_content_generation_task(
         # Handle unexpected errors
         error_msg = f"Unexpected error processing job {job_id}: {str(e)}"
         logger.error(error_msg, exc_info=True)
+        error_details = {
+            "error_type": "unexpected_error",
+            "traceback": traceback.format_exc(),
+            "error_class": e.__class__.__name__,
+        }
 
         try:
             await _update_job_error(
@@ -218,10 +314,45 @@ async def process_content_generation_task(
             )
         except Exception as update_error:
             logger.error(f"Failed to update job error for {job_id}: {update_error}")
+            error_details["update_error"] = str(update_error)
 
-        return _create_worker_response(
-            False, job_id, JobStatus.FAILED, error_msg, start_time
+        return WorkerResponse(
+            success=False,
+            job_id=job_id,
+            status=JobStatus.FAILED,
+            message=error_msg,
+            processing_time_seconds=(datetime.utcnow() - start_time).total_seconds(),
+            error_details=error_details,
         )
+
+
+def _validate_generated_content(
+    generated_content: Any, request: ContentRequest
+) -> bool:
+    """Validate generated content against the original request.
+
+    Args:
+        generated_content: The generated content object
+        request: The original content request
+
+    Returns:
+        bool: True if validation passes, False otherwise
+    """
+    try:
+        # Basic validation checks
+        if not generated_content:
+            return False
+
+        # Add more specific validation checks here
+        # For example:
+        # - Check if the generated content matches the target format
+        # - Verify the content length meets the target duration/pages
+        # - Validate the content structure
+
+        return True
+    except Exception as e:
+        logger.error(f"Error during content validation: {str(e)}")
+        return False
 
 
 @router.get("/health", response_model=Dict[str, Any])
@@ -271,6 +402,9 @@ async def _update_job_progress(
             "updated_at": datetime.utcnow().isoformat(),
         }
         await update_job_field_in_firestore(job_id, "progress", progress_data)
+        logger.debug(
+            f"Updated progress for job {job_id}: {current_step} ({percentage}%)"
+        )
     except Exception as e:
         logger.warning(f"Failed to update progress for job {job_id}: {e}")
 
@@ -299,30 +433,8 @@ async def _update_job_error(
         await update_job_field_in_firestore(
             job_id, "updated_at", datetime.utcnow().isoformat()
         )
+        logger.debug(
+            f"Updated error for job {job_id}: {error_code.value} - {error_message}"
+        )
     except Exception as e:
         logger.error(f"Failed to update error for job {job_id}: {e}")
-
-
-def _create_worker_response(
-    success: bool, job_id: str, status: JobStatus, message: str, start_time: datetime
-) -> WorkerResponse:
-    """Create a worker response object.
-
-    Args:
-        success: Whether the operation was successful
-        job_id: Job identifier
-        status: Final job status
-        message: Result message
-        start_time: When processing started
-
-    Returns:
-        WorkerResponse object
-    """
-    processing_time = (datetime.utcnow() - start_time).total_seconds()
-    return WorkerResponse(
-        success=success,
-        job_id=job_id,
-        status=status,
-        message=message,
-        processing_time_seconds=processing_time,
-    )

@@ -1,0 +1,79 @@
+# Docker ignore
+
+# Git files
+.git
+.gitignore
+
+# Python specific
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment specific
+.env
+.env.*
+!.env.example
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDE specific
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node specific (if frontend source is copied and built outside an earlier stage)
+# node_modules/ # Usually handled by multi-stage build
+# frontend/node_modules/ # If frontend is a subdirectory
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Build artifacts / Distribution
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Docker specific
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Logs and temp files
+logs/
+*.log
+*.tmp
+
+# Test reports and coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.tox/
+.coverage
+.coverage.*
+
+# Terraform files (not needed in app image)
+# iac/
+
+# Tasks & Memory (not needed in app image)
+# tasks/
+# memory/
+
+# Documentation (not needed in app image)
+# README.md
+# docs/
+# reports/
+
+# Scripts (if not needed in image)
+# scripts/
+
+# Large data files / assets not needed in runtime
+# *.mp4
+# *.zip

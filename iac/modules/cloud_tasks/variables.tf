@@ -62,4 +62,4 @@ variable "labels" {
   description = "A map of labels to assign to the Cloud Tasks queue."
   type        = map(string)
   default     = {}
-} 
+}

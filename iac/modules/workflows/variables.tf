@@ -58,4 +58,4 @@ variable "labels" {
   description = "A map of labels to assign to the Cloud Workflow."
   type        = map(string)
   default     = {}
-} 
+}

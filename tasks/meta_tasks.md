@@ -46,9 +46,72 @@
 
 ## Sprint: Project Finalization & Polish (AI Execution - Cline)
 - Goal: Address outstanding technical debt, complete documentation, and ensure project robustness for handoff.
+- Status: In Progress - Blocked by significant testing and API integration issues. See docs/CURRENT_STATUS.md.
 - Milestones:
   - [x] Finalize Service Refactoring: Cleanup Deprecated Methods (Task ID: SVC-1.2)
-  - [x] Achieve Comprehensive Unit Test Coverage (Task ID: TEST-1.2)
-  - [x] Update README.md to Current Project State (Task ID: DOC-1.2)
+  - [ ] Achieve Comprehensive Unit Test Coverage (Task ID: TEST-1.2) - Status: TODO - Requires significant work. See reports/test_infrastructure_status.md
+  - [x] Update README.md to Current Project State (Task ID: DOC-1.2) - Updated June 1, 2025 to reflect "In Development" status.
   - [x] Implement Non-Root User in Docker Container (Task ID: INF-2.1)
   - [ ] Address Human Review Items from `user_input_required_final.md` (Manual - User)
+
+## [✅] META-ARCHIVE-SETTINGS: Foundational Settings & Security
+- Goal: Archive of completed foundational tasks for securing and consolidating application settings.
+- Milestones:
+  - [x] Consolidate settings (ARCHIVE-SETTINGS-1.5)
+  - [x] Remove insecure API_KEY (ARCHIVE-SETTINGS-1.6)
+  - [x] Review critical settings (ARCHIVE-SETTINGS-1.7)
+  - [x] Implement Secret Manager (Covered by INF-1.1, API-2.4)
+  - [x] Add docstrings for settings/secrets (ARCHIVE-SETTINGS-1.9)
+- Status: done
+
+## [✅] META-ARCHIVE-COREAPI: Archived Core Service & API Alignment
+- Goal: Archive of completed foundational tasks for aligning API structure and designating the primary content generation service.
+- Milestones:
+  - [x] Designate EnhancedMultiStepContentGenerationService as primary (ARCHIVE-COREAPI-2.1)
+  - [x] Adapt API for Asynchronous Job-Based Workflow (ARCHIVE-COREAPI-2.2)
+  - [x] Refactor API Routers to app/api/routes/ (ARCHIVE-COREAPI-2.3)
+- Status: done
+
+## [✅] META-ARCHIVE-DEPCLEAN: Archived Backend Dependencies & Cleanup
+- Goal: Archive of completed foundational tasks for resolving backend dependency issues and cleaning up obsolete code structures.
+- Milestones:
+  - [x] Resolve pytest version conflict (ARCHIVE-DEPCLEAN-3.1)
+  - [x] Resolve pydantic & pydantic-settings versions (ARCHIVE-DEPCLEAN-3.2)
+  - [x] Clean up requirements.txt (dev dependencies) (ARCHIVE-DEPCLEAN-3.3)
+  - [x] Full Review & Cleanup/Deletion of backend/ directory (ARCHIVE-DEPCLEAN-3.4)
+- Status: done
+
+## [✅] META-ARCHIVE-ASYNCTEST: Archived Sprint - Enable E2E Testing of Async Job System
+- Goal: Archive of completed tasks focused on making the asynchronous content generation flow fully functional and testable, including adding missing job parameters and improving progress indication.
+- Milestones:
+  - [x] Add Missing Job Parameters (target_duration, target_pages) (ARCHIVE-ASYNCTEST-A)
+  - [x] Improve Placeholder Progress Updates in JobManager (ARCHIVE-ASYNCTEST-B)
+  - [x] Document Manual User Steps Required for Testing (ARCHIVE-ASYNCTEST-C)
+- Status: done
+
+## [✅] META-ARCHIVE-DEVEX11: Archived Task Group 11 - Developer Experience & Tooling
+- Goal: Archive of completed tasks from Task Group 11 focusing on developer experience and internal tooling.
+- Milestones:
+  - [x] Implement Automated AI Context Dump (ARCHIVE-DEVEX11-11.1)
+- Status: done
+
+## [✅] META-INFERRED-FOUNDATION: AI-Inferred Foundational Work
+- Goal: To document foundational setup and architectural work inferred by the AI assistant as completed but not explicitly tracked, ensuring a more complete project history.
+- Milestones:
+  - [x] Initial FastAPI Application Setup (INFERRED-FASTAPI-001)
+  - [x] Basic Project Directory Structure (INFERRED-STRUCTURE-001)
+  - [x] Initial Dockerfile Setup (INFERRED-DOCKER-001)
+  - [x] Initial .gitignore and .dockerignore Setup (INFERRED-IGNOREFILES-001)
+  - [x] Core Logging Configuration (INFERRED-LOGGING-001)
+  - [x] Basic Error Handling Framework (INFERRED-ERRORHANDLING-001)
+  - [x] Initial Pydantic Adoption & Basic Schemas (INFERRED-PYDANTIC-001)
+- Status: done
+
+## [ ] META-UNDOCUMENTED-WORK: Capture and Integrate Previously Undocumented Work
+- Goal: To systematically document and integrate any completed development efforts that were not previously tracked in atomic_tasks.yaml or tasks_archive.md. This is a bucket for any items the user identifies beyond what the AI inferred.
+- Milestones:
+  - [ ] Identify and list all previously undocumented completed work items.
+  - [ ] For each item, create a new atomic task with full details (objective, files, done_when, status 'done', completion_notes).
+  - [ ] Link all such new atomic tasks to this meta-task.
+  - [ ] Review and confirm all undocumented work is captured.
+- Status: todo

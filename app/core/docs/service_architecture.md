@@ -43,4 +43,4 @@ This is the **primary service** responsible for all complex, multi-step content 
 *   **`QualityMetricsService`**: Assesses the quality of generated content.
 *   **`ContentVersionManager`**: Manages versions of content.
 
-*(This document should be updated as the architecture evolves.)* 
+*(This document should be updated as the architecture evolves.)*

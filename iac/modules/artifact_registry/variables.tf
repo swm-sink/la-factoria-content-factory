@@ -12,4 +12,16 @@ variable "repository_id" {
   description = "The ID of the Artifact Registry repository."
   type        = string
   default     = "acpf-docker-repo" # Default repo ID
-} 
+}
+
+variable "repository_description" {
+  description = "The description of the Artifact Registry repository."
+  type        = string
+  default     = "Docker repository for ACPF application"
+}
+
+variable "labels" {
+  description = "A map of labels to assign to the Artifact Registry repository."
+  type        = map(string)
+  default     = {}
+}

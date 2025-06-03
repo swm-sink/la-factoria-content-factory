@@ -63,13 +63,13 @@ variable "max_instances" {
 }
 
 variable "cpu_limit" {
-  description = "CPU limit for the Cloud Run service (e.g., 1, 2, "1000m")."
+  description = "CPU limit for the Cloud Run service (e.g., 1, 2, \"1000m\")."
   type        = string
   default     = "1"
 }
 
 variable "memory_limit" {
-  description = "Memory limit for the Cloud Run service (e.g., "512Mi", "1Gi")."
+  description = "Memory limit for the Cloud Run service (e.g., \"512Mi\", \"1Gi\")."
   type        = string
   default     = "512Mi"
 }
@@ -94,4 +94,4 @@ variable "labels" {
   description = "A map of labels to assign to the Cloud Run service."
   type        = map(string)
   default     = {}
-} 
+}

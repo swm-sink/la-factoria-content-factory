@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { JobMetadata, JobCreationRequest, ApiError, ContentType } from '../types/content';
+import { JobMetadata, ApiError, ContentType } from '../types/content';
 import api from '../api'; // Assuming api.ts is configured for axios instance
 
 const availableContentTypes: { id: ContentType; label: string }[] = [
@@ -52,7 +52,7 @@ export const ContentGeneratorForm: React.FC = () => {
       setIsLoading(false);
       return;
     }
-    
+
     // Construct payload matching backend ContentRequest (flattened)
     // JobCreationRequest is already flat. formData (JobMetadata) has extra fields.
     const requestPayload = {
@@ -86,7 +86,7 @@ export const ContentGeneratorForm: React.FC = () => {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value, type } = e.target;
-    
+
     if (type === 'checkbox') {
       const { checked } = e.target as HTMLInputElement;
       setFormData((prev) => ({ ...prev, [name]: checked }));
@@ -101,7 +101,7 @@ export const ContentGeneratorForm: React.FC = () => {
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl mx-auto p-8 bg-white shadow-lg rounded-lg">
       <h2 className="text-2xl font-semibold text-gray-800 mb-6">Create New Content Generation Job</h2>
-      
+
       <div>
         <label htmlFor="syllabus_text" className="block text-sm font-medium text-gray-700 mb-1">
           Syllabus / Topic Description
@@ -155,7 +155,7 @@ export const ContentGeneratorForm: React.FC = () => {
           placeholder="e.g., High school students, Professionals"
         />
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div>
           <label htmlFor="target_duration_minutes" className="block text-sm font-medium text-gray-700 mb-1">

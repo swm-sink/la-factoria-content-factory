@@ -1,25 +1,25 @@
 resource "google_service_account" "cloud_run" {
   project      = var.gcp_project_id
   account_id   = var.cloud_run_sa_name
-  display_name = "Cloud Run Service Account for ACPF"
-  description  = "Service account for running the AI Content Factory app on Cloud Run."
-  labels       = var.labels
+  display_name = "Service Account for ACPF Cloud Run service"
+  description  = "Used by the main Cloud Run application service."
+  # labels       = var.labels # Labels are not directly supported on google_service_account resource
 }
 
 resource "google_service_account" "cloud_tasks_invoker" {
   project      = var.gcp_project_id
   account_id   = var.cloud_tasks_invoker_sa_name
-  display_name = "Cloud Tasks Invoker Service Account for ACPF"
-  description  = "Service account for Cloud Tasks to securely invoke Cloud Run endpoints."
-  labels       = var.labels
+  display_name = "Service Account for Cloud Tasks to invoke Cloud Run"
+  description  = "Allows Cloud Tasks to securely invoke the Cloud Run worker endpoint."
+  # labels       = var.labels # Labels are not directly supported on google_service_account resource
 }
 
 resource "google_service_account" "workflows_executor" {
   project      = var.gcp_project_id
   account_id   = var.workflows_executor_sa_name
-  display_name = "Workflows Executor Service Account for ACPF"
-  description  = "Service account for executing Cloud Workflows."
-  labels       = var.labels
+  display_name = "Service Account for Cloud Workflows execution"
+  description  = "Used by Cloud Workflows to orchestrate tasks and access other GCP services."
+  # labels       = var.labels # Labels are not directly supported on google_service_account resource
 }
 
 # ====================================
@@ -40,11 +40,17 @@ resource "google_project_iam_member" "cloud_run_sa_firestore_user" {
   member  = "serviceAccount:${google_service_account.cloud_run.email}"
 }
 
-# Vertex AI access for content generation
+# Vertex AI access for content generation (resource-constrained for security)
 resource "google_project_iam_member" "cloud_run_sa_vertexai_user" {
   project = var.gcp_project_id
   role    = "roles/aiplatform.user"
   member  = "serviceAccount:${google_service_account.cloud_run.email}"
+
+  condition {
+    title       = "limit_to_gemini_models"
+    description = "Restrict access to Gemini models only for enhanced security"
+    expression  = "resource.name.startsWith('projects/${var.gcp_project_id}/locations/${var.gcp_region}/publishers/google/models/gemini')"
+  }
 }
 
 # Cloud Tasks enqueue permissions (required for API-2.5 job processing)
@@ -134,4 +140,4 @@ resource "google_project_iam_member" "workflows_executor_sa_tasks_enqueuer" {
 # }
 
 # Add more IAM bindings as needed for other services (e.g., Cloud Tasks, Pub/Sub, Monitoring)
-# Custom roles can be created and assigned here if needed, using var.custom_roles 
+# Custom roles can be created and assigned here if needed, using var.custom_roles

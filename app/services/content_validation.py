@@ -9,25 +9,21 @@ This service orchestrates the validation workflow including:
 """
 
 import logging
-from typing import Dict, List, Optional, Any, Union, Tuple
 from datetime import datetime
+from typing import Any, Dict, Optional, Tuple, Union
 
+from app.core.config.settings import get_settings
 from app.models.pydantic.content import (
+    APIErrorResponse,
+    ContentMetadata,
     ContentResponse,
     GeneratedContent,
     QualityMetrics,
-    ContentMetadata,
-    APIErrorResponse,
 )
 from app.utils.content_validation import (
-    validate_and_parse_content_response,
-    validate_ai_content_dict,
-    sanitize_content_dict,
-    calculate_readability_score,
     estimate_reading_time,
-    extract_text_from_content,
+    validate_and_parse_content_response,
 )
-from app.core.config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -44,8 +40,9 @@ class ContentValidationService:
             "failed_validations": 0,
             "average_quality_score": 0.0,
         }
+        self.logger = logging.getLogger(__name__)
 
-    def validate_raw_ai_output(
+    def validate_content(
         self,
         raw_content: Dict[str, Any],
         job_id: Optional[str] = None,
@@ -66,7 +63,7 @@ class ContentValidationService:
         self.validation_stats["total_validations"] += 1
 
         try:
-            logger.info(f"Validating AI output for job {job_id}")
+            self.logger.info(f"Validating AI output for job {job_id}")
 
             # Pre-validation checks
             if not raw_content:
@@ -103,7 +100,7 @@ class ContentValidationService:
                         current_avg * (total_successful - 1) + new_score
                     ) / total_successful
 
-                logger.info(f"Successfully validated content for job {job_id}")
+                self.logger.info(f"Successfully validated content for job {job_id}")
                 return True, content_response
 
             else:
@@ -118,14 +115,14 @@ class ContentValidationService:
                     details=error_messages,
                 )
 
-                logger.warning(
+                self.logger.warning(
                     f"Content validation failed for job {job_id}: {error_messages}"
                 )
                 return False, error_response
 
         except Exception as e:
             self.validation_stats["failed_validations"] += 1
-            logger.error(
+            self.logger.error(
                 f"Unexpected error during content validation for job {job_id}: {e}",
                 exc_info=True,
             )
@@ -188,7 +185,7 @@ class ContentValidationService:
                 metrics.overall_score = sum(valid_scores) / len(valid_scores)
 
         except Exception as e:
-            logger.warning(f"Failed to enhance quality metrics: {e}")
+            self.logger.warning(f"Failed to enhance quality metrics: {e}")
 
     def _calculate_engagement_score(self, text: str) -> float:
         """Calculate engagement score based on text characteristics.
@@ -421,7 +418,7 @@ class ContentValidationService:
             }
 
         except Exception as e:
-            logger.error(f"Health check failed: {e}")
+            self.logger.error(f"Health check failed: {e}")
             return {
                 "status": "unhealthy",
                 "error": str(e),

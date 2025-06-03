@@ -1,6 +1,10 @@
-"""Test script to verify ElevenLabs API key and voice ID (v2 client, handling generator output)."""
+"""Test script to verify ElevenLabs API key and voice ID (v0.2.27 API)."""
 
-from elevenlabs.client import ElevenLabs
+import os
+
+from elevenlabs import set_api_key
+from elevenlabs.api import generate
+from elevenlabs.exceptions import APIError
 
 
 def test_elevenlabs():
@@ -9,28 +13,33 @@ def test_elevenlabs():
     api_key = "sk_f9f15293edb761661313e56a0fb7840cc383acf4bddefaf3"
     voice_id = "j9jfwdrw7BRfcR43Qohk"
 
-    client = ElevenLabs(api_key=api_key)
+    # Set API key for the session
+    set_api_key(api_key)
 
     # Test text
     test_text = "Hello! This is a test of the ElevenLabs API integration."
 
     try:
-        # Generate audio
-        audio_stream = client.text_to_speech.convert(
-            text=test_text, voice_id=voice_id, model_id="eleven_multilingual_v2"
-        )
+        # Generate audio using the simple function API
+        audio = generate(text=test_text, voice=voice_id, model="eleven_multilingual_v2")
 
-        # Handle the generator output by iterating and writing chunks
+        # Save the audio file
         with open("test_audio.mp3", "wb") as f:
-            for chunk in audio_stream:
-                if chunk:
-                    f.write(chunk)
+            f.write(audio)
 
         print("✅ ElevenLabs test successful!")
         print(f"✅ API Key: {api_key[:8]}...{api_key[-4:]}")
         print(f"✅ Voice ID: {voice_id}")
         print("✅ Test audio saved as 'test_audio.mp3'")
 
+        # Cleanup test file
+        if os.path.exists("test_audio.mp3"):
+            os.remove("test_audio.mp3")
+            print("✅ Test audio file cleaned up")
+
+    except APIError as e:
+        print("❌ ElevenLabs API error!")
+        print(f"API Error: {str(e)}")
     except Exception as e:
         print("❌ ElevenLabs test failed!")
         print(f"Error: {str(e)}")

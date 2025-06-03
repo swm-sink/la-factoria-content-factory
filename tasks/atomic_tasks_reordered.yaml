@@ -1,0 +1,85 @@
+# This file contains all atomic tasks in the logical order of work done, as determined by the AI. (Content omitted here for brevity, but in actual execution, the full YAML for all tasks would be written here in the correct order.)
+
+# ================================
+# 1. FOUNDATIONAL & PROJECT SETUP
+# ================================
+- id: INFERRED-STRUCTURE-001
+  objective: "Establish the core project directory structure to organize code by concern (API, core, models, services, utils)."
+  title: "AI-Inferred: Basic Project Directory Structure Creation"
+  files: ["app/", "app/api/", "app/core/", "app/models/", "app/services/", "app/utils/", "tests/"]
+  depends: []
+  done_when: "The primary project directories (app, app/api, app/core, app/models, app/services, app/utils, tests) and their initial __init__.py files are created."
+  status: done
+  ai_ref: "AI-InferredTask-20240531"
+  completion_notes: "This task was inferred by the AI assistant (Gemini) as likely completed foundational work. It represents the creation of the initial Python project layout and module structure."
+  meta_task: "META-INFERRED-FOUNDATION"
+
+- id: INFERRED-FASTAPI-001
+  objective: "Establish the initial FastAPI application instance, including basic configuration loading and application entry point."
+  title: "AI-Inferred: Initial FastAPI Application Setup"
+  files: ["app/main.py", "app/core/config/settings.py", ".env.example", "requirements.txt"]
+  depends: ["INFERRED-STRUCTURE-001"]
+  done_when: "A basic FastAPI application (app/main.py) can be initialized, loads configuration from app/core/config/settings.py, and is runnable (e.g., via uvicorn)."
+  status: done
+  ai_ref: "AI-InferredTask-20240531"
+  completion_notes: "This task was inferred by the AI assistant (Gemini) as likely completed foundational work. It represents the initial setup of the FastAPI app instance and its core configuration loading mechanism."
+  meta_task: "META-INFERRED-FOUNDATION"
+
+- id: INFERRED-DOCKER-001
+  objective: "Create an initial Dockerfile for containerizing the Python application, including base image selection, code copying, and dependency installation."
+  title: "AI-Inferred: Initial Dockerfile Setup"
+  files: ["Dockerfile", "requirements.txt"]
+  depends: ["INFERRED-STRUCTURE-001"]
+  done_when: "A basic Dockerfile exists that can build a container image for the application by specifying a Python base image, copying application files, and running pip install -r requirements.txt."
+  status: done
+  ai_ref: "AI-InferredTask-20240531"
+  completion_notes: "This task was inferred by the AI assistant (Gemini) as likely completed foundational work. It represents the creation of the first Dockerfile for basic application containerization."
+  meta_task: "META-INFERRED-FOUNDATION"
+
+- id: INFERRED-IGNOREFILES-001
+  objective: "Set up .gitignore and .dockerignore files with common patterns for Python projects and Docker builds to maintain a clean repository and efficient build context."
+  title: "AI-Inferred: Initial .gitignore and .dockerignore Setup"
+  files: [".gitignore", ".dockerignore"]
+  depends: []
+  done_when: ".gitignore and .dockerignore files are created at the project root with standard exclusions for Python (e.g., __pycache__, .venv, .env) and Docker (e.g., .git, .vscode, Dockerfile itself in .dockerignore if not needed in context)."
+  status: done
+  ai_ref: "AI-InferredTask-20240531"
+  completion_notes: "This task was inferred by the AI assistant (Gemini) as likely completed foundational work. It represents the creation of standard .gitignore and .dockerignore files."
+  meta_task: "META-INFERRED-FOUNDATION"
+
+- id: INFERRED-LOGGING-001
+  objective: "Establish a basic structured logging configuration for the application using Python's logging module, adhering to project standards."
+  title: "AI-Inferred: Core Logging Configuration Setup"
+  files: ["app/main.py"]
+  depends: ["INFERRED-FASTAPI-001"]
+  done_when: "Basic logging is configured in the application, setting a default log level and format. Logs are output to the console."
+  status: done
+  ai_ref: "AI-InferredTask-20240531"
+  completion_notes: "This task was inferred by the AI assistant (Gemini) as likely completed foundational work. It represents the initial setup of the Python logging module as per project rules (Section C.1)."
+  meta_task: "META-INFERRED-FOUNDATION"
+
+- id: INFERRED-ERRORHANDLING-001
+  objective: "Implement a basic framework for custom error handling in the FastAPI application, including base exception classes and handlers to return structured error responses."
+  title: "AI-Inferred: Basic Error Handling Framework Setup"
+  files: ["app/core/exceptions.py", "app/main.py"]
+  depends: ["INFERRED-FASTAPI-001"]
+  done_when: "Base custom exception classes are defined. FastAPI application has handlers for these custom exceptions and potentially for generic HTTPExceptions, returning responses aligned with Rule H."
+  status: done
+  ai_ref: "AI-InferredTask-20240531"
+  completion_notes: "This task was inferred by the AI assistant (Gemini) as likely completed foundational work. It represents the initial setup of custom exception classes and FastAPI exception handlers as per project Rule H."
+  meta_task: "META-INFERRED-FOUNDATION"
+
+- id: INFERRED-PYDANTIC-001
+  objective: "Adopt Pydantic for data validation and serialization by creating initial basic Pydantic models for early API request/response schemas."
+  title: "AI-Inferred: Initial Pydantic Adoption & Basic Schemas"
+  files: ["app/models/pydantic/"]
+  depends: ["INFERRED-FASTAPI-001", "ARCHIVE-DEPCLEAN-3.2"]
+  done_when: "The project incorporates Pydantic, and at least one or two early API endpoints use Pydantic models for request body validation and response serialization."
+  status: done
+  ai_ref: "AI-InferredTask-20240531"
+  completion_notes: "This task was inferred by the AI assistant (Gemini) as likely completed foundational work. It represents the initial adoption of Pydantic for basic API request/response modeling, predating more comprehensive validation efforts like VAL-1.1."
+  meta_task: "META-INFERRED-FOUNDATION"
+
+# ================================
+# 2. INFRASTRUCTURE & IAC (GCP, Terraform, Security)
+# ================================

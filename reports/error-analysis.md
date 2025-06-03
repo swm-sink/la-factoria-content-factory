@@ -64,4 +64,4 @@ This document provides a simplified analysis of common errors found during testi
 *   **Review logs regularly** (especially from the worker processing AI output) for any recurring validation errors from the AI, which might indicate a need for further prompt tuning.
 *   **Consider adding automated API contract testing** (e.g., using a tool that consumes OpenAPI spec) to CI/CD pipeline if project complexity grows significantly.
 
---- 
+---

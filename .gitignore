@@ -1,118 +1,8 @@
-# Python
+hi# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
-*.egg-info/
-dist/
-build/
-wheels/
-*.egg
-*.manifest
-*.spec
-
-# Virtual environment
-.venv/
-venv/
-ENV/
-env/
-virtualenv/
-VIRTUAL_ENV/
-# Note: if your venv is not named .venv, add its name here
-
-# Instance folder (Flask)
-instance/
-!instance/.gitkeep
-
-# IDEs and Editors
-.idea/
-.vscode/
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-*.sublime-workspace
-*.sublime-project
-.DS_Store
-Thumbs.db
-.cursor/
-!.cursor/rules/
-!.cursor/rules/project.mdc
-
-# Secrets and Credentials
-*.env
-.env.*
-!.env.example
-secrets.yml
-*.pem
-*.key
-service-account-key.json
-service_account.json
-# Add any other files that may contain sensitive credentials
-
-# GCP / Terraform
-.terraform/
-terraform.tfstate
-terraform.tfstate.backup
-*.tfvars
-# You might want to commit .terraform.lock.hcl
-
-# Docker
-docker-compose.override.yml
-docker-compose.local.yml
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-package-lock.json
-yarn.lock
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-nosetests.xml
-coverage.xml
-*.cover
-
-# Other
-*.swp
-*.swo
-*~
-
-# Ignore dependency management specific files
-pip-log.txt
-pip-delete-this-reason.txt
-poetry.lock
-
-# Ignore system files
-thumbs.db
-
-# Ignore GCP specific files (common patterns)
-*.gcloudignore
-.gcloud/
-
-# Ignore instance-specific data (adjust as needed)
-data/
-
-# Ignore environment variables file
-.flaskenv
-
-# Ignore secret keys/credentials (add specific filenames if known)
-secrets.py
-*.key
-*.pem
-
-# Ignore Flask specific files (if any beyond general Python)
-# e.g., instance specific config not tracked in VCS 
-
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
 
 # C extensions
 *.so
@@ -138,8 +28,9 @@ share/python-wheels/
 MANIFEST
 
 # PyInstaller
-*.manifest
-*.spec
+# Uncomment if you use PyInstaller
+# *.manifest
+# *.spec
 
 # Installer logs
 pip-log.txt
@@ -165,13 +56,13 @@ cover/
 *.pot
 
 # Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
+# local_settings.py
+# db.sqlite3
+# db.sqlite3-journal
 
 # Flask stuff:
 instance/
+!.instance/.gitkeep # Allow keeping an empty instance folder if needed
 .webassets-cache
 
 # Scrapy stuff:
@@ -217,6 +108,8 @@ celerybeat.pid
 
 # Environments
 .env
+.env.*
+!.env.example # Do not ignore .env.example
 .venv
 env/
 venv/
@@ -232,7 +125,7 @@ venv.bak/
 .ropeproject
 
 # mkdocs documentation
-/site
+/site/
 
 # mypy
 .mypy_cache/
@@ -248,34 +141,73 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-# PyCharm
+# IDE & Editor specific
 .idea/
-
-# VS Code
 .vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.sublime-workspace
+*.sublime-project
 *.code-workspace
+.cursor/
+!.cursor/rules/
+!.cursor/rules/project.mdc
 
+# OS-generated files
 # macOS
 .DS_Store
 .AppleDouble
 .LSOverride
-
 # Windows
 Thumbs.db
 Thumbs.db:encryptable
 ehthumbs.db
 ehthumbs_vista.db
-*.stackdump
 [Dd]esktop.ini
 $RECYCLE.BIN/
 *.lnk
-
 # Linux
 *~
 .fuse_hidden*
 .directory
 .Trash-*
 .nfs*
+
+# Secrets and Credentials
+secrets.yml
+*.pem
+*.key
+service-account-key.json
+service_account.json
+# Add any other files that may contain sensitive credentials like:
+# secrets.py # If you have a file named this for actual secrets
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Terraform
+terraform.tfstate
+terraform.tfstate.backup
+*.tfvars
+# .terraform.lock.hcl should typically be committed
+iac/.terraform/
+
+# Docker
+docker-compose.override.yml
+docker-compose.local.yml
+# .dockerignore is a separate file, not for .gitignore
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/build/
+# yarn.lock or package-lock.json are usually committed
 
 # Project specific
 *.mp3
@@ -284,44 +216,22 @@ $RECYCLE.BIN/
 /tmp/
 /temp/
 /cache/
-/logs/
-*.log
-.env.local
-.env.*.local
 
-# Google Cloud
-.gcloud/
-*.json
-!package.json
-!tsconfig.json
+# Google Cloud specific (if any beyond Terraform state)
+# .gcloud/ # Typically contains user-specific auth, good to ignore
+# *.gcloudignore # This is a file type, not a directory to ignore
 
-# Terraform
-*.tfstate
-*.tfstate.*
-.terraform/
-.terraform.lock.hcl
-
-# Docker
-.dockerignore
-
-# Kubernetes
-*.kubeconfig
-
-# Test outputs
+# Testing outputs (if not covered by .coverage etc.)
 test-results/
 test-reports/
 
-# IDE specific
-.cursor/
-
-# Python virtual environments
-.Python
-[Bb]in
-[Ii]nclude
-[Ll]ib
-[Ll]ib64
-[Ll]ocal
-[Ss]cripts
+# Python virtual environments (alternative spellings)
+[Bb]in/
+[Ii]nclude/
+[Ll]ib/
+[Ll]ib64/
+[Ll]ocal/
+[Ss]cripts/
 pyvenv.cfg
-.venv
-pip-selfcheck.json 
+pip-selfcheck.json
+.terraform/

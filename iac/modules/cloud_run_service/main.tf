@@ -73,7 +73,7 @@ resource "google_cloud_run_v2_service" "default" {
       min_instance_count = var.min_instances
       max_instance_count = var.max_instances
     }
-    
+
     # vpc_access { # Configure if VPC connector is needed
     #   connector = "projects/YOUR_PROJECT/locations/YOUR_REGION/connectors/YOUR_CONNECTOR"
     #   egress    = "ALL_TRAFFIC"
@@ -92,4 +92,4 @@ resource "google_cloud_run_v2_service" "default" {
   #   role     = "roles/run.invoker"
   #   member   = "allUsers"
   # }
-} 
+}

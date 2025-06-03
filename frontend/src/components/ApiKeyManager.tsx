@@ -39,4 +39,4 @@ export const ApiKeyManager = () => {
       {apiKey && status === 'idle' && <span className="text-green-500 text-xs ml-2">Key set</span>}
     </form>
   );
-}; 
+};

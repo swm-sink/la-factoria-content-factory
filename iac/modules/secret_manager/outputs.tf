@@ -6,4 +6,4 @@ output "secret_ids" {
 output "secret_names_list" {
   description = "A list of the created secret names (short IDs)."
   value       = keys(google_secret_manager_secret.default)
-} 
+}
