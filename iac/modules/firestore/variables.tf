@@ -47,4 +47,4 @@ variable "delete_protection_state" {
     condition     = contains(["DELETE_PROTECTION_ENABLED", "DELETE_PROTECTION_DISABLED"], var.delete_protection_state)
     error_message = "Allowed values for delete_protection_state are DELETE_PROTECTION_ENABLED or DELETE_PROTECTION_DISABLED."
   }
-} 
+}

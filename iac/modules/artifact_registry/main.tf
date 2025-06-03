@@ -2,7 +2,7 @@ resource "google_artifact_registry_repository" "default" {
   project       = var.gcp_project_id
   location      = var.gcp_location
   repository_id = var.repository_id
-  description   = "Docker repository for AI Content Factory application images"
+  description   = var.repository_description
   format        = "DOCKER"
 
   docker_config {
@@ -16,8 +16,5 @@ resource "google_artifact_registry_repository" "default" {
   # KMS key for encryption (optional, but good practice for production)
   # kms_key_name = "projects/YOUR_PROJECT/locations/YOUR_REGION/keyRings/YOUR_KEYRING/cryptoKeys/YOUR_KEY"
 
-  labels = {
-    environment = "shared" # Or tie to a specific environment variable
-    app         = "acpf"
-  }
-} 
+  labels = var.labels
+}

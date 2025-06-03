@@ -14,4 +14,4 @@ resource "google_firestore_database" "default" {
 
 # Note: Firestore indexes are typically managed separately, either via gcloud commands,
 # manually in the console, or using google_firestore_index resources if defined explicitly.
-# This module focuses on provisioning the database instance itself. 
+# This module focuses on provisioning the database instance itself.

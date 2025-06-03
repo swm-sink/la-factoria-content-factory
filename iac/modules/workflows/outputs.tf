@@ -16,4 +16,4 @@ output "workflow_revision_id" {
 output "region" {
   description = "The region of the Cloud Workflow."
   value       = google_workflows_workflow.default.region
-} 
+}

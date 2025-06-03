@@ -13,7 +13,7 @@ interface User {
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  user: User | null; 
+  user: User | null;
   token: string | null;
   isLoading: boolean;
   login: (email_or_username: string, password_string: string) => Promise<void>;
@@ -61,7 +61,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     try {
       const response = await apiClient.post(
-        '/api/v1/auth/login', 
+        '/api/v1/auth/login',
         new URLSearchParams({ username: email, password: password_string }), // FastAPI token endpoint expects form data
         { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }}
       );
@@ -69,7 +69,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.setItem('authToken', access_token);
       setToken(access_token);
       setGlobalError(null); // Clear previous errors on successful token fetch
-      
+
       // After setting token, fetch user details
       try {
         const userResponse = await apiClient.get('/api/v1/auth/users/me'); // apiClient already has /api base

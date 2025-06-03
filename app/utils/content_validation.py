@@ -8,25 +8,14 @@ This module provides functions for:
 - Content consistency verification
 """
 
-import re
 import html
 import logging
-from typing import Dict, List, Optional, Any, Union, Tuple
+import re
+from typing import Any, Dict, List, Tuple, Union
+
 from pydantic import ValidationError
 
-from app.models.pydantic.content import (
-    ContentResponse,
-    GeneratedContent,
-    ContentOutline,
-    PodcastScript,
-    StudyGuide,
-    OnePagerSummary,
-    DetailedReadingMaterial,
-    FAQCollection,
-    FlashcardCollection,
-    ReadingGuideQuestions,
-    QualityMetrics,
-)
+from app.models.pydantic.content import ContentResponse, QualityMetrics
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +78,9 @@ def sanitize_content_dict(content_dict: Dict[str, Any]) -> Dict[str, Any]:
                 (
                     sanitize_html_content(item)
                     if isinstance(item, str)
-                    else sanitize_content_dict(item) if isinstance(item, dict) else item
+                    else sanitize_content_dict(item)
+                    if isinstance(item, dict)
+                    else item
                 )
                 for item in value
             ]

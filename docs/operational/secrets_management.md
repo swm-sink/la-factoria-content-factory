@@ -90,14 +90,14 @@ The Cloud Run Terraform module (`iac/main.tf` calling `iac/modules/cloud_run_ser
 module "cloud_run_service" {
   # ... other arguments ...
   secret_env_vars = [
-    { 
+    {
       name           = "API_KEY", # Env var name available to the app
       secret_name    = module.secret_manager.secret_ids_map["AI_CONTENT_FACTORY_API_KEY"], # Full Secret Manager ID from module output
       secret_version = "latest"
     },
-    { 
-      name           = "ELEVENLABS_API_KEY", 
-      secret_name    = module.secret_manager.secret_ids_map["AI_CONTENT_FACTORY_ELEVENLABS_KEY"], 
+    {
+      name           = "ELEVENLABS_API_KEY",
+      secret_name    = module.secret_manager.secret_ids_map["AI_CONTENT_FACTORY_ELEVENLABS_KEY"],
       secret_version = "latest"
     },
     # Repeat for JWT_SECRET_KEY, SENTRY_DSN etc.
@@ -108,4 +108,4 @@ This configuration ensures that when the application running in Cloud Run calls 
 
 ## Future Considerations (Post-MVP)
 *   Automated secret rotation.
-*   Using a more secure CI/CD process for managing secret versions (e.g., with tools like HashiCorp Vault or specialized CI/CD secrets management). 
+*   Using a more secure CI/CD process for managing secret versions (e.g., with tools like HashiCorp Vault or specialized CI/CD secrets management).

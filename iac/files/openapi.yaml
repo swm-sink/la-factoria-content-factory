@@ -78,7 +78,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object 
+              type: object
               properties:
                 syllabus_text:
                   type: string
@@ -94,10 +94,3 @@ paths:
 
   # TODO: USER ACTION REQUIRED: Add all other actual paths and operations from your FastAPI /openapi.json here.
   # Ensure request/response schemas are accurately defined.
-
-# Define x-google-backend for Cloud Run integration
-# This will be referenced in the API Config
-x-google-backend:
-  address: "YOUR_CLOUD_RUN_SERVICE_URL" # This will be replaced by Terraform using the Cloud Run service URL
-  # path_translation: CONSTANT_ADDRESS
-  # jwt_audience: "YOUR_CLOUD_RUN_SERVICE_URL_OR_CUSTOM_AUDIENCE" # If using IAP or custom JWT auth for Cloud Run 

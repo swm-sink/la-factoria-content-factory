@@ -37,7 +37,7 @@ alwaysApply: true
     * **API Versioning:** All endpoints MUST use the `/api/v1` prefix.
 
 * **3. Google Cloud Platform (GCP):**
-    * **Core Services (MVP):** 
+    * **Core Services (MVP):**
         - Cloud Run (FastAPI service)
         - Vertex AI (Gemini API)
         - Firestore (job persistence)
@@ -46,7 +46,7 @@ alwaysApply: true
         - API Gateway (rate limiting & auth)
         - Secret Manager (credentials)
         - Cloud Monitoring & Logging
-    * **Post-MVP Evolution:** 
+    * **Post-MVP Evolution:**
         - Cloud SQL (PostgreSQL) if relational features needed
         - Cloud Storage (for generated content)
         - Pub/Sub (for event-driven features)
@@ -81,7 +81,7 @@ All code generated or modified MUST strictly adhere to these standards.
             ```python
             def my_function(param1: str, param2: int) -> bool:
                 """Brief summary understandable to a non-developer. Detailed explanation for devs. Args: param1 (str): Desc. param2 (int): Desc. Returns: bool: Desc. Raises: ValueError: If invalid."""
-                pass 
+                pass
             ```
     * **Type Hinting:** Mandatory for all function signatures and key variables.
     * **Clear Naming:** Descriptive, unambiguous names. Prioritize full English words (e.g., `create_podcast_script` not `gen_pod_scr`). For AI-generated components primarily serving UI or simplified logic, consider a suffix like `_ui_friendly` or `_simple` if it enhances clarity for non-technical collaborators, but overall readability is paramount.
@@ -714,37 +714,37 @@ memory/                  # A dedicated space for high-level AI guidance.
      * Must be hierarchical
      * Include main topics and subtopics
      * Provide clear progression of ideas
-   
+
    - Podcast Script:
      * Include speaker roles
      * Add timing markers
      * Structure for natural flow
      * Include transitions
-   
+
    - Study Guide:
      * Key concepts with explanations
      * Relevant examples
      * Practice questions
      * Summary sections
-   
+
    - One-pager Summary:
      * Concise but comprehensive
      * Key points only
      * Visual hierarchy
      * Actionable takeaways
-   
+
    - FAQs:
      * Common questions
      * Common misconceptions
      * Progressive difficulty
      * Practical applications
-   
+
    - Flashcards:
      * Question/Answer format
      * Progressive complexity
      * Include examples
      * Cross-reference concepts
-   
+
    - Reading Guide Questions:
      * Basic to advanced progression
      * Critical thinking focus

@@ -39,3 +39,9 @@ variable "storage_bucket_name" {
   type        = string
   # No default, must be provided as it's environment/project specific.
 }
+
+variable "workflow_description" {
+  description = "Description for the main workflow."
+  type        = string
+  default     = "Main orchestration workflow for AI Content Factory"
+}

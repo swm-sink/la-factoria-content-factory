@@ -3,36 +3,36 @@
 ## Current Sprint Focus (Next ~2 Weeks) - Foundational Stability & Cleanup - COMPLETED
 
 ### Execution Path 1: Settings & Security (Priority) - COMPLETED
-**Goal**: Secure and consolidate all application settings with proper environment variable 
-handling and security measures. Ensure `app/main.py` (and all components) use these 
+**Goal**: Secure and consolidate all application settings with proper environment variable
+handling and security measures. Ensure `app/main.py` (and all components) use these
 settings.
 
-- [x] Task 1.5: Consolidate settings into single source of truth 
+- [x] Task 1.5: Consolidate settings into single source of truth
 [AI-EXECUTION-SESSION-20250527]
-- [x] Task 1.6: Remove default insecure `API_KEY` from `app/core/config/settings.py` 
+- [x] Task 1.6: Remove default insecure `API_KEY` from `app/core/config/settings.py`
 [AI-EXECUTION-SESSION-20250527]
-- [x] Task 1.7: Review and ensure all critical settings in `app/core/config/settings.py` 
+- [x] Task 1.7: Review and ensure all critical settings in `app/core/config/settings.py`
 are correctly defined [AI-EXECUTION-SESSION-20250528]
-- [x] Task 1.8: Implement Google Secret Manager integration for sensitive settings 
+- [x] Task 1.8: Implement Google Secret Manager integration for sensitive settings
 [AI-EXECUTION-SESSION-20250528]
-- [x] Task 1.9: Add comprehensive Google-style docstrings to `app/core/config/settings.py` 
+- [x] Task 1.9: Add comprehensive Google-style docstrings to `app/core/config/settings.py`
 and `app/core/security/secrets.py` [AI-EXECUTION-SESSION-20250528]
 
 ### Execution Path 2: Core Service Strategy & API Alignment - COMPLETED
-**Goal**: Align the API (`app/main.py` and `app/api/routes/`) to use the 
+**Goal**: Align the API (`app/main.py` and `app/api/routes/`) to use the
 `EnhancedMultiStepContentGenerationService` from `app/services/
 multi_step_content_generation.py` as the primary service for content generation.
 
-- [x] Task 2.1: Designate `EnhancedMultiStepContentGenerationService` as primary & 
+- [x] Task 2.1: Designate `EnhancedMultiStepContentGenerationService` as primary &
 Refactor API to use it [AI-EXECUTION-SESSION-20250528]
-    *   [x] Verified `app/main.py` API endpoint uses 
+    *   [x] Verified `app/main.py` API endpoint uses
     `EnhancedMultiStepContentGenerationService` and compatible Pydantic models.
-    *   [x] Created/Updated `app/core/docs/service_architecture.md` to reflect 
+    *   [x] Created/Updated `app/core/docs/service_architecture.md` to reflect
     `EnhancedMultiStepContentGenerationService` as primary.
-    *   [x] Deprecated the simple `app/services/content_generation.py` with warnings and 
+    *   [x] Deprecated the simple `app/services/content_generation.py` with warnings and
     docstring updates.
 
-- [x] Task 2.2: Adapt API for Asynchronous Job-Based Workflow 
+- [x] Task 2.2: Adapt API for Asynchronous Job-Based Workflow
 [AI-EXECUTION-SESSION-PREVIOUS]
     *   Dependencies: Task 2.1
     *   Files: Created and implemented:
@@ -40,36 +40,36 @@ Refactor API to use it [AI-EXECUTION-SESSION-20250528]
         *   `app/api/routes/jobs.py`: API endpoints for job operations.
         *   `app/services/job_manager.py`: Job lifecycle management service.
     *   Steps:
-        *   Created job schema with status tracking, progress monitoring, and error 
+        *   Created job schema with status tracking, progress monitoring, and error
         handling.
-        *   Implemented RESTful job management endpoints (create, list, get, update, 
+        *   Implemented RESTful job management endpoints (create, list, get, update,
         delete).
         *   The `create_job` endpoint now accepts `ContentRequest` directly.
-        *   `JobManager` now uses `ContentRequest` from `job.metadata` to call 
-        `EnhancedMultiStepContentGenerationService` for actual content generation 
+        *   `JobManager` now uses `ContentRequest` from `job.metadata` to call
+        `EnhancedMultiStepContentGenerationService` for actual content generation
         (executed in a separate thread).
-        *   Basic result and error state from content generation service are stored in the 
+        *   Basic result and error state from content generation service are stored in the
         Job object.
         *   Updated main API router to include job endpoints.
-    *   Success Criteria: Asynchronous job system framework implemented with API support 
+    *   Success Criteria: Asynchronous job system framework implemented with API support
     and core content generation processing.
     *   **Pending Enhancements / Skipped Items (deferred until after E2E async testing):**
-        *   **Detailed Real-time Progress Tracking:** Current progress updates in 
-        `JobManager._process_job` are placeholders. True real-time progress requires 
-        deeper integration with `EnhancedMultiStepContentGenerationService`'s internal 
+        *   **Detailed Real-time Progress Tracking:** Current progress updates in
+        `JobManager._process_job` are placeholders. True real-time progress requires
+        deeper integration with `EnhancedMultiStepContentGenerationService`'s internal
         `ProgressTracker` (e.g., via callbacks or a shared observable state).
-        *   **Job Persistence:** The `JobManager` currently stores jobs in-memory. For 
-        production, job state needs to be persisted to a database (e.g., SQLite, 
+        *   **Job Persistence:** The `JobManager` currently stores jobs in-memory. For
+        production, job state needs to be persisted to a database (e.g., SQLite,
         PostgreSQL). This is a significant next step (see Execution Path 4).
-        *   **Advanced Error Handling & Retries:** While basic error state is captured, 
-        more granular error codes from the content generation process and retry mechanisms 
+        *   **Advanced Error Handling & Retries:** While basic error state is captured,
+        more granular error codes from the content generation process and retry mechanisms
         for transient issues could be implemented.
-        *   **Scalability & Resource Management:** For a high number of concurrent jobs, a 
+        *   **Scalability & Resource Management:** For a high number of concurrent jobs, a
         more robust worker system (e.g., Celery, or careful management of `asyncio.
-        to_thread` with resource limits) and strategies for managing external API rate 
+        to_thread` with resource limits) and strategies for managing external API rate
         limits are needed (see Execution Path 5).
 
-- [x] Task 2.3: Refactor API Routers to be fully within `app/api/routes/` 
+- [x] Task 2.3: Refactor API Routers to be fully within `app/api/routes/`
 [AI-EXECUTION-SESSION-20250528]
     *   [x] Created `app/api/routes/content.py`.
     *   [x] Moved `/api/generate-content` and `/api/health` endpoint logic to `app/api/
@@ -78,71 +78,71 @@ Refactor API to use it [AI-EXECUTION-SESSION-20250528]
     *   [x] Updated `app/main.py` to use the main `api_router` with prefix.
 
 ### Execution Path 3: Backend Dependencies & Cleanup - COMPLETED
-**Goal**: Resolve dependency conflicts, ensure proper version management, and remove 
+**Goal**: Resolve dependency conflicts, ensure proper version management, and remove
 obsolete code.
 
-- [x] Task 3.1: Resolve `pytest` version conflict & standardize usage 
+- [x] Task 3.1: Resolve `pytest` version conflict & standardize usage
 [AI-EXECUTION-SESSION-20250528]
-- [x] Task 3.2: Resolve `pydantic` & `pydantic-settings` versions (ensure Pydantic V2) 
+- [x] Task 3.2: Resolve `pydantic` & `pydantic-settings` versions (ensure Pydantic V2)
 [AI-EXECUTION-SESSION-20250528]
-- [x] Task 3.3: Clean up `requirements.txt` (move all dev dependencies) 
+- [x] Task 3.3: Clean up `requirements.txt` (move all dev dependencies)
 [AI-EXECUTION-SESSION-20250528]
 
-- [x] Task 3.4: Full Review & Cleanup/Deletion of `backend/` directory 
+- [x] Task 3.4: Full Review & Cleanup/Deletion of `backend/` directory
 [AI-EXECUTION-SESSION-PREVIOUS]
-    *   Dependencies: Execution Paths 1 & 2 fully completed and stable (or Task 2.2 
+    *   Dependencies: Execution Paths 1 & 2 fully completed and stable (or Task 2.2
     deferred).
     *   Files: Entire `backend/` directory.
     *   Steps:
-        1.  **Final Confirmation**: Verified all functionality from `backend/app/` is 
+        1.  **Final Confirmation**: Verified all functionality from `backend/app/` is
         covered by `app/`.
-        2.  Checked `Dockerfile` and `docker-compose.yml` point to `app.main:app` and 
+        2.  Checked `Dockerfile` and `docker-compose.yml` point to `app.main:app` and
         updated them.
         3.  Created a final backup of `backend/` to `backend_backup/`.
         4.  Deleted the `backend/` directory.
         5.  Removed `__pycache__` directories from `app/`.
-    *   Success Criteria: `backend/` removed; app structure consolidated into `app/`. 
+    *   Success Criteria: `backend/` removed; app structure consolidated into `app/`.
     Docker configurations updated.
     *   **Pending Items (to be addressed later / User Action Required):**
-        *   **Python 3.13 `pydantic-core` Build Issue (User Action for Local Dev):** Local 
-        `pytest` execution with Python 3.13 encounters build failures for `pydantic-core`. 
-        Workaround `PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1` helps but a permanent fix is 
+        *   **Python 3.13 `pydantic-core` Build Issue (User Action for Local Dev):** Local
+        `pytest` execution with Python 3.13 encounters build failures for `pydantic-core`.
+        Workaround `PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1` helps but a permanent fix is
         needed if local Python 3.13 testing is a priority.
-        *   **`.env` File Creation (User Action for Testing):** A `.env` file at the 
-        project root is required for `docker-compose` to run successfully and for local 
-        testing if Secret Manager is not configured locally. It should contain essential 
+        *   **`.env` File Creation (User Action for Testing):** A `.env` file at the
+        project root is required for `docker-compose` to run successfully and for local
+        testing if Secret Manager is not configured locally. It should contain essential
         variables like `API_KEY`, `ELEVENLABS_API_KEY`, `GCP_PROJECT_ID`.
 
 ---
 ## NEW SPRINT FOCUS: Enable End-to-End Testing of Asynchronous Job System - COMPLETED
-**Goal**: Make the asynchronous content generation flow fully functional and testable, 
-from job creation to retrieving generated content, with basic but meaningful progress 
+**Goal**: Make the asynchronous content generation flow fully functional and testable,
+from job creation to retrieving generated content, with basic but meaningful progress
 indication.
 
 - [x] **Task A: Add Missing Job Parameters (`target_duration`, `target_pages`)**
-    - [x] **Sub-task A.1:** Update `app/api/routes/content.py`'s `ContentRequest` model to 
-    include `target_duration: Optional[float] = None` and `target_pages: Optional[int] = 
+    - [x] **Sub-task A.1:** Update `app/api/routes/content.py`'s `ContentRequest` model to
+    include `target_duration: Optional[float] = None` and `target_pages: Optional[int] =
     None`.
-    - [x] **Sub-task A.2:** Ensure `JobManager._process_job` correctly extracts these from 
+    - [x] **Sub-task A.2:** Ensure `JobManager._process_job` correctly extracts these from
     `job.metadata` (derived from `ContentRequest`) and passes them to `self.
     _content_service.generate_long_form_content`.
-    - [x] **Sub-task A.3:** Verify OpenAPI schema (auto-generated docs) for the `/jobs` 
+    - [x] **Sub-task A.3:** Verify OpenAPI schema (auto-generated docs) for the `/jobs`
     endpoint reflects these new optional parameters in the request body.
 
 - [x] **Task B: Improve Placeholder Progress Updates in `JobManager`**
-    - [x] **Sub-task B.1:** Analyze the main stages in 
-    `EnhancedMultiStepContentGenerationService.generate_long_form_content` (e.g., Cache 
+    - [x] **Sub-task B.1:** Analyze the main stages in
+    `EnhancedMultiStepContentGenerationService.generate_long_form_content` (e.g., Cache
     Check, Topic Decomposition, Section Generation, Assembly, Quality Eval, Versioning).
-    - [x] **Sub-task B.2:** Modify `JobManager._process_job` to update `Job.progress` with 
-    more meaningful `current_step` messages and `percentage` estimates that roughly 
+    - [x] **Sub-task B.2:** Modify `JobManager._process_job` to update `Job.progress` with
+    more meaningful `current_step` messages and `percentage` estimates that roughly
     correspond to these actual service stages.
 
 - [x] **Task C: Document Manual User Steps Required for Testing (User Action Required)**
-    - [x] **Sub-task C.1:** (User Action) Create `.env` file at project root with `API_KEY`, 
-    `ELEVENLABS_API_KEY`, `GCP_PROJECT_ID` for Dockerized testing and local testing if 
+    - [x] **Sub-task C.1:** (User Action) Create `.env` file at project root with `API_KEY`,
+    `ELEVENLABS_API_KEY`, `GCP_PROJECT_ID` for Dockerized testing and local testing if
     Secret Manager is not used locally. (Documentation updated in README.md)
-    - [x] **Sub-task C.2:** (User Action) For local testing on Python 3.13 outside Docker, the 
-    `pydantic-core` build issue may require setting 
+    - [x] **Sub-task C.2:** (User Action) For local testing on Python 3.13 outside Docker, the
+    `pydantic-core` build issue may require setting
     `PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1` or other resolution. (Documentation updated in README.md)
 
 ---
@@ -384,7 +384,7 @@ indication.
           for key, value in update_data.items():
               if hasattr(value, 'model_dump'): # Check if it's a Pydantic model
                   update_data[key] = value.model_dump(exclude_none=True)
-          
+
           logger.info(f"Updating job {job_id} in Firestore with status: {status.value} and data: {update_data}")
           await client.collection("jobs").document(job_id).update(update_data)
           logger.info(f"Job {job_id} status updated in Firestore.")
@@ -426,13 +426,13 @@ indication.
 
       async def enqueue_content_generation_task(job: Job) -> str:
           client = get_tasks_client()
-          
+
           if not all([settings.GCP_PROJECT_ID, settings.GCP_QUEUE_LOCATION, settings.GCP_JOB_QUEUE_NAME, settings.GCP_JOB_WORKER_ENDPOINT, settings.GCP_JOB_WORKER_SA_EMAIL]):
               logger.error("Missing Cloud Tasks configuration in settings. Cannot enqueue task.")
               raise ValueError("Cloud Tasks configuration is incomplete.")
 
           queue_path = client.queue_path(settings.GCP_PROJECT_ID, settings.GCP_QUEUE_LOCATION, settings.GCP_JOB_QUEUE_NAME)
-          
+
           payload = {"job_id": job.id}
           task_body = json.dumps(payload).encode()
 
@@ -449,7 +449,7 @@ indication.
               # Optional: schedule_time, dispatch_deadline
               # schedule_time=timestamp_pb2.Timestamp(seconds=int(datetime.datetime.now(datetime.timezone.utc).timestamp()) + 10), # 10s delay
           )
-          
+
           logger.info(f"Creating Cloud Task for job {job.id} in queue {queue_path} to target {settings.GCP_JOB_WORKER_ENDPOINT}")
           created_task = await client.create_task(request={"parent": queue_path, "task": task})
           logger.info(f"Cloud Task {created_task.name} created for job {job.id}.")
@@ -507,7 +507,7 @@ indication.
 6. Conclude with **Sub-Phase 1.E: Documentation & Final Review**.
 
 ---
-## Previous Sprint Focus (Foundational Stability & Cleanup) - COMPLETED 
+## Previous Sprint Focus (Foundational Stability & Cleanup) - COMPLETED
 **(Duplicated Section for historical reference only - tasks are identical to the first section with this title)**
 
 ### Execution Path 1: Settings & Security (Priority) - COMPLETED
@@ -519,7 +519,7 @@ indication.
 **Note:** These tasks are adapted to leverage the new GCP-Native Serverless Architecture.
 
 ### Execution Path 4: Reliability & Resilience (GCP Focused)
-**Goal**: Enhance the application's ability to handle failures gracefully, ensure data 
+**Goal**: Enhance the application's ability to handle failures gracefully, ensure data
 integrity, and recover from errors, using GCP services.
 
 - **Task 4.1: Implement Job Persistence for Asynchronous System using Firestore**
@@ -741,29 +741,29 @@ integrity, and recover from errors, using GCP services.
 ### Session 5: Foundational Stability & Async Enablement (2025-05-27 - Recent) - COMPLETED
 **Focus**: Settings consolidation, service strategy, dependency cleanup, enabling E2E async testing.
 #### Completed Tasks (within this extended session period)
-- [x] Task 1.5: Consolidate settings into single source of truth 
+- [x] Task 1.5: Consolidate settings into single source of truth
 [AI-EXECUTION-SESSION-20250527]
-- [x] Task 1.6: Remove default insecure `API_KEY` from settings 
+- [x] Task 1.6: Remove default insecure `API_KEY` from settings
 [AI-EXECUTION-SESSION-20250527]
-- [x] Task 1.7: Review and ensure all critical settings in `app/core/config/settings.py` 
+- [x] Task 1.7: Review and ensure all critical settings in `app/core/config/settings.py`
 are correctly defined [AI-EXECUTION-SESSION-20250528]
-- [x] Task 1.8: Implement Google Secret Manager integration for sensitive settings 
+- [x] Task 1.8: Implement Google Secret Manager integration for sensitive settings
 [AI-EXECUTION-SESSION-20250528]
-- [x] Task 1.9: Add comprehensive Google-style docstrings (as part of 1.8) 
+- [x] Task 1.9: Add comprehensive Google-style docstrings (as part of 1.8)
 [AI-EXECUTION-SESSION-20250528]
-- [x] Task 2.1: Designate `EnhancedMultiStepContentGenerationService` as primary & 
+- [x] Task 2.1: Designate `EnhancedMultiStepContentGenerationService` as primary &
 Refactor API to use it [AI-EXECUTION-SESSION-20250528]
-- [x] Task 2.2: Adapt API for Asynchronous Job-Based Workflow 
+- [x] Task 2.2: Adapt API for Asynchronous Job-Based Workflow
 [AI-EXECUTION-SESSION-PREVIOUS]
-- [x] Task 2.3: Refactor API Routers to be fully within `app/api/routes/` 
+- [x] Task 2.3: Refactor API Routers to be fully within `app/api/routes/`
 [AI-EXECUTION-SESSION-20250528]
-- [x] Task 3.1: Resolve `pytest` version conflict & standardize usage 
+- [x] Task 3.1: Resolve `pytest` version conflict & standardize usage
 [AI-EXECUTION-SESSION-20250528]
-- [x] Task 3.2: Resolve `pydantic` & `pydantic-settings` versions (ensure Pydantic V2) 
+- [x] Task 3.2: Resolve `pydantic` & `pydantic-settings` versions (ensure Pydantic V2)
 [AI-EXECUTION-SESSION-20250528]
-- [x] Task 3.3: Clean up `requirements.txt` (move all dev dependencies) 
+- [x] Task 3.3: Clean up `requirements.txt` (move all dev dependencies)
 [AI-EXECUTION-SESSION-20250528]
-- [x] Task 3.4: Full Review & Cleanup/Deletion of `backend/` directory 
+- [x] Task 3.4: Full Review & Cleanup/Deletion of `backend/` directory
 [AI-EXECUTION-SESSION-PREVIOUS]
 - [x] Task 11.1: Implement Automated AI Context Dump [AI-EXECUTION-SESSION-20250528]
 - [x] All tasks under "NEW SPRINT FOCUS: Enable End-to-End Testing of Asynchronous Job System" (Tasks A, B, C)
@@ -781,7 +781,7 @@ Refactor API to use it [AI-EXECUTION-SESSION-20250528]
 
 ---
 ## Issues
-(This section can be removed or repurposed as most items are now integrated into the 
+(This section can be removed or repurposed as most items are now integrated into the
 Execution Paths above or SaaS Quality Enhancements Phase)
 
 ---

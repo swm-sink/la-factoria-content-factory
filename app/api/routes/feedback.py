@@ -3,16 +3,18 @@ API Endpoints for content feedback.
 """
 
 import logging
-from uuid import uuid4, UUID
 from datetime import datetime
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from google.cloud.firestore_v1.async_client import AsyncClient as FirestoreAsyncClient  # type: ignore
+from google.cloud.firestore_v1.async_client import (
+    AsyncClient as FirestoreAsyncClient,  # type: ignore
+)
 
-from app.models.pydantic.feedback import FeedbackCreate, FeedbackResponse
-from app.services.job.firestore_client import get_firestore_client
 from app.api.deps import get_current_active_user  # Import the actual dependency
+from app.models.pydantic.feedback import FeedbackCreate, FeedbackResponse
 from app.models.pydantic.user import User  # User model for type hinting
+from app.services.job.firestore_client import get_firestore_client
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

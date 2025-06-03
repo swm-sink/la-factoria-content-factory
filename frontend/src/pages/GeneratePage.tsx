@@ -10,12 +10,12 @@ const GeneratePage: React.FC = () => {
           Fill out the form below to start generating your AI-powered content.
         </p>
       </header>
-      
+
       {/* Placeholder for ContentGeneratorForm or other content */}
       <div className="bg-white p-6 rounded-lg shadow-md">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Content Generation Form</h2>
         <p className="text-gray-700">
-          The content generation form (Task FE-3.2) will be implemented here. 
+          The content generation form (Task FE-3.2) will be implemented here.
           This page will allow users to input their syllabus or topic and select the desired content types.
         </p>
         {/* <ContentGeneratorForm /> */} {/* This will be added in a subsequent task */}

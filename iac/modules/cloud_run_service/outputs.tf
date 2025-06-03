@@ -16,4 +16,4 @@ output "service_id" {
 output "latest_revision" {
   description = "The name of the latest revision of the Cloud Run service."
   value       = google_cloud_run_v2_service.default.latest_ready_revision
-} 
+}

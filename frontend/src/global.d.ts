@@ -1,2 +1,2 @@
 declare module 'zustand';
-declare module 'axios'; 
+declare module 'axios';

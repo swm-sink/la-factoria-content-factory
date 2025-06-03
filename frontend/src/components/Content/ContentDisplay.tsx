@@ -15,19 +15,19 @@ const ContentDisplay: React.FC<ContentDisplayProps> = ({ contentId, generatedCon
     setFeedbackError(null);
     setFeedbackSubmitted(null);
     console.log(`Feedback for ${contentId}: ${liked ? 'Like' : 'Dislike'}`);
-    
+
     try {
       // Assuming contentId is the ID the backend /api/v1/content/{content_id}/feedback expects.
       // This might be a specific ID of a content piece within the job, or the job ID itself
       // if feedback is at the job level. This needs to align with backend API design.
-      await api.post(`/v1/feedback/content/${contentId}/feedback`, { 
+      await api.post(`/v1/feedback/content/${contentId}/feedback`, {
         rating: liked,
         // comment: "Optional comment here" // Add if comment field is implemented
       });
 
-      setFeedbackSubmitted({ 
-        type: liked ? 'like' : 'dislike', 
-        message: `Thank you for your feedback! You ${liked ? 'liked' : 'disliked'} this content.` 
+      setFeedbackSubmitted({
+        type: liked ? 'like' : 'dislike',
+        message: `Thank you for your feedback! You ${liked ? 'liked' : 'disliked'} this content.`
       });
     } catch (err) {
       const apiError = err as ApiError; // Or AxiosError
@@ -43,7 +43,7 @@ const ContentDisplay: React.FC<ContentDisplayProps> = ({ contentId, generatedCon
   return (
     <div className="mt-6 bg-white p-6 rounded-lg shadow">
       <h3 className="text-xl font-semibold text-gray-800 mb-4">Generated Content</h3>
-      
+
       {/* Placeholder for actual content rendering */}
       <div className="prose max-w-none">
         <p className="text-gray-700 mb-2"><strong>Content Outline:</strong></p>

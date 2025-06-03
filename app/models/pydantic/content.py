@@ -6,10 +6,20 @@ handling AI-generated content, including request parameters, metadata,
 quality metrics, and the specific structures for different educational content formats.
 """
 
-from pydantic import BaseModel, Field, field_validator, model_validator
-from typing import Optional, List, Dict, Any, Union
-import re
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional, Union
+
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+class TargetFormat(str, Enum):
+    """Enumeration of allowed target formats for content generation."""
+
+    PODCAST = "podcast"
+    GUIDE = "guide"
+    ONE_PAGER = "one_pager"
+    COMPREHENSIVE = "comprehensive"
 
 
 class ContentRequest(BaseModel):
@@ -21,9 +31,9 @@ class ContentRequest(BaseModel):
         max_length=5000,
         description="The main input text/syllabus for content generation (50-5000 characters).",
     )
-    target_format: str = Field(
-        default="guide",
-        description="Target format for the content (e.g., 'podcast', 'guide', 'one_pager').",
+    target_format: TargetFormat = Field(
+        default=TargetFormat.GUIDE,
+        description="Target format for the content.",
     )
     target_duration: Optional[float] = Field(
         default=None,
@@ -43,15 +53,7 @@ class ContentRequest(BaseModel):
         default=True, description="Whether to use caching for generated content."
     )
 
-    @field_validator("target_format")
-    @classmethod
-    def validate_target_format(cls, v: str) -> str:
-        allowed_formats = {"podcast", "guide", "one_pager", "comprehensive"}
-        if v not in allowed_formats:
-            raise ValueError(
-                f"target_format must be one of: {', '.join(allowed_formats)}"
-            )
-        return v
+    # Note: target_format validation now handled by TargetFormat enum
 
 
 class ContentMetadata(BaseModel):
@@ -320,7 +322,7 @@ class GeneratedContent(BaseModel):
         if not self.content_outline or not self.content_outline.title:
             # This case should ideally be caught by outline being mandatory
             # or a separate validator if outline can be None initially.
-            return self 
+            return self
 
         outline_title = self.content_outline.title
 
@@ -329,16 +331,24 @@ class GeneratedContent(BaseModel):
             "study_guide": self.study_guide,
             "one_pager_summary": self.one_pager_summary,
             "detailed_reading_material": self.detailed_reading_material,
-            "faqs": self.faqs, # FAQCollection might use a default title
-            "flashcards": self.flashcards, # FlashcardCollection might use a default title
-            "reading_guide_questions": self.reading_guide_questions # ReadingGuideQuestions might use a default title
+            "faqs": self.faqs,  # FAQCollection might use a default title
+            "flashcards": self.flashcards,  # FlashcardCollection might use a default title
+            "reading_guide_questions": self.reading_guide_questions,  # ReadingGuideQuestions might use a default title
         }
 
         for field_name, content_item in content_types_to_check.items():
-            if content_item and hasattr(content_item, 'title') and content_item.title:
+            if content_item and hasattr(content_item, "title") and content_item.title:
                 # Allow default titles for collections if they are not outline-derived
-                if field_name in ["faqs", "flashcards", "reading_guide_questions"] and content_item.title in ["Frequently Asked Questions", "Study Flashcards", "Reading Guide Questions"]:
-                    continue # Skip check for default titles of these specific collections
+                if field_name in [
+                    "faqs",
+                    "flashcards",
+                    "reading_guide_questions",
+                ] and content_item.title in [
+                    "Frequently Asked Questions",
+                    "Study Flashcards",
+                    "Reading Guide Questions",
+                ]:
+                    continue  # Skip check for default titles of these specific collections
                 if content_item.title != outline_title:
                     raise ValueError(
                         f"{field_name.replace('_', ' ').title()} title '{content_item.title}' "

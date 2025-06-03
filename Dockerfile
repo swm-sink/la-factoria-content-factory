@@ -19,6 +19,9 @@ RUN npm run build
 FROM python:3.11-slim AS backend-builder
 WORKDIR /opt/app_code
 
+# Install build dependencies for Python packages that need compilation
+RUN apt-get update && apt-get install -y gcc python3-dev && apt-get clean
+
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -34,8 +37,8 @@ RUN groupadd -r appgroup && useradd --no-log-init -r -g appgroup appuser
 
 WORKDIR /opt/app_code
 
-# Install Nginx and envsubst utility
-RUN apt-get update && apt-get install -y nginx gettext-base && apt-get clean
+# Install Nginx, envsubst utility, and build tools for psutil
+RUN apt-get update && apt-get install -y nginx gettext-base gcc python3-dev build-essential libffi-dev musl-dev musl-tools python3.11-dev && apt-get clean
 
 # Copy placeholder static content first (will be overwritten by frontend-builder if it exists)
 COPY docker/static_content/index.html /usr/share/nginx/html/index.html
@@ -65,6 +68,9 @@ RUN chmod +x /start.sh
 # If Uvicorn needs to write to /opt/app_code for any reason (e.g. temp files, though unlikely for this app)
 # RUN chown -R appuser:appgroup /opt/app_code
 # Ensure Nginx can read static files (usually default permissions are fine)
+
+# Fix for Nginx body temp directory permissions
+RUN mkdir -p /var/lib/nginx/body && chown -R appuser:appgroup /var/lib/nginx
 
 # Nginx will listen on this port (via env var substitution in start.sh),
 # Uvicorn on another internal one (typically 8000, set by APP_PORT for Uvicorn in start.sh).

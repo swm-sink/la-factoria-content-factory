@@ -1,12 +1,12 @@
 # User Input Required
 
-This file lists items identified during the autonomous sprint that require your input, decision, or action. 
+This file lists items identified during the autonomous sprint that require your input, decision, or action.
 
 ## Items from Previous Sprint (Addressed or In Progress)
 
 **1. Architectural Deviation in Content Generation Flow & Mismatch Between Content Assembly Service Logic and Prompt Definition**
    - **Status:** ADDRESSED.
-   - **Resolution:** The content generation service (`EnhancedMultiStepContentGenerationService`) and prompts (`MultiStepPrompts`) have been refactored to an outline-driven, modular flow. 
+   - **Resolution:** The content generation service (`EnhancedMultiStepContentGenerationService`) and prompts (`MultiStepPrompts`) have been refactored to an outline-driven, modular flow.
      - A master `ContentOutline` is generated first.
      - Derivative content types are then generated in parallel, each from the master outline using dedicated prompts and validated against their Pydantic models.
      - The old monolithic assembly logic has been replaced.
@@ -47,7 +47,7 @@ This file lists items identified during the autonomous sprint that require your 
 
 ## End of Current Autonomous Sprint (Refactoring Focus)
 
-This sprint focused on refactoring the core content generation pipeline to an outline-driven, modular architecture. 
+This sprint focused on refactoring the core content generation pipeline to an outline-driven, modular architecture.
 
 **Key Accomplishments:**
 - Prompts (`app/core/prompts/v1/multi_step_prompts.py`) refactored for the new flow.

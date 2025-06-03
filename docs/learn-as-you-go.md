@@ -44,4 +44,4 @@ This glossary contains explanations of technical terms encountered during the pr
 
 -   **Vertex AI Gemini:**
     -   **What it is:** The AI model from Google Cloud that we use to generate the actual content (outlines, podcast scripts, study guides, etc.). It's a large language model (LLM) that can understand and generate human-like text based on the prompts (instructions) we give it.
-    -   **Why it's used:** It's the core AI engine for our content factory, providing the "intelligence" to transform user inputs into various educational materials. 
+    -   **Why it's used:** It's the core AI engine for our content factory, providing the "intelligence" to transform user inputs into various educational materials.

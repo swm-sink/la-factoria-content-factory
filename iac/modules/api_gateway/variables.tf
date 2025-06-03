@@ -60,4 +60,4 @@ variable "labels" {
   description = "A map of labels to assign to API Gateway resources."
   type        = map(string)
   default     = {}
-} 
+}

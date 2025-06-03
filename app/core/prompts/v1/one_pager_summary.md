@@ -32,4 +32,26 @@ Detailed Constraints (based on Pydantic model 'OnePagerSummary'):
 IMPORTANT: Do not include any Personally Identifiable Information (PII) such as real names (unless they are widely known public figures relevant to the content), addresses, phone numbers, email addresses, or any other private data in the generated content.
 
 Ensure the summary is highly condensed and impactful.
+
+---
+CRITICAL OUTPUT REQUIREMENTS:
+1. Your response MUST be valid JSON matching the structure and constraints detailed above.
+   Ensure all field names, types, and nesting are exactly as specified.
+   Do not include any text before or after the JSON object.
+   Do not wrap the JSON in markdown code blocks (e.g., ```json ... ```).
+
+2. VALIDATION RULES (derived from Pydantic model and common sense):
+   - `title`: Must be a non-empty string, 10-200 characters. Should align with the outline's title.
+   - `executive_summary`: Must be a non-empty string, 100-500 characters.
+   - `key_takeaways`: Must be a list of 3 to 7 non-empty strings, each at least 20 characters long.
+   - `main_content`: Must be a non-empty string, 200-1500 characters. It should concisely summarize the Content Outline.
+   - All textual content should be meaningful, well-written, concise, and directly relevant to the Content Outline.
+
+3. QUALITY CHECKS (Before responding, internally verify these):
+   ✓ All required fields (title, executive_summary, key_takeaways, main_content) are populated with valid data meeting length/count constraints.
+   ✓ The summary's content directly and concisely reflects the provided Content Outline.
+   ✓ Key takeaways are impactful and accurately represent core messages.
+   ✓ The main content is a succinct yet comprehensive summary of the outline's sections.
+---
+
 Generate the JSON object now.

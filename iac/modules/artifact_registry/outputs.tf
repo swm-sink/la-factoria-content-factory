@@ -18,4 +18,4 @@ output "repository_url" {
   # Constructing the URL as per GCP format: https://cloud.google.com/artifact-registry/docs/docker/names
   # Example: us-central1-docker.pkg.dev/my-project/my-repo
   value       = "${google_artifact_registry_repository.default.location}-docker.pkg.dev/${google_artifact_registry_repository.default.project}/${google_artifact_registry_repository.default.repository_id}"
-} 
+}

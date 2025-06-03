@@ -19,7 +19,7 @@ jobs:
     # Add dependency on the backend-ci test job if it's in a separate workflow
     # or make sure this workflow only runs if CI-1.1 (tests) has passed if combined.
     # For now, assuming it runs on direct push to main after PR checks have passed.
-    
+
     permissions:
       contents: 'read'
       id-token: 'write' # Required for Workload Identity Federation
@@ -54,4 +54,4 @@ jobs:
         #   arg1=value1
         #   arg2=value2
         cache-from: type=gha
-        cache-to: type=gha,mode=max 
+        cache-to: type=gha,mode=max

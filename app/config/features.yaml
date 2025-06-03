@@ -1,0 +1,76 @@
+# Feature Flags Configuration
+# These can be updated without restarting the application
+
+features:
+  content_generation:
+    # Use the new unified content service
+    use_unified_service: true
+    # Enable parallel processing (disabled for MVP)
+    parallel_processing: false
+    # Enable quality refinement (disabled for MVP)
+    quality_refinement: false
+    # Maximum retries for LLM calls
+    max_retries: 2
+    # Timeout for operations
+    timeout_seconds: 30
+    # Enable debug mode
+    debug_mode: false
+
+  validation:
+    # Use strict validation mode
+    strict_mode: false
+    # Quality threshold (for logging only, not blocking)
+    quality_threshold: 0.7
+    # Enable semantic validation (disabled for MVP)
+    semantic_validation: false
+
+  caching:
+    # Enable caching
+    enabled: true
+    # Cache TTL in seconds (7 days)
+    ttl_seconds: 604800
+
+  debug:
+    # Save prompts to disk
+    save_prompts: false
+    # Save LLM responses to disk
+    save_responses: false
+    # Enable debug REPL
+    enable_repl: false
+    # Enable debug dashboard
+    enable_dashboard: false
+
+  circuit_breakers:
+    # Circuit breaker for LLM calls
+    llm_calls:
+      enabled: true
+      failure_threshold: 5
+      timeout_seconds: 60
+      half_open_requests: 1
+    # Circuit breaker for cache
+    cache:
+      enabled: false
+      failure_threshold: 10
+      timeout_seconds: 30
+
+  monitoring:
+    # Enable Prometheus metrics
+    prometheus_enabled: true
+    # Enable detailed logging
+    detailed_logging: false
+    # Log token usage
+    log_token_usage: true
+
+  rollout:
+    # Percentage of traffic to route to unified service
+    unified_service_percentage: 100
+    # Gradual rollout schedule (not used if percentage is 100)
+    rollout_schedule:
+      - date: "2025-06-03"
+        percentage: 5
+      - date: "2025-06-04"
+        percentage: 25
+      - date: "2025-06-05"
+        percentage: 50
+      - date: "2025-06-06"
+        percentage: 100

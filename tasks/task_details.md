@@ -210,4 +210,167 @@ This document provides detailed context, rationale, edge cases, and implementati
 
 This revised 10-hour plan is more aggressive on the frontend side, aiming for a more complete user flow.
 ---
+## Sprint: Project Finalization & Polish (AI Execution - Cline)
+
+### TEST-1.2: Tests: Comprehensive Unit Test Coverage for Content Service
+- **Objective:** Achieve comprehensive unit test coverage for the refactored EnhancedMultiStepContentGenerationService, including all derivative types and edge cases.
+- **Status:** todo
+- **Parent Meta-task:** Sprint: Project Finalization & Polish (AI Execution - Cline)
+- **Completion Notes:** Previously marked done. However, current test suite shows many failures. This task needs to be revisited to ensure all tests for this service are passing and comprehensive. See reports/test_infrastructure_status.md.
+- **User Context Needed:** Build upon existing tests. Needs to mock AI responses for all derivative types and assert their successful creation or graceful failure.
+- **AI Ref:** CLINE_EXECUTION_20250601_UPDATE
+
+### DOC-1.2: Docs: Update README.md with Current Project State
+- **Objective:** Ensure README.md accurately reflects the current project structure, API request/response formats, and all relevant environment variables.
+- **Status:** done
+- **Parent Meta-task:** Sprint: Project Finalization & Polish (AI Execution - Cline)
+- **Completion Notes:** README.md updated on June 1, 2025, to reflect 'In Development' status and link to docs/CURRENT_STATUS.md. Previous updates included API details and env vars.
+- **User Context Needed:** Refer to actual Pydantic models for request/response examples and settings.py for environment variables.
+- **AI Ref:** CLINE_EXECUTION_20250601_UPDATE
+
+---
 *(Existing task details for other IDs would follow)*
+
+### ARCHIVE-SETTINGS-1.5: Archived: Consolidate settings into single source of truth
+- **Objective:** Consolidate all application settings into a single source of truth for better manageability and clarity.
+- **Status:** done
+- **Parent Meta-task:** META-ARCHIVE-SETTINGS
+- **Completion Notes:** Migrated from tasks_archive.md (Execution Path 1: Settings & Security). Task originally marked completed. This involved centralizing application configurations. AI Ref: AI-EXECUTION-SESSION-20250527.
+
+### ARCHIVE-SETTINGS-1.6: Archived: Remove default insecure API_KEY from settings.py
+- **Objective:** Enhance security by removing any default insecure API keys from the settings configuration.
+- **Status:** done
+- **Parent Meta-task:** META-ARCHIVE-SETTINGS
+- **Completion Notes:** Migrated from tasks_archive.md (Execution Path 1: Settings & Security). Task originally marked completed. Default insecure API_KEY removed. AI Ref: AI-EXECUTION-SESSION-20250527.
+
+### ARCHIVE-SETTINGS-1.7: Archived: Review and ensure critical settings in settings.py are correct
+- **Objective:** Verify the correctness and completeness of all critical application settings defined in app/core/config/settings.py.
+- **Status:** done
+- **Parent Meta-task:** META-ARCHIVE-SETTINGS
+- **Completion Notes:** Migrated from tasks_archive.md (Execution Path 1: Settings & Security). Task originally marked completed. Critical settings reviewed and confirmed. AI Ref: AI-EXECUTION-SESSION-20250528.
+
+### ARCHIVE-SETTINGS-1.9: Archived: Add docstrings to settings.py and secrets.py
+- **Objective:** Improve code maintainability and understanding by adding comprehensive Google-style docstrings to settings and secrets management modules.
+- **Status:** done
+- **Parent Meta-task:** META-ARCHIVE-SETTINGS
+- **Completion Notes:** Migrated from tasks_archive.md (Execution Path 1: Settings & Security). Task originally marked completed. Docstrings added. AI Ref: AI-EXECUTION-SESSION-20250528.
+
+### ARCHIVE-COREAPI-2.1: Archived: Designate EnhancedMultiStepContentGenerationService as Primary & Refactor API
+- **Objective:** Establish EnhancedMultiStepContentGenerationService as the primary service for content generation and update API and documentation accordingly.
+- **Status:** done
+- **Parent Meta-task:** META-ARCHIVE-COREAPI
+- **Completion Notes:** Migrated from tasks_archive.md (Execution Path 2). Task originally marked completed. Involved making EnhancedMultiStepContentGenerationService primary, updating docs, and deprecating the old service. AI Ref: AI-EXECUTION-SESSION-20250528.
+
+### ARCHIVE-COREAPI-2.2: Archived: Initial API Adaptation for Asynchronous Job-Based Workflow (In-Memory)
+- **Objective:** Implement the initial framework for an asynchronous job-based workflow for content generation, including basic API endpoints and in-memory job management.
+- **Status:** done
+- **Parent Meta-task:** META-ARCHIVE-COREAPI
+- **Completion Notes:** Migrated from tasks_archive.md (Execution Path 2). Task originally marked completed. This was the initial implementation of the async job system with in-memory storage. Original 'Pending Enhancements / Skipped Items' included: Detailed Real-time Progress Tracking (deferred), Job Persistence (deferred to what became Firestore implementation), Advanced Error Handling & Retries (deferred), Scalability & Resource Management (deferred to what became Cloud Tasks/worker system). AI Ref: AI-EXECUTION-SESSION-PREVIOUS.
+
+### ARCHIVE-COREAPI-2.3: Archived: Refactor API Routers to be within app/api/routes/
+- **Objective:** Improve API codebase organization by refactoring all API route definitions into the app/api/routes/ directory structure.
+- **Status:** done
+- **Parent Meta-task:** META-ARCHIVE-COREAPI
+- **Completion Notes:** Migrated from tasks_archive.md (Execution Path 2). Task originally marked completed. Involved creating app/api/routes/content.py, app/api/routes.py, and updating app/main.py. AI Ref: AI-EXECUTION-SESSION-20250528.
+
+### ARCHIVE-DEPCLEAN-3.1: Archived: Resolve pytest version conflict & standardize usage
+- **Objective:** Resolve pytest version conflicts and standardize its usage within the project for consistent testing.
+- **Status:** done
+- **Parent Meta-task:** META-ARCHIVE-DEPCLEAN
+- **Completion Notes:** Migrated from tasks_archive.md (Execution Path 3). Task originally marked completed. Focused on resolving pytest version issues. AI Ref: AI-EXECUTION-SESSION-20250528.
+
+### ARCHIVE-DEPCLEAN-3.2: Archived: Resolve pydantic & pydantic-settings versions (ensure Pydantic V2)
+- **Objective:** Ensure the project uses Pydantic V2 and resolve any version conflicts with pydantic-settings.
+- **Status:** done
+- **Parent Meta-task:** META-ARCHIVE-DEPCLEAN
+- **Completion Notes:** Migrated from tasks_archive.md (Execution Path 3). Task originally marked completed. Focused on migrating to Pydantic V2 and resolving pydantic-settings compatibility. AI Ref: AI-EXECUTION-SESSION-20250528.
+
+### ARCHIVE-DEPCLEAN-3.3: Archived: Clean up requirements.txt (move dev dependencies to requirements-dev.txt)
+- **Objective:** Improve dependency management by separating development dependencies from production dependencies.
+- **Status:** done
+- **Parent Meta-task:** META-ARCHIVE-DEPCLEAN
+- **Completion Notes:** Migrated from tasks_archive.md (Execution Path 3). Task originally marked completed. Involved separating production and development dependencies. AI Ref: AI-EXECUTION-SESSION-20250528.
+
+### ARCHIVE-DEPCLEAN-3.4: Archived: Full Review & Cleanup/Deletion of backend/ directory
+- **Objective:** Consolidate project structure by removing the obsolete backend/ directory after ensuring all its functionality was migrated to the app/ directory.
+- **Status:** done
+- **Parent Meta-task:** META-ARCHIVE-DEPCLEAN
+- **Completion Notes:** Migrated from tasks_archive.md (Execution Path 3). Task originally marked completed. Involved verifying functionality migration from backend/ to app/, updating Docker configurations, backing up and deleting backend/, and removing __pycache__ directories. Original 'Pending Items (to be addressed later / User Action Required)' included: Python 3.13 pydantic-core build issue (User Action for Local Dev), .env file creation for Dockerized/local testing (User Action for Testing). AI Ref: AI-EXECUTION-SESSION-PREVIOUS.
+
+### ARCHIVE-ASYNCTEST-A: Archived: Add Missing Job Parameters (target_duration, target_pages) for Async Testing
+- **Objective:** Enhance the job creation request to include target_duration and target_pages, and ensure these parameters are processed by the JobManager and reflected in the API.
+- **Status:** done
+- **Parent Meta-task:** META-ARCHIVE-ASYNCTEST
+- **Completion Notes:** Migrated from tasks_archive.md (NEW SPRINT FOCUS: Enable E2E Testing...). Task originally marked completed. Involved: Sub-task A.1: Updated ContentRequest model with target_duration and target_pages. Sub-task A.2: Ensured JobManager._process_job extracted and passed these to the content generation service. Sub-task A.3: Verified OpenAPI schema reflected new parameters. AI Ref: tasks_archive.md (NEW SPRINT FOCUS: Enable E2E Testing... Task A).
+
+### ARCHIVE-ASYNCTEST-B: Archived: Improve Placeholder Progress Updates in JobManager for Async Testing
+- **Objective:** Improve the meaningfulness of progress updates provided by the JobManager during asynchronous job processing by aligning them with actual service stages.
+- **Status:** done
+- **Parent Meta-task:** META-ARCHIVE-ASYNCTEST
+- **Completion Notes:** Migrated from tasks_archive.md (NEW SPRINT FOCUS: Enable E2E Testing...). Task originally marked completed. Involved: Sub-task B.1: Analyzed main stages in EnhancedMultiStepContentGenerationService. Sub-task B.2: Modified JobManager._process_job to update Job.progress with more meaningful step messages and percentage estimates. AI Ref: tasks_archive.md (NEW SPRINT FOCUS: Enable E2E Testing... Task B).
+
+### ARCHIVE-ASYNCTEST-C: Archived: Document Manual User Steps Required for Async System Testing
+- **Objective:** Document essential manual steps and workarounds required for users to effectively test the application, particularly concerning local environment setup.
+- **Status:** done
+- **Parent Meta-task:** META-ARCHIVE-ASYNCTEST
+- **Completion Notes:** Migrated from tasks_archive.md (NEW SPRINT FOCUS: Enable E2E Testing...). Task originally marked completed. Involved documenting: Sub-task C.1: Need for .env file with API_KEY, ELEVENLABS_API_KEY, GCP_PROJECT_ID. Sub-task C.2: PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 workaround for pydantic-core build issue on Python 3.13 for local testing. This information was to be added to README.md or similar developer documentation. AI Ref: tasks_archive.md (NEW SPRINT FOCUS: Enable E2E Testing... Task C).
+
+### ARCHIVE-GCPSETUP-1.1: Archived: GCP Project Setup & API Enablement (Prerequisite)
+- **Objective:** Ensure the Google Cloud Platform project is correctly set up and all necessary APIs are enabled for the application deployment.
+- **Status:** done
+- **Parent Meta-task:** Current Sprint: GCP-Native Serverless Architecture
+- **Completion Notes:** Migrated from tasks_archive.md. Task originally marked as a completed prerequisite. This involved verifying GCP project creation and enabling all required service APIs. AI Ref: tasks_archive.md (CURRENT SPRINT FOCUS... Task GCP-1.1).
+
+### ARCHIVE-DEVEX11-11.1: Archived: Implement Automated AI Context Dump Script
+- **Objective:** Create a script to automatically generate an AI context dump for easier interaction with AI assistants.
+- **Status:** done
+- **Parent Meta-task:** META-ARCHIVE-DEVEX11
+- **Completion Notes:** Migrated from tasks_archive.md (Task Group 11: Developer Experience & Tooling). Task originally marked completed on 2025-05-28. Script generate_ai_context_dump.py created in project root. AI Ref: AI-EXECUTION-SESSION-20250528.
+
+### INFERRED-FASTAPI-001: AI-Inferred: Initial FastAPI Application Setup
+- **Objective:** Establish the initial FastAPI application instance, including basic configuration loading and application entry point.
+- **Status:** done
+- **Parent Meta-task:** META-INFERRED-FOUNDATION
+- **Completion Notes:** This task was inferred by the AI assistant (Gemini) as likely completed foundational work. It represents the initial setup of the FastAPI app instance and its core configuration loading mechanism. AI Ref: AI-InferredTask-20240531.
+
+### INFERRED-STRUCTURE-001: AI-Inferred: Basic Project Directory Structure Creation
+- **Objective:** Establish the core project directory structure to organize code by concern (API, core, models, services, utils).
+- **Status:** done
+- **Parent Meta-task:** META-INFERRED-FOUNDATION
+- **Completion Notes:** This task was inferred by the AI assistant (Gemini) as likely completed foundational work. It represents the creation of the initial Python project layout and module structure. AI Ref: AI-InferredTask-20240531.
+
+### INFERRED-DOCKER-001: AI-Inferred: Initial Dockerfile Setup
+- **Objective:** Create an initial Dockerfile for containerizing the Python application, including base image selection, code copying, and dependency installation.
+- **Status:** done
+- **Parent Meta-task:** META-INFERRED-FOUNDATION
+- **Completion Notes:** This task was inferred by the AI assistant (Gemini) as likely completed foundational work. It represents the creation of the first Dockerfile for basic application containerization. AI Ref: AI-InferredTask-20240531.
+
+### INFERRED-IGNOREFILES-001: AI-Inferred: Initial .gitignore and .dockerignore Setup
+- **Objective:** Set up .gitignore and .dockerignore files with common patterns for Python projects and Docker builds to maintain a clean repository and efficient build context.
+- **Status:** done
+- **Parent Meta-task:** META-INFERRED-FOUNDATION
+- **Completion Notes:** This task was inferred by the AI assistant (Gemini) as likely completed foundational work. It represents the creation of standard .gitignore and .dockerignore files. AI Ref: AI-InferredTask-20240531.
+
+### INFERRED-LOGGING-001: AI-Inferred: Core Logging Configuration Setup
+- **Objective:** Establish a basic structured logging configuration for the application using Python's logging module, adhering to project standards.
+- **Status:** done
+- **Parent Meta-task:** META-INFERRED-FOUNDATION
+- **Completion Notes:** This task was inferred by the AI assistant (Gemini) as likely completed foundational work. It represents the initial setup of the Python logging module as per project rules (Section C.1). AI Ref: AI-InferredTask-20240531.
+
+### INFERRED-ERRORHANDLING-001: AI-Inferred: Basic Error Handling Framework Setup
+- **Objective:** Implement a basic framework for custom error handling in the FastAPI application, including base exception classes and handlers to return structured error responses.
+- **Status:** done
+- **Parent Meta-task:** META-INFERRED-FOUNDATION
+- **Completion Notes:** This task was inferred by the AI assistant (Gemini) as likely completed foundational work. It represents the initial setup of custom exception classes and FastAPI exception handlers as per project Rule H. AI Ref: AI-InferredTask-20240531.
+
+### INFERRED-PYDANTIC-001: AI-Inferred: Initial Pydantic Adoption & Basic Schemas
+- **Objective:** Adopt Pydantic for data validation and serialization by creating initial basic Pydantic models for early API request/response schemas.
+- **Status:** done
+- **Parent Meta-task:** META-INFERRED-FOUNDATION
+- **Completion Notes:** This task was inferred by the AI assistant (Gemini) as likely completed foundational work. It represents the initial adoption of Pydantic for basic API request/response modeling, predating more comprehensive validation efforts like VAL-1.1. AI Ref: AI-InferredTask-20240531.
+
+### UNDOC-WORK-PLACEHOLDER-001: User Action: Document Previously Undocumented Completed Work Item
+- **Objective:** User to detail the objective of a piece of completed work that was not previously documented in any task file.
+- **Status:** todo
+- **Parent Meta-task:** META-UNDOCUMENTED-WORK
+- **Notes:** This is a placeholder task intended for the user to fill in details about a completed piece of work that was not previously tracked. The user should update the objective, title, files involved, dependencies (if any), specific completion criteria (`done_when`), and then change the status of this task in `atomic_tasks.yaml` to `done`. If multiple undocumented work items exist, this task can be duplicated and modified accordingly for each item. AI Ref: SystemGeneratedPlaceholder.

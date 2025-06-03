@@ -9,4 +9,4 @@ Examples might include:
 
 ---
 
-*(No automated outputs currently configured to be piped here.)* 
+*(No automated outputs currently configured to be piped here.)*

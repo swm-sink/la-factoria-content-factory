@@ -11,4 +11,4 @@ output "cloud_tasks_invoker_service_account_email" {
 output "workflows_executor_service_account_email" {
   description = "The email address of the Workflows executor service account."
   value       = google_service_account.workflows_executor.email
-} 
+}

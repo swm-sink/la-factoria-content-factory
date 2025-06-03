@@ -5,9 +5,9 @@ This module defines the data structures for user creation, updates,
 and representations for API responses and database storage.
 """
 
-from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
-import uuid  # Keep for potential future use, though not for ID if email is ID
+
+from pydantic import BaseModel, EmailStr, Field
 
 
 class UserBase(BaseModel):
@@ -17,6 +17,10 @@ class UserBase(BaseModel):
     # is_active: bool = Field(default=True, description="Whether the user is active.")
     # is_superuser: bool = Field(default=False, description="Whether the user has superuser privileges.")
     # full_name: Optional[str] = Field(None, description="User's full name.")
+
+
+class TokenData(BaseModel):
+    username: Optional[str] = None
 
 
 class UserCreate(UserBase):
@@ -59,26 +63,24 @@ class UserInDBBase(UserBase):
         from_attributes = True  # For Pydantic V2 compatibility
 
 
-class User(UserInDBBase):
-    """Pydantic model for returning user data to the client (excludes hashed_password)."""
+class UserResponse(BaseModel):
+    """Model for returning user data in API responses (excludes sensitive fields)."""
 
-    # This model inherits hashed_password but it should be excluded in API responses.
-    # FastAPI response_model handles this if UserResponse in auth.py is User.
-    # Or, define specific fields here if UserInDBBase is too broad.
-    # For now, assuming UserResponse in auth.py (aliased to this User model)
-    # will be constructed carefully to exclude hashed_password.
-    # A more explicit approach:
-    # email: EmailStr
-    # id: EmailStr
-    # is_active: Optional[bool] = None
-    # is_superuser: Optional[bool] = None
-    # full_name: Optional[str] = None
-    model_config = {"fields": {"hashed_password": {"exclude": True}}}
+    id: EmailStr = Field(..., description="Unique user identifier (email address).")
+    email: EmailStr = Field(..., description="User's email address.")
+    full_name: Optional[str] = Field(None, description="User's full name.")
+    is_active: bool = Field(default=True, description="Whether the user is active.")
+    # is_superuser: bool = Field(default=False, description="Whether the user has superuser privileges.")
+
+    class Config:
+        from_attributes = True
+
+
+# Keep the User alias for backward compatibility, but it should use UserResponse
+User = UserResponse
 
 
 class UserInDB(UserInDBBase):
     """Pydantic model representing a user document as stored in the database,
     including the hashed password.
     """
-
-    pass

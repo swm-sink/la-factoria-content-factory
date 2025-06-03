@@ -1,61 +1,154 @@
 """
-Content caching service for storing and retrieving generated content.
+Content caching service for storing and retrieving generated content using Redis.
+
+This service provides a scalable caching solution using Redis (Google Cloud Memorystore)
+for caching generated content across multiple instances of the application.
 """
 
+import hashlib
 import json
 import logging
-import hashlib
-from typing import Dict, Any, Optional, List
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
-from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple
+
+import redis
 from prometheus_client import Counter, Histogram
+from pydantic import BaseModel
+from redis.exceptions import ConnectionError as RedisConnectionError
+from redis.exceptions import RedisError
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
+
+from app.core.config.settings import get_settings
+from app.models.pydantic.content import ContentResponse
 
 # Prometheus metrics
 CACHE_HITS = Counter("content_cache_hits_total", "Total cache hits")
 CACHE_MISSES = Counter("content_cache_misses_total", "Total cache misses")
-CACHE_OPERATIONS = Histogram(
-    "content_cache_operation_duration_seconds", "Cache operation duration"
+CACHE_ERRORS = Counter(
+    "content_cache_errors_total", "Total cache errors", ["error_type"]
 )
+CACHE_OPERATIONS = Histogram(
+    "content_cache_operation_duration_seconds",
+    "Cache operation duration",
+    ["operation"],
+)
+CACHE_WARMING_OPERATIONS = Counter(
+    "content_cache_warming_total", "Total cache warming operations", ["status"]
+)
+CACHE_HIT_RATIO = Histogram("content_cache_hit_ratio", "Cache hit ratio over time")
 
 
 @dataclass
 class CacheEntry:
-    """Represents a cached content entry."""
+    """Cache entry for content."""
 
-    key: str
-    content: Dict[str, Any]
+    content: ContentResponse
     created_at: datetime
-    last_accessed: datetime
-    access_count: int
-    ttl: int  # Time to live in seconds
+    expires_at: datetime
+    metadata: Dict[str, Any]
 
-    def is_expired(self) -> bool:
-        """Check if the cache entry has expired."""
-        if self.ttl <= 0:  # No expiration
-            return False
-        return datetime.utcnow() > self.created_at + timedelta(seconds=self.ttl)
-
-    def touch(self) -> None:
-        """Update last accessed time and increment access count."""
-        self.last_accessed = datetime.utcnow()
-        self.access_count += 1
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "CacheEntry":
+        """Create CacheEntry from dictionary."""
+        return cls(
+            content=data["content"],
+            created_at=datetime.fromisoformat(data["created_at"]),
+            expires_at=datetime.fromisoformat(data["expires_at"]),
+            metadata=data.get("metadata", {}),
+        )
 
 
 class ContentCacheService:
-    """Service for caching generated content."""
+    """Service for caching generated content using Redis."""
 
-    def __init__(self, max_size: int = 1000, default_ttl: int = 3600):
+    def __init__(
+        self, max_size: Optional[int] = None, default_ttl: Optional[int] = None
+    ):
         """
-        Initialize the cache service.
+        Initialize the cache service with Redis connection.
 
         Args:
-            max_size: Maximum number of entries to store
-            default_ttl: Default time to live in seconds (1 hour)
+            max_size: Maximum number of entries to store (from settings if None)
+            default_ttl: Default time to live in seconds (from settings if None)
         """
-        self.max_size = max_size
-        self.default_ttl = default_ttl
-        self._cache: Dict[str, CacheEntry] = {}
+        settings = get_settings()
+        self.max_size = max_size or settings.cache_max_size
+        self.default_ttl = default_ttl or settings.cache_ttl_seconds
         self.logger = logging.getLogger(__name__)
+
+        # Redis connection configuration
+        redis_config = {
+            "host": settings.redis_host,
+            "port": settings.redis_port,
+            "db": settings.redis_db,
+            "password": settings.redis_password,
+            "decode_responses": True,  # Automatically decode responses to strings
+            "socket_timeout": settings.redis_socket_timeout,
+            "socket_connect_timeout": settings.redis_socket_connect_timeout,
+            "retry_on_timeout": settings.redis_retry_on_timeout,
+            "health_check_interval": settings.redis_health_check_interval,
+            "max_connections": settings.redis_max_connections,
+        }
+
+        # Add SSL if configured
+        if settings.redis_ssl:
+            redis_config["ssl"] = True
+            redis_config["ssl_cert_reqs"] = "required"
+
+        # Create connection pool for better connection management
+        self.redis_pool = redis.ConnectionPool(**redis_config)
+        self._redis: Optional[redis.Redis] = None
+
+        # Namespace for cache keys to avoid collisions
+        self.namespace = "content_cache"
+
+        # Check if caching is enabled before connecting
+        self.cache_enabled = settings.enable_cache
+        if self.cache_enabled:
+            # Initialize connection
+            self._ensure_connection()
+        else:
+            self.logger.info(
+                "Caching is disabled. ContentCacheService will operate in no-op mode."
+            )
+
+    def _ensure_connection(self) -> None:
+        """Ensure Redis connection is established."""
+        if self._redis is None:
+            try:
+                self._redis = redis.Redis(connection_pool=self.redis_pool)
+                self._redis.ping()
+                self.logger.info("Redis connection established successfully")
+            except RedisError as e:
+                self.logger.error(f"Failed to connect to Redis: {e}")
+                CACHE_ERRORS.labels(error_type="connection").inc()
+                raise
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type(RedisConnectionError),
+    )
+    def _redis_operation(self, operation: str, *args, **kwargs) -> Any:
+        """Execute a Redis operation with retry logic."""
+        self._ensure_connection()
+        try:
+            method = getattr(self._redis, operation)
+            return method(*args, **kwargs)
+        except RedisConnectionError as e:
+            self.logger.warning(f"Redis connection error, retrying: {e}")
+            self._redis = None  # Force reconnection on next attempt
+            raise
+        except RedisError as e:
+            self.logger.error(f"Redis operation {operation} failed: {e}")
+            CACHE_ERRORS.labels(error_type=operation).inc()
+            raise
 
     def _generate_cache_key(
         self,
@@ -63,6 +156,7 @@ class ContentCacheService:
         target_format: str,
         target_duration: Optional[float] = None,
         target_pages: Optional[int] = None,
+        version: str = "default_v1",
     ) -> str:
         """Generate a cache key for the given parameters."""
         key_data = {
@@ -70,9 +164,34 @@ class ContentCacheService:
             "format": target_format,
             "duration": target_duration,
             "pages": target_pages,
+            "cache_version": version,
         }
         key_str = json.dumps(key_data, sort_keys=True)
-        return hashlib.md5(key_str.encode()).hexdigest()
+        hash_key = hashlib.md5(key_str.encode()).hexdigest()
+        return f"{self.namespace}:{hash_key}"
+
+    def _serialize_content(self, content: Any) -> str:
+        """Serialize content for Redis storage."""
+        if isinstance(content, BaseModel):
+            # Pydantic model - use model_dump_json for efficient serialization
+            return content.model_dump_json(exclude_none=True)
+        elif isinstance(content, dict):
+            return json.dumps(content)
+        else:
+            return json.dumps({"data": content})
+
+    def _deserialize_content(self, content_str: str) -> Any:
+        """Deserialize content from Redis storage."""
+        try:
+            # Try to parse as JSON first
+            content_data = json.loads(content_str)
+
+            # If it looks like a Pydantic model dump (has specific fields we expect)
+            # We'll leave it as a dict for the caller to reconstruct if needed
+            return content_data
+        except json.JSONDecodeError:
+            self.logger.warning("Failed to deserialize content, returning as string")
+            return content_str
 
     def get(
         self,
@@ -80,45 +199,77 @@ class ContentCacheService:
         target_format: str,
         target_duration: Optional[float] = None,
         target_pages: Optional[int] = None,
-    ) -> Optional[Dict[str, Any]]:
+        version: str = "default_v1",
+    ) -> Optional[
+        Tuple[Any, Optional[Dict[str, Any]]]
+    ]:  # Returns (content, quality_metrics_dict)
         """
-        Get cached content if available.
+        Get cached content and its quality metrics if available.
 
         Returns:
-            Cached content or None if not found/expired
+            A tuple (content, quality_metrics_dict) or None if not found/expired.
         """
-        with CACHE_OPERATIONS.time():
-            cache_key = self._generate_cache_key(
-                syllabus_text, target_format, target_duration, target_pages
-            )
+        # Return None if caching is disabled
+        if not self.cache_enabled:
+            return None
 
-            entry = self._cache.get(cache_key)
-            if not entry:
-                CACHE_MISSES.inc()
+        with CACHE_OPERATIONS.labels(operation="get").time():
+            try:
+                cache_key = self._generate_cache_key(
+                    syllabus_text, target_format, target_duration, target_pages, version
+                )
+
+                # Get entry from Redis
+                entry_json = self._redis_operation("get", f"{cache_key}:entry")
+                if not entry_json:
+                    CACHE_MISSES.inc()
+                    return None
+
+                # Deserialize entry
+                entry_data = json.loads(entry_json)
+                entry = CacheEntry.from_dict(entry_data)
+
+                # Check expiration
+                if datetime.utcnow() > entry.expires_at:
+                    self._redis_operation(
+                        "delete", f"{cache_key}:entry", f"{cache_key}:content"
+                    )
+                    CACHE_MISSES.inc()
+                    self.logger.info(f"Cache entry expired: {cache_key}")
+                    return None
+
+                # Get content
+                content_str = self._redis_operation("get", f"{cache_key}:content")
+                if not content_str:
+                    CACHE_MISSES.inc()
+                    return None
+
+                CACHE_HITS.inc()
+                self.logger.info(f"Cache hit: {cache_key}")
+                # Deserialize content and return with quality metrics from entry
+                deserialized_content = self._deserialize_content(content_str)
+                return deserialized_content, entry.metadata
+
+            except RedisError as e:
+                self.logger.error(f"Cache get error: {e}")
+                CACHE_ERRORS.labels(error_type="get").inc()
                 return None
-
-            if entry.is_expired():
-                self._cache.pop(cache_key, None)
-                CACHE_MISSES.inc()
-                self.logger.info(f"Cache entry expired: {cache_key}")
-                return None
-
-            entry.touch()
-            CACHE_HITS.inc()
-            self.logger.info(f"Cache hit: {cache_key}")
-            return entry.content
 
     def set(
         self,
         syllabus_text: str,
         target_format: str,
-        content: Dict[str, Any],
+        content: Any,
         target_duration: Optional[float] = None,
         target_pages: Optional[int] = None,
+        quality_metrics_obj: Optional[
+            BaseModel
+        ] = None,  # Accept Pydantic QualityMetrics
         ttl: Optional[int] = None,
+        version: str = "default_v1",
     ) -> None:
         """
-        Store content in cache.
+        Store content and its quality metrics in cache.
 
         Args:
             syllabus_text: The source syllabus text
@@ -128,36 +279,89 @@ class ContentCacheService:
             target_pages: Target pages for guides
             ttl: Time to live in seconds (uses default if None)
         """
-        with CACHE_OPERATIONS.time():
-            cache_key = self._generate_cache_key(
-                syllabus_text, target_format, target_duration, target_pages
-            )
+        with CACHE_OPERATIONS.labels(operation="set").time():
+            try:
+                cache_key = self._generate_cache_key(
+                    syllabus_text, target_format, target_duration, target_pages, version
+                )
 
-            # Evict if cache is full
-            if len(self._cache) >= self.max_size:
-                self._evict_lru()
+                # Check cache size and evict if necessary
+                cache_size = self._redis_operation("dbsize")
+                if cache_size >= self.max_size:
+                    self._evict_lru()
 
-            entry = CacheEntry(
-                key=cache_key,
-                content=content,
-                created_at=datetime.utcnow(),
-                last_accessed=datetime.utcnow(),
-                access_count=1,
-                ttl=ttl or self.default_ttl,
-            )
+                # Create cache entry
+                # Serialize quality metrics if provided
+                quality_metrics_dict: Optional[Dict[str, Any]] = None
+                if quality_metrics_obj and isinstance(quality_metrics_obj, BaseModel):
+                    quality_metrics_dict = quality_metrics_obj.model_dump(
+                        exclude_none=True
+                    )
 
-            self._cache[cache_key] = entry
-            self.logger.info(f"Content cached: {cache_key}")
+                entry = CacheEntry(
+                    content=content,
+                    created_at=datetime.utcnow(),
+                    expires_at=datetime.utcnow()
+                    + timedelta(seconds=ttl or self.default_ttl),
+                    metadata=quality_metrics_dict or {},
+                )
+
+                # Serialize main content payload
+                content_str = self._serialize_content(content)
+
+                # Store in Redis with expiration
+                expire_time = ttl or self.default_ttl
+                self._redis_operation(
+                    "setex",
+                    f"{cache_key}:entry",
+                    expire_time,
+                    json.dumps(asdict(entry)),
+                )
+                self._redis_operation(
+                    "setex", f"{cache_key}:content", expire_time, content_str
+                )
+
+                self.logger.info(f"Content cached: {cache_key}")
+
+            except RedisError as e:
+                self.logger.error(f"Cache set error: {e}")
+                CACHE_ERRORS.labels(error_type="set").inc()
 
     def _evict_lru(self) -> None:
         """Evict the least recently used entry."""
-        if not self._cache:
-            return
+        try:
+            # Get all cache entry keys
+            pattern = f"{self.namespace}:*:entry"
+            entry_keys = list(
+                self._redis_operation("scan_iter", match=pattern, count=100)
+            )
 
-        lru_key = min(self._cache.keys(), key=lambda k: self._cache[k].last_accessed)
+            if not entry_keys:
+                return
 
-        self._cache.pop(lru_key, None)
-        self.logger.info(f"Evicted LRU entry: {lru_key}")
+            # Find LRU entry
+            lru_key = None
+            lru_time = None
+
+            for key in entry_keys:
+                entry_json = self._redis_operation("get", key)
+                if entry_json:
+                    entry_data = json.loads(entry_json)
+                    last_accessed = entry_data.get("created_at")
+                    if lru_time is None or last_accessed < lru_time:
+                        lru_time = last_accessed
+                        lru_key = key.replace(":entry", "")
+
+            # Delete LRU entry
+            if lru_key:
+                self._redis_operation(
+                    "delete", f"{lru_key}:entry", f"{lru_key}:content"
+                )
+                self.logger.info(f"Evicted LRU entry: {lru_key}")
+
+        except RedisError as e:
+            self.logger.error(f"LRU eviction error: {e}")
+            CACHE_ERRORS.labels(error_type="evict").inc()
 
     def invalidate(
         self,
@@ -165,6 +369,7 @@ class ContentCacheService:
         target_format: str,
         target_duration: Optional[float] = None,
         target_pages: Optional[int] = None,
+        version: str = "default_v1",
     ) -> bool:
         """
         Invalidate a specific cache entry.
@@ -172,21 +377,35 @@ class ContentCacheService:
         Returns:
             True if entry was found and removed, False otherwise
         """
-        cache_key = self._generate_cache_key(
-            syllabus_text, target_format, target_duration, target_pages
-        )
+        try:
+            cache_key = self._generate_cache_key(
+                syllabus_text, target_format, target_duration, target_pages, version
+            )
 
-        if cache_key in self._cache:
-            self._cache.pop(cache_key)
-            self.logger.info(f"Cache entry invalidated: {cache_key}")
-            return True
+            # Delete both entry and content
+            deleted = self._redis_operation(
+                "delete", f"{cache_key}:entry", f"{cache_key}:content"
+            )
 
-        return False
+            if deleted > 0:
+                self.logger.info(f"Cache entry invalidated: {cache_key}")
+                return True
+
+            return False
+
+        except RedisError as e:
+            self.logger.error(f"Cache invalidate error: {e}")
+            CACHE_ERRORS.labels(error_type="invalidate").inc()
+            return False
 
     def clear(self) -> None:
         """Clear all cache entries."""
-        self._cache.clear()
-        self.logger.info("Cache cleared")
+        try:
+            self._redis_operation("flushdb")
+            self.logger.info("Cache cleared")
+        except RedisError as e:
+            self.logger.error(f"Cache clear error: {e}")
+            CACHE_ERRORS.labels(error_type="clear").inc()
 
     def cleanup_expired(self) -> int:
         """
@@ -195,43 +414,200 @@ class ContentCacheService:
         Returns:
             Number of entries removed
         """
-        expired_keys = [key for key, entry in self._cache.items() if entry.is_expired()]
+        try:
+            pattern = f"{self.namespace}:*:entry"
+            entry_keys = list(
+                self._redis_operation("scan_iter", match=pattern, count=100)
+            )
 
-        for key in expired_keys:
-            self._cache.pop(key, None)
+            expired_count = 0
+            for key in entry_keys:
+                entry_json = self._redis_operation("get", key)
+                if entry_json:
+                    entry_data = json.loads(entry_json)
+                    entry = CacheEntry.from_dict(entry_data)
+                    if datetime.utcnow() > entry.expires_at:
+                        cache_key = key.replace(":entry", "")
+                        self._redis_operation(
+                            "delete", f"{cache_key}:entry", f"{cache_key}:content"
+                        )
+                        expired_count += 1
 
-        if expired_keys:
-            self.logger.info(f"Cleaned up {len(expired_keys)} expired entries")
+            if expired_count > 0:
+                self.logger.info(f"Cleaned up {expired_count} expired entries")
 
-        return len(expired_keys)
+            return expired_count
+
+        except RedisError as e:
+            self.logger.error(f"Cleanup error: {e}")
+            CACHE_ERRORS.labels(error_type="cleanup").inc()
+            return 0
 
     def get_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
-        total_entries = len(self._cache)
-        expired_entries = sum(1 for entry in self._cache.values() if entry.is_expired())
+        try:
+            info = self._redis_operation("info", "memory")
+            dbsize = self._redis_operation("dbsize")
 
-        return {
-            "total_entries": total_entries,
-            "expired_entries": expired_entries,
-            "active_entries": total_entries - expired_entries,
-            "max_size": self.max_size,
-            "cache_utilization": (
-                total_entries / self.max_size if self.max_size > 0 else 0
-            ),
-        }
+            # Count actual cache entries (divide by 2 since we store entry + content)
+            pattern = f"{self.namespace}:*:entry"
+            entry_count = len(
+                list(self._redis_operation("scan_iter", match=pattern, count=100))
+            )
+
+            return {
+                "total_entries": entry_count,
+                "total_keys": dbsize,
+                "max_size": self.max_size,
+                "cache_utilization": (
+                    entry_count / self.max_size if self.max_size > 0 else 0
+                ),
+                "memory_used": info.get("used_memory_human", "unknown"),
+                "memory_peak": info.get("used_memory_peak_human", "unknown"),
+            }
+        except RedisError as e:
+            self.logger.error(f"Get stats error: {e}")
+            CACHE_ERRORS.labels(error_type="stats").inc()
+            return {
+                "error": str(e),
+                "total_entries": 0,
+                "max_size": self.max_size,
+            }
 
     def get_popular_content(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Get the most accessed content."""
-        sorted_entries = sorted(
-            self._cache.values(), key=lambda e: e.access_count, reverse=True
-        )
+        try:
+            pattern = f"{self.namespace}:*:entry"
+            entry_keys = list(
+                self._redis_operation("scan_iter", match=pattern, count=100)
+            )
 
-        return [
-            {
-                "key": entry.key,
-                "access_count": entry.access_count,
-                "created_at": entry.created_at.isoformat(),
-                "last_accessed": entry.last_accessed.isoformat(),
+            entries = []
+            for key in entry_keys:
+                entry_json = self._redis_operation("get", key)
+                if entry_json:
+                    entry_data = json.loads(entry_json)
+                    entries.append(
+                        {
+                            "key": entry_data["key"],
+                            "access_count": entry_data["access_count"],
+                            "created_at": entry_data["created_at"],
+                            "last_accessed": entry_data["last_accessed"],
+                        }
+                    )
+
+            # Sort by access count
+            entries.sort(key=lambda x: x["access_count"], reverse=True)
+
+            return entries[:limit]
+
+        except RedisError as e:
+            self.logger.error(f"Get popular content error: {e}")
+            CACHE_ERRORS.labels(error_type="popular").inc()
+            return []
+
+    def health_check(self) -> Dict[str, Any]:
+        """Check Redis connection health."""
+        try:
+            start_time = datetime.utcnow()
+            self._redis_operation("ping")
+            latency = (datetime.utcnow() - start_time).total_seconds() * 1000
+
+            return {
+                "status": "healthy",
+                "latency_ms": round(latency, 2),
+                "connection_pool": {
+                    "created_connections": self.redis_pool.connection_kwargs.get(
+                        "max_connections", 0
+                    ),
+                    "available_connections": len(
+                        self.redis_pool._available_connections
+                    ),
+                    "in_use_connections": len(self.redis_pool._in_use_connections),
+                },
             }
-            for entry in sorted_entries[:limit]
-        ]
+        except Exception as e:
+            return {"status": "unhealthy", "error": str(e)}
+
+    def warm_cache(self, popular_queries: List[Dict[str, Any]]) -> Dict[str, int]:
+        """Warm the cache with frequently requested content.
+
+        Args:
+            popular_queries: List of query dictionaries with 'syllabus_text', 'target_format', etc.
+
+        Returns:
+            Dictionary with warming statistics
+        """
+        if not self.cache_enabled:
+            return {"status": "disabled", "warmed": 0, "failed": 0}
+
+        warmed_count = 0
+        failed_count = 0
+
+        for query in popular_queries:
+            try:
+                # Check if already cached
+                existing = self.get(
+                    query.get("syllabus_text", ""),
+                    query.get("target_format", ""),
+                    query.get("target_duration"),
+                    query.get("target_pages"),
+                    query.get("version", "default_v1"),
+                )
+
+                if existing is None:
+                    # Would need to generate content here in a real implementation
+                    # For now, just log the warming attempt
+                    self.logger.info(
+                        f"Cache warming opportunity: {query.get('target_format')}"
+                    )
+                    CACHE_WARMING_OPERATIONS.labels(status="attempted").inc()
+                else:
+                    warmed_count += 1
+                    CACHE_WARMING_OPERATIONS.labels(status="already_cached").inc()
+
+            except Exception as e:
+                self.logger.error(f"Cache warming failed for query {query}: {e}")
+                failed_count += 1
+                CACHE_WARMING_OPERATIONS.labels(status="failed").inc()
+
+        CACHE_WARMING_OPERATIONS.labels(status="completed").inc()
+        return {
+            "warmed": warmed_count,
+            "failed": failed_count,
+            "total": len(popular_queries),
+        }
+
+    def get_cache_hit_ratio(self) -> float:
+        """Calculate current cache hit ratio."""
+        try:
+            # Get current metric values (this is a simplified version)
+            # In production, you'd want to calculate this over a time window
+            hits = (
+                CACHE_HITS._value._value if hasattr(CACHE_HITS._value, "_value") else 0
+            )
+            misses = (
+                CACHE_MISSES._value._value
+                if hasattr(CACHE_MISSES._value, "_value")
+                else 0
+            )
+
+            total = hits + misses
+            if total == 0:
+                return 0.0
+
+            ratio = hits / total
+            CACHE_HIT_RATIO.observe(ratio)
+            return ratio
+
+        except Exception as e:
+            self.logger.error(f"Error calculating cache hit ratio: {e}")
+            return 0.0
+
+    def __del__(self):
+        """Cleanup Redis connection on deletion."""
+        try:
+            if hasattr(self, "redis_pool"):
+                self.redis_pool.disconnect()
+        except Exception:
+            pass

@@ -1,7 +1,7 @@
 # AI Content Factory - Production Deployment Checklist
 
-**Version:** 1.0  
-**Date:** 2025-05-30  
+**Version:** 1.0
+**Date:** 2025-05-30
 **Project:** AI Content Factory MVP
 
 **Note on Automation:** Many of the infrastructure setup, application build, and deployment steps outlined in this checklist are automated via Terraform (see `iac/` directory) and GitHub Actions CI/CD pipelines (see `.github/workflows/`). This checklist serves as a comprehensive guide to all components and considerations, including verification steps for automated processes and fallback manual steps where applicable.
@@ -91,7 +91,7 @@ echo "YOUR_SENTRY_DSN" | gcloud secrets versions add AI_CONTENT_FACTORY_SENTRY_D
   ```bash
   # Build image
   docker build -t ${{ secrets.GCP_ARTIFACT_REGISTRY_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_ARTIFACT_REGISTRY_REPO_ID }}/acpf-mvp:manual-build .
-  
+
   # Push to Artifact Registry
   docker push ${{ secrets.GCP_ARTIFACT_REGISTRY_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_ARTIFACT_REGISTRY_REPO_ID }}/acpf-mvp:manual-build
   ```
@@ -165,7 +165,7 @@ echo "YOUR_SENTRY_DSN" | gcloud secrets versions add AI_CONTENT_FACTORY_SENTRY_D
   # Create bucket for static hosting
   gsutil mb gs://YOUR_PROJECT_ID-frontend
   gsutil web set -m index.html -e index.html gs://YOUR_PROJECT_ID-frontend
-  
+
   # Upload build files
   gsutil -m cp -r dist/* gs://YOUR_PROJECT_ID-frontend/
   gsutil -m acl ch -u AllUsers:R gs://YOUR_PROJECT_ID-frontend/**
@@ -336,7 +336,7 @@ gcloud logs read "resource.type=cloud_run_revision AND textPayload:'POST /api/v1
 
 ### Deployment Team Sign-off
 - [ ] **Technical Lead:** ___________________ Date: ___________
-- [ ] **DevOps Engineer:** ___________________ Date: ___________  
+- [ ] **DevOps Engineer:** ___________________ Date: ___________
 - [ ] **Security Review:** ___________________ Date: ___________
 - [ ] **Project Manager:** ___________________ Date: ___________
 
@@ -351,6 +351,6 @@ gcloud logs read "resource.type=cloud_run_revision AND textPayload:'POST /api/v1
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** 2025-05-30  
-**Next Review Date:** TBD 
+**Document Version:** 1.0
+**Last Updated:** 2025-05-30
+**Next Review Date:** TBD

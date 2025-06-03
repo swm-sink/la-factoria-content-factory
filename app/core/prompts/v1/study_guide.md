@@ -33,4 +33,27 @@ Ensure the content is educational, clear, and well-organized.
 
 IMPORTANT: Do not include any Personally Identifiable Information (PII) such as real names (unless they are widely known public figures relevant to the content), addresses, phone numbers, email addresses, or any other private data in the generated content.
 
+---
+CRITICAL OUTPUT REQUIREMENTS:
+1. Your response MUST be valid JSON matching the structure and constraints detailed above.
+   Ensure all field names, types, and nesting are exactly as specified.
+   Do not include any text before or after the JSON object.
+   Do not wrap the JSON in markdown code blocks (e.g., ```json ... ```).
+
+2. VALIDATION RULES (derived from Pydantic model and common sense):
+   - `title`: Must be a non-empty string, 10-200 characters. Should align with the outline's title.
+   - `overview`: Must be a non-empty string, 100-1000 characters.
+   - `key_concepts`: Must be a list of 5 to 20 non-empty strings.
+   - `detailed_content`: Must be a non-empty string, 500-8000 characters. It should expand on the Content Outline.
+   - `summary`: Must be a non-empty string, 100-1000 characters.
+   - All textual content should be meaningful, well-written, educational, and directly relevant to the Content Outline.
+
+3. QUALITY CHECKS (Before responding, internally verify these):
+   ✓ All required fields (title, overview, key_concepts, detailed_content, summary) are populated with valid data meeting length/count constraints.
+   ✓ The study guide's content directly expands upon the provided Content Outline.
+   ✓ Key concepts are relevant and accurately reflect the core ideas.
+   ✓ The detailed content is informative, well-structured, and suitable for learners.
+   ✓ `recommended_reading` (if provided) lists relevant resources.
+---
+
 Generate the JSON object now.

@@ -3,7 +3,7 @@ Pydantic models for content feedback.
 """
 
 from datetime import datetime
-from typing import Optional, Any
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -23,8 +23,6 @@ class FeedbackBase(BaseModel):
 
 class FeedbackCreate(FeedbackBase):
     """Model for creating new feedback."""
-
-    pass
 
 
 class FeedbackResponse(FeedbackBase):

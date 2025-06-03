@@ -13,7 +13,7 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use((config: any) => {
   const apiKey = useApiKeyStore.getState().apiKey;
   // Ensure headers object exists
-  config.headers = config.headers || {}; 
+  config.headers = config.headers || {};
   if (apiKey) {
     config.headers['X-API-Key'] = apiKey;
   }

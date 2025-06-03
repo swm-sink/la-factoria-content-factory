@@ -1,51 +1,25 @@
 """
-Enhanced job manager service with Firestore persistence and Cloud Tasks integration.
-
-This module provides the core functionality for managing job lifecycle,
-including creation, monitoring, and cleanup of asynchronous jobs using
-Firestore for persistence and Cloud Tasks for async processing.
+Job manager service for handling content generation jobs.
 """
 
-import asyncio
+import logging
 import uuid
 from datetime import datetime
-from typing import Dict, List, Optional, Union
+from typing import Dict, Optional
 from uuid import UUID
 
-from fastapi import Depends
-from pydantic import ValidationError
-
-from app.core.schemas.job import (
-    Job,
-    JobCreate,
-    JobList,
-    JobStatus,
-    JobUpdate,
-    JobProgress,
-    JobError,
-    JobErrorCode,
-)
-from app.core.config.settings import get_settings
-from app.services.job.firestore_client import (
-    get_job_from_firestore,
-    create_or_update_job_in_firestore,
-    update_job_field_in_firestore,
-)
-from app.services.job.tasks_client import get_cloud_tasks_client
 from app.models.pydantic.content import ContentRequest
-import logging
+from app.models.pydantic.job import Job, JobList, JobStatus, JobUpdate
 
 logger = logging.getLogger(__name__)
 
 
 class JobManager:
-    """Enhanced service for managing asynchronous content generation jobs with Firestore and Cloud Tasks."""
+    """Manages content generation jobs."""
 
     def __init__(self):
         """Initialize the job manager."""
-        self._settings = get_settings()
-        self._tasks_client = get_cloud_tasks_client()
-        self._collection_name = "jobs"
+        self.jobs: Dict[str, Job] = {}
 
     async def create_job(self, content_request: ContentRequest) -> Job:
         """
@@ -170,9 +144,6 @@ class JobManager:
         """
         List jobs with optional filtering and pagination.
 
-        Note: This is a simplified implementation. For production,
-        implement proper Firestore querying with pagination cursors.
-
         Args:
             status: Optional status filter
             page: Page number (1-based)
@@ -182,17 +153,40 @@ class JobManager:
             Paginated list of jobs
         """
         try:
-            # For MVP, we'll implement a simple approach
-            # In production, use Firestore queries with proper pagination
+            # Convert page to offset (0-based)
+            offset = (page - 1) * page_size
 
-            # This is a placeholder implementation
-            # TODO: Implement proper Firestore collection querying
+            # Convert JobStatus enum to string if provided
+            status_str = status.value if status else None
+
+            # Query jobs from Firestore
+            job_docs = await query_jobs_by_status(
+                status=status_str,
+                limit=page_size,
+                offset=offset,
+                collection_name=self._collection_name,
+            )
+
+            # Get total count for pagination
+            total = await count_jobs_by_status(
+                status=status_str, collection_name=self._collection_name
+            )
+
+            # Convert Firestore documents to Job models
             jobs = []
-            total = 0
-            total_pages = 0
+            for doc in job_docs:
+                try:
+                    job = self._firestore_to_job_model(doc)
+                    jobs.append(job)
+                except Exception as e:
+                    logger.error(f"Failed to convert job document to model: {e}")
+                    continue
 
-            logger.warning(
-                "list_jobs is not fully implemented for Firestore. Returning empty results."
+            # Calculate total pages
+            total_pages = (total + page_size - 1) // page_size if page_size > 0 else 0
+
+            logger.info(
+                f"Listed {len(jobs)} jobs (page {page}/{total_pages}, total: {total})"
             )
 
             return JobList(
@@ -204,7 +198,7 @@ class JobManager:
             )
 
         except Exception as e:
-            logger.error(f"Failed to list jobs: {e}")
+            logger.error(f"Failed to list jobs: {e}", exc_info=True)
             return JobList(
                 jobs=[], total=0, page=page, page_size=page_size, total_pages=0
             )
@@ -280,7 +274,7 @@ class JobManager:
 
             # Mark as deleted
             await update_job_field_in_firestore(
-                str(job_id), "status", "deleted", self._collection_name
+                str(job_id), "status", JobStatus.DELETED.value, self._collection_name
             )
             await update_job_field_in_firestore(
                 str(job_id),
@@ -347,19 +341,46 @@ class JobManager:
             Dictionary with job counts by status
         """
         try:
-            # TODO: Implement proper Firestore aggregation queries
-            # For now, return placeholder data
-            logger.warning("get_job_statistics not fully implemented for Firestore")
+            # Get all job status counts from Firestore
+            status_counts = await get_all_job_statuses(self._collection_name)
+
+            # Map status strings to lowercase for consistent output
+            # and ensure all expected statuses are present
+            statistics = {
+                "total": sum(status_counts.values()),
+                "pending": status_counts.get(JobStatus.PENDING.value, 0),
+                "processing": status_counts.get(JobStatus.PROCESSING.value, 0),
+                "completed": status_counts.get(JobStatus.COMPLETED.value, 0),
+                "failed": status_counts.get(JobStatus.FAILED.value, 0),
+                "deleted": status_counts.get(JobStatus.DELETED.value, 0),
+                "cancelled": status_counts.get(JobStatus.CANCELLED.value, 0),
+            }
+
+            # Add any other statuses that might exist in the database
+            for status, count in status_counts.items():
+                if status not in [
+                    JobStatus.PENDING.value,
+                    JobStatus.PROCESSING.value,
+                    JobStatus.COMPLETED.value,
+                    JobStatus.FAILED.value,
+                    JobStatus.DELETED.value,
+                    JobStatus.CANCELLED.value,
+                ]:
+                    statistics[f"other_{status.lower()}"] = count
+
+            logger.info(f"Job statistics: {statistics}")
+            return statistics
+
+        except Exception as e:
+            logger.error(f"Failed to get job statistics: {e}", exc_info=True)
             return {
                 "total": 0,
                 "pending": 0,
                 "processing": 0,
                 "completed": 0,
                 "failed": 0,
+                "error": str(e),
             }
-        except Exception as e:
-            logger.error(f"Failed to get job statistics: {e}")
-            return {"error": "Failed to retrieve statistics"}
 
 
 # Dependency for getting job manager instance

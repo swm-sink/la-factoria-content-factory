@@ -8,10 +8,11 @@ Secrets are loaded with the following precedence:
 2. Environment Variables / .env file
 """
 
+import json
 import logging
 import os
 from functools import lru_cache
-from typing import Dict, Any, List, Optional, ClassVar
+from typing import Any, ClassVar, Dict, List, Optional
 
 from pydantic import Field, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -39,12 +40,13 @@ class Settings(BaseSettings):
 
     # Core Settings
     gcp_project_id: Optional[str] = Field(
-        default=None,  # Can be None if not using Secret Manager
         pattern="^[a-z][a-z0-9-]{4,28}[a-z0-9]$",
         description="Google Cloud Project ID. Required if using Secret Manager.",
         env="GCP_PROJECT_ID",  # Explicitly define env var for clarity
     )
-    gcp_location: str = Field("us-central1", description="GCP Location")
+    gcp_location: str = Field(
+        default="us-central1", env="GCP_LOCATION", description="GCP Location"
+    )
     app_port: int = Field(
         default=8080,
         env="APP_PORT",
@@ -53,25 +55,21 @@ class Settings(BaseSettings):
 
     # Sensitive fields - will attempt to load from Secret Manager first, then Env
     api_key: Optional[str] = Field(
-        default=None,  # Validation (min_length=1) will be applied after attempting load
         env="API_KEY",
         min_length=1,
         description="API Key for accessing the application. Loaded from GSM or ENV.",
     )
     elevenlabs_api_key: Optional[str] = Field(
-        default=None,  # Validation (min_length=1) will be applied after attempting load
         env="ELEVENLABS_API_KEY",
         min_length=1,
         description="ElevenLabs API Key. Loaded from GSM or ENV.",
     )
     jwt_secret_key: Optional[str] = Field(
-        default=None,
         env="JWT_SECRET_KEY",
         min_length=32,  # Good practice for JWT secrets
         description="Secret key for signing JWTs. Loaded from GSM or ENV. Should be a long, random string.",
     )
     sentry_dsn: Optional[str] = Field(
-        default=None,
         env="SENTRY_DSN",
         description="Sentry DSN for error reporting. Loaded from GSM or ENV.",
     )
@@ -80,6 +78,11 @@ class Settings(BaseSettings):
         env="ACCESS_TOKEN_EXPIRE_MINUTES",
         description="Access token expiration time in minutes.",
     )
+    jwt_algorithm: str = Field(
+        default="HS256",
+        env="JWT_ALGORITHM",
+        description="Algorithm for JWT signing (e.g., HS256).",
+    )
 
     elevenlabs_voice_id: str = Field(
         default="21m00Tcm4TlvDq8ikWAM",
@@ -87,26 +90,12 @@ class Settings(BaseSettings):
         description="ElevenLabs Voice ID. Must be a 20-character alphanumeric string. Default: 21m00Tcm4TlvDq8ikWAM (Rachel voice)",
     )
     project_name: str = Field("AI Content Factory", description="Application name")
-    api_v1_prefix: str = Field(
-        default="/api/v1",
-        pattern="^/api/v[1-9][0-9]*$",
-        description="API version prefix (e.g., /api/v1)",
-    )
 
     # CORS
-    cors_origins_env: Optional[str] = Field(
-        default=None, # Will be processed into a list
-        env="CORS_ORIGINS",
-        description="Comma-separated string of allowed CORS origins from environment."
-    )
     cors_origins: List[str] = Field(
-        default_factory=lambda: ["http://localhost:3000", "http://localhost:5173"],
-        description="Allowed CORS origins. Populated from CORS_ORIGINS_ENV or defaults.",
-    )
-
-    # Database
-    database_url: str = Field(
-        "sqlite:///./app.db", description="Database connection string"
+        default_factory=lambda: _get_default_cors_origins(),
+        env="CORS_ORIGINS",
+        description="CORS allowed origins. Comma-separated list or JSON array.",
     )
 
     # Storage
@@ -114,11 +103,69 @@ class Settings(BaseSettings):
         "ai-content-factory", description="Cloud storage bucket name"
     )
 
-    # Redis/Cache
-    redis_url: str = Field(
-        "redis://localhost:6379/0", description="Redis connection string"
+    # Redis/Cache Configuration
+    redis_host: str = Field(
+        default="localhost", env="REDIS_HOST", description="Redis host address"
     )
-    cache_ttl_seconds: int = Field(86400, description="Cache TTL in seconds")
+    redis_port: int = Field(
+        default=6379, env="REDIS_PORT", description="Redis port number"
+    )
+    redis_db: int = Field(
+        default=0, env="REDIS_DB", description="Redis database number"
+    )
+    redis_password: Optional[str] = Field(
+        env="REDIS_PASSWORD", description="Redis password (if required)"
+    )
+    redis_ssl: bool = Field(
+        default=False, env="REDIS_SSL", description="Enable SSL for Redis connection"
+    )
+    redis_max_connections: int = Field(
+        default=50,
+        env="REDIS_MAX_CONNECTIONS",
+        description="Maximum number of Redis connections",
+    )
+    redis_socket_timeout: int = Field(
+        default=5,
+        env="REDIS_SOCKET_TIMEOUT",
+        description="Redis socket timeout in seconds",
+    )
+    redis_socket_connect_timeout: int = Field(
+        default=5,
+        env="REDIS_SOCKET_CONNECT_TIMEOUT",
+        description="Redis socket connection timeout in seconds",
+    )
+    redis_retry_on_timeout: bool = Field(
+        default=True,
+        env="REDIS_RETRY_ON_TIMEOUT",
+        description="Retry Redis operations on timeout",
+    )
+    redis_health_check_interval: int = Field(
+        default=30,
+        env="REDIS_HEALTH_CHECK_INTERVAL",
+        description="Redis health check interval in seconds",
+    )
+
+    # Cache settings
+    cache_ttl_seconds: int = Field(
+        default=3600,
+        env="CACHE_TTL_SECONDS",
+        description="Default cache TTL in seconds (1 hour)",
+    )
+    cache_max_size: int = Field(
+        default=1000,
+        env="CACHE_MAX_SIZE",
+        description="Maximum number of cache entries",
+    )
+    enable_cache: bool = Field(
+        default=True, env="ENABLE_CACHE", description="Enable content caching"
+    )
+    cache_min_quality_retrieval: float = Field(
+        default=0.7,
+        env="CACHE_MIN_QUALITY_RETRIEVAL",
+        description="Minimum quality score for cache retrieval",
+    )
+
+    # Async processing
     max_parallel_requests: int = Field(
         8, description="Max parallel requests for async jobs"
     )
@@ -128,26 +175,20 @@ class Settings(BaseSettings):
 
     # AI Model Settings
     gemini_model_name: str = Field(
-        default="gemini-1.5-flash-latest",
-        pattern="^gemini-(1\\.0-pro|1\\.5-pro|1\\.5-flash)(-latest|-001|-002)?$",
-        description="Gemini Model Name. Must be one of: gemini-1.0-pro, gemini-1.5-pro, gemini-1.5-flash, with optional -latest, -001, or -002 suffix. Default: gemini-1.5-flash-latest",
+        default="models/gemini-2.5-flash-preview-05-20",
+        pattern="^models/gemini-(1\\.0-pro|1\\.5-pro|1\\.5-flash|2\\.5-flash-preview-05-20)(-latest|-001|-002)?$",
+        description="Gemini Model Name. Must be one of: models/gemini-1.0-pro, models/gemini-1.5-pro, models/gemini-1.5-flash, models/gemini-2.5-flash-preview-05-20, with optional -latest, -001, or -002 suffix.",
+        env="GEMINI_MODEL_NAME",
     )
 
-    # AI Model Pricing (USD) - Add this new section
-    # Prices are examples and should be verified and updated from official sources.
-    # Gemini pricing is often per 1,000 characters or 1,000 tokens.
-    # For gemini-1.5-flash-latest (example, check current pricing):
-    # Input: $0.000125 / 1k characters (or $0.00035 / 1k tokens)
-    # Output: $0.000375 / 1k characters (or $0.00105 / 1k tokens)
-    # Assuming tokens for now as it's more common for LLMs.
+    # AI Model Pricing (USD)
     gemini_1_5_flash_pricing: Dict[str, float] = Field(
         default_factory=lambda: {
-            "input_per_1k_tokens": 0.00035,  # Example price
-            "output_per_1k_tokens": 0.00105,  # Example price
+            "input_per_1k_tokens": 0.00035,
+            "output_per_1k_tokens": 0.00105,
         },
-        description="Pricing for Gemini 1.5 Flash model (per 1000 tokens).",
+        description="Pricing for Gemini model (per 1000 tokens).",
     )
-    # Add other models if used, e.g., gemini_1_0_pro_pricing
 
     elevenlabs_tts_pricing_per_1k_chars: float = Field(
         default=0.30,  # Example: $0.30 per 1000 characters for standard quality
@@ -155,6 +196,12 @@ class Settings(BaseSettings):
     )
 
     # Content Generation Settings
+    max_refinement_iterations: int = Field(
+        default=2,
+        env="MAX_REFINEMENT_ITERATIONS",
+        description="Maximum number of refinement iterations for quality improvement",
+    )
+
     max_tokens_per_content_type: Dict[str, int] = Field(
         default_factory=lambda: {
             "outline": 800,
@@ -178,22 +225,51 @@ class Settings(BaseSettings):
     retry_delay: int = Field(2, description="Delay between retries in seconds")
 
     # Monitoring & Logging
-    enable_cost_tracking: bool = Field(True, description="Enable cost tracking")
+    enable_cost_tracking: bool = Field(
+        default=True, env="ENABLE_COST_TRACKING", description="Enable cost tracking"
+    )
     enable_performance_tracking: bool = Field(
         True, description="Enable performance tracking"
+    )
+    enable_quality_metrics: bool = Field(
+        default=True,
+        env="ENABLE_QUALITY_METRICS",
+        description="Enable quality metrics tracking",
+    )
+    enable_parallel_processing: bool = Field(
+        default=True,
+        env="ENABLE_PARALLEL_PROCESSING",
+        description="Enable parallel content generation",
     )
     log_level: str = Field("INFO", description="Logging level")
     metrics_export_interval: int = Field(
         60, description="Interval for exporting metrics in seconds"
     )
     log_format: str = Field(
-        "%(asctime)s - %(name)s - %(levelname)s - [%(correlation_id)s] - %(message)s", # Added correlation_id placeholder
+        "%(asctime)s - %(name)s - %(levelname)s - [%(correlation_id)s] - %(message)s",  # Added correlation_id placeholder
         description="Log message format. Expects correlation_id to be available in LogRecord.",
     )
     prometheus_port: int = Field(
         default=9000,
         env="PROMETHEUS_PORT",
         description="Port for Prometheus metrics server.",
+    )
+
+    # Cloud Tasks
+    tasks_queue_name: str = Field(
+        default="content-generation-queue",
+        env="TASKS_QUEUE_NAME",
+        description="Name of the Cloud Tasks queue for content generation.",
+    )
+    tasks_worker_service_url: Optional[str] = Field(
+        default=None,  # If None, will attempt to construct from GCP_PROJECT_ID
+        env="TASKS_WORKER_SERVICE_URL",
+        description="Full base URL of the worker service (e.g., Cloud Run URL). If None, attempts to use default Cloud Run URL format.",
+    )
+    cloud_tasks_service_account: Optional[str] = Field(
+        default=None,
+        env="CLOUD_TASKS_SERVICE_ACCOUNT",
+        description="Service account email for Cloud Tasks to use when invoking the worker",
     )
 
     @model_validator(mode="before")
@@ -222,12 +298,19 @@ class Settings(BaseSettings):
                     if api_key_gsm:
                         values["api_key"] = api_key_gsm
                         logger.info(
-                            f"Loaded '{GSM_API_KEY_NAME}' from Google Secret Manager."
+                            f"Setting 'api_key' loaded from Google Secret Manager (secret: {GSM_API_KEY_NAME})"
                         )
                     else:
-                        logger.info(
-                            f"'{GSM_API_KEY_NAME}' not found in GSM or client error. Will rely on env/default for api_key."
-                        )
+                        api_key_env = os.getenv("API_KEY")
+                        if api_key_env:
+                            values["api_key"] = api_key_env
+                            logger.info(
+                                "Setting 'api_key' loaded from environment variable (API_KEY)"
+                            )
+                        else:
+                            logger.info(
+                                "Setting 'api_key' not found in GSM or environment. Will use default if set."
+                            )
 
                 # Try to load elevenlabs_api_key if not already provided
                 if not values.get("elevenlabs_api_key"):
@@ -237,12 +320,19 @@ class Settings(BaseSettings):
                     if el_api_key_gsm:
                         values["elevenlabs_api_key"] = el_api_key_gsm
                         logger.info(
-                            f"Loaded '{GSM_ELEVENLABS_API_KEY_NAME}' from Google Secret Manager."
+                            f"Setting 'elevenlabs_api_key' loaded from Google Secret Manager (secret: {GSM_ELEVENLABS_API_KEY_NAME})"
                         )
                     else:
-                        logger.info(
-                            f"'{GSM_ELEVENLABS_API_KEY_NAME}' not found in GSM or client error. Will rely on env/default for elevenlabs_api_key."
-                        )
+                        el_api_key_env = os.getenv("ELEVENLABS_API_KEY")
+                        if el_api_key_env:
+                            values["elevenlabs_api_key"] = el_api_key_env
+                            logger.info(
+                                "Setting 'elevenlabs_api_key' loaded from environment variable (ELEVENLABS_API_KEY)"
+                            )
+                        else:
+                            logger.info(
+                                "Setting 'elevenlabs_api_key' not found in GSM or environment. Will use default if set."
+                            )
 
                 # Load JWT_SECRET_KEY from GSM
                 if not values.get("jwt_secret_key"):
@@ -252,12 +342,19 @@ class Settings(BaseSettings):
                     if jwt_secret_gsm:
                         values["jwt_secret_key"] = jwt_secret_gsm
                         logger.info(
-                            f"Loaded '{GSM_JWT_SECRET_KEY_NAME}' from Google Secret Manager."
+                            f"Setting 'jwt_secret_key' loaded from Google Secret Manager (secret: {GSM_JWT_SECRET_KEY_NAME})"
                         )
                     else:
-                        logger.info(
-                            f"'{GSM_JWT_SECRET_KEY_NAME}' not found in GSM or client error. Will rely on env/default for jwt_secret_key."
-                        )
+                        jwt_secret_key_env = os.getenv("JWT_SECRET_KEY")
+                        if jwt_secret_key_env:
+                            values["jwt_secret_key"] = jwt_secret_key_env
+                            logger.info(
+                                "Setting 'jwt_secret_key' loaded from environment variable (JWT_SECRET_KEY)"
+                            )
+                        else:
+                            logger.info(
+                                "Setting 'jwt_secret_key' not found in GSM or environment. Will use default if set."
+                            )
 
                 # Load SENTRY_DSN from GSM
                 if not values.get("sentry_dsn"):
@@ -265,12 +362,19 @@ class Settings(BaseSettings):
                     if sentry_dsn_gsm:
                         values["sentry_dsn"] = sentry_dsn_gsm
                         logger.info(
-                            f"Loaded '{GSM_SENTRY_DSN_NAME}' from Google Secret Manager."
+                            f"Setting 'sentry_dsn' loaded from Google Secret Manager (secret: {GSM_SENTRY_DSN_NAME})"
                         )
                     else:
-                        logger.info(
-                            f"'{GSM_SENTRY_DSN_NAME}' not found in GSM or client error. Will rely on env/default for sentry_dsn."
-                        )
+                        sentry_dsn_env = os.getenv("SENTRY_DSN")
+                        if sentry_dsn_env:
+                            values["sentry_dsn"] = sentry_dsn_env
+                            logger.info(
+                                "Setting 'sentry_dsn' loaded from environment variable (SENTRY_DSN)"
+                            )
+                        else:
+                            logger.info(
+                                "Setting 'sentry_dsn' not found in GSM or environment. Will use default if set."
+                            )
             else:
                 logger.warning(
                     "SecretManagerClient could not be initialized (client is None). Secrets will not be loaded from GSM."
@@ -280,17 +384,68 @@ class Settings(BaseSettings):
                 "GCP_PROJECT_ID is not set. Secrets will not be loaded from Google Secret Manager."
             )
 
+        # Load secrets from environment variables if not already loaded
+        if not values.get("api_key"):
+            api_key_env = os.getenv("API_KEY")
+            if api_key_env:
+                values["api_key"] = api_key_env
+                logger.info(
+                    "Setting 'api_key' loaded from environment variable (API_KEY)"
+                )
+
+        if not values.get("elevenlabs_api_key"):
+            el_api_key_env = os.getenv("ELEVENLABS_API_KEY")
+            if el_api_key_env:
+                values["elevenlabs_api_key"] = el_api_key_env
+                logger.info(
+                    "Setting 'elevenlabs_api_key' loaded from environment variable (ELEVENLABS_API_KEY)"
+                )
+
+        if not values.get("jwt_secret_key"):
+            jwt_secret_key_env = os.getenv("JWT_SECRET_KEY")
+            if jwt_secret_key_env:
+                values["jwt_secret_key"] = jwt_secret_key_env
+                logger.info(
+                    "Setting 'jwt_secret_key' loaded from environment variable (JWT_SECRET_KEY)"
+                )
+
+        if not values.get("sentry_dsn"):
+            sentry_dsn_env = os.getenv("SENTRY_DSN")
+            if sentry_dsn_env:
+                values["sentry_dsn"] = sentry_dsn_env
+                logger.info(
+                    "Setting 'sentry_dsn' loaded from environment variable (SENTRY_DSN)"
+                )
+
         return values
 
     @model_validator(mode="before")
     @classmethod
     def _process_cors_origins(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        cors_env_str = values.get("cors_origins_env") or os.getenv("CORS_ORIGINS")
-        if cors_env_str:
-            values["cors_origins"] = [origin.strip() for origin in cors_env_str.split(",")]
-        elif not values.get("cors_origins"): # Ensure default if not in values and not in env
-            values["cors_origins"] = ["http://localhost:3000", "http://localhost:5173"]
+        if not values.get("cors_origins"):
+            values["cors_origins"] = _get_default_cors_origins()
         return values
+
+
+def _get_default_cors_origins() -> List[str]:
+    """Get default CORS origins based on environment"""
+    env_value = os.getenv("CORS_ORIGINS")
+    if env_value:
+        # Handle both comma-separated and JSON array formats
+        if env_value.startswith("["):
+            try:
+                return json.loads(env_value)
+            except json.JSONDecodeError:
+                logger.warning(f"Invalid JSON in CORS_ORIGINS: {env_value}")
+        else:
+            return [origin.strip() for origin in env_value.split(",")]
+
+    # Default origins for development
+    return [
+        "http://localhost:3000",  # React dev server
+        "http://localhost:5173",  # Vite dev server
+        "http://localhost:8080",  # Docker compose
+    ]
 
 
 @lru_cache()

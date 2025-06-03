@@ -11,4 +11,4 @@ output "location_id" {
 output "database_type" {
   description = "The type of the Firestore database (NATIVE or DATASTORE_MODE)."
   value       = google_firestore_database.default.type
-} 
+}

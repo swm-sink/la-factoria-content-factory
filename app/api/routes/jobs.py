@@ -11,17 +11,19 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 
-from app.core.schemas.job import Job, JobCreate, JobList, JobStatus, JobUpdate
-from app.services.job_manager import JobManager, get_job_manager
+from app.api.deps import get_api_key
 from app.models.pydantic.content import ContentRequest  # Corrected import path
+from app.models.pydantic.job import Job, JobList, JobStatus, JobUpdate
+from app.services.job_manager import JobManager, get_job_manager
 
-router = APIRouter(prefix="/jobs", tags=["jobs"])
+router = APIRouter(tags=["jobs"])
 
 
 @router.post("", response_model=Job, status_code=201)
 async def create_job(
     content_request: ContentRequest,
     job_manager: JobManager = Depends(get_job_manager),
+    api_key: str = Depends(get_api_key),
 ) -> Job:
     """
     Create a new content generation job.
@@ -43,6 +45,7 @@ async def list_jobs(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
     job_manager: JobManager = Depends(get_job_manager),
+    api_key: str = Depends(get_api_key),
 ) -> JobList:
     """
     List all jobs with optional filtering and pagination.
@@ -63,6 +66,7 @@ async def list_jobs(
 async def get_job(
     job_id: UUID,
     job_manager: JobManager = Depends(get_job_manager),
+    api_key: str = Depends(get_api_key),
 ) -> Job:
     """
     Get a specific job by ID.

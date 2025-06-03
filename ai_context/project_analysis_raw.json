@@ -1,0 +1,2292 @@
+{
+  "service_interactions": {
+    "service_map": {
+      "content_generation_service": {
+        "file": "app/services/content_generation_service.py",
+        "imports": [
+          "comprehensive_content_validator",
+          "content_cache",
+          "content_orchestration",
+          "enhanced_content_validator",
+          "llm_client",
+          "parallel_processor",
+          "prompt_optimizer",
+          "prompts",
+          "quality_metrics"
+        ],
+        "uses": [
+          "prompts",
+          "llm_client"
+        ],
+        "dependencies": [
+          "content_cache",
+          "content_orchestration",
+          "quality_metrics",
+          "llm_client",
+          "parallel_processor",
+          "enhanced_content_validator",
+          "prompt_optimizer",
+          "comprehensive_content_validator",
+          "prompts"
+        ],
+        "async_dependencies": [],
+        "is_critical": true,
+        "line_count": 389
+      },
+      "parallel_processor": {
+        "file": "app/services/parallel_processor.py",
+        "imports": [],
+        "uses": [],
+        "dependencies": [],
+        "async_dependencies": [],
+        "is_critical": false,
+        "line_count": 541
+      },
+      "progress_tracker": {
+        "file": "app/services/progress_tracker.py",
+        "imports": [],
+        "uses": [
+          "quality_metrics"
+        ],
+        "dependencies": [
+          "quality_metrics"
+        ],
+        "async_dependencies": [],
+        "is_critical": false,
+        "line_count": 788
+      },
+      "content_validation": {
+        "file": "app/services/content_validation.py",
+        "imports": [],
+        "uses": [
+          "quality_metrics"
+        ],
+        "dependencies": [
+          "quality_metrics"
+        ],
+        "async_dependencies": [],
+        "is_critical": false,
+        "line_count": 436
+      },
+      "quality_metrics": {
+        "file": "app/services/quality_metrics.py",
+        "imports": [],
+        "uses": [],
+        "dependencies": [],
+        "async_dependencies": [],
+        "is_critical": false,
+        "line_count": 213
+      },
+      "multi_step_content_generation_final": {
+        "file": "app/services/multi_step_content_generation_final.py",
+        "imports": [
+          "content_cache",
+          "comprehensive_content_validator",
+          "enhanced_content_validator",
+          "parallel_processor",
+          "prompt_optimizer",
+          "prompts",
+          "quality_metrics",
+          "quality_refinement"
+        ],
+        "uses": [
+          "parallel_processor",
+          "prompt_optimizer",
+          "prompts"
+        ],
+        "dependencies": [
+          "content_cache",
+          "quality_metrics",
+          "parallel_processor",
+          "enhanced_content_validator",
+          "prompt_optimizer",
+          "comprehensive_content_validator",
+          "prompts",
+          "quality_refinement"
+        ],
+        "async_dependencies": [],
+        "is_critical": true,
+        "line_count": 834
+      },
+      "prompt_optimizer": {
+        "file": "app/services/prompt_optimizer.py",
+        "imports": [],
+        "uses": [
+          "prompts"
+        ],
+        "dependencies": [
+          "prompts"
+        ],
+        "async_dependencies": [],
+        "is_critical": false,
+        "line_count": 405
+      },
+      "multi_step_content_generation": {
+        "file": "app/services/multi_step_content_generation.py",
+        "imports": [
+          "multi_step_content_generation_final"
+        ],
+        "uses": [],
+        "dependencies": [
+          "multi_step_content_generation_final"
+        ],
+        "async_dependencies": [],
+        "is_critical": true,
+        "line_count": 4
+      },
+      "content_cache": {
+        "file": "app/services/content_cache.py",
+        "imports": [],
+        "uses": [],
+        "dependencies": [],
+        "async_dependencies": [],
+        "is_critical": false,
+        "line_count": 595
+      },
+      "comprehensive_content_validator": {
+        "file": "app/services/comprehensive_content_validator.py",
+        "imports": [
+          "enhanced_content_validator"
+        ],
+        "uses": [
+          "prompts"
+        ],
+        "dependencies": [
+          "prompts",
+          "enhanced_content_validator"
+        ],
+        "async_dependencies": [],
+        "is_critical": false,
+        "line_count": 705
+      },
+      "job_manager": {
+        "file": "app/services/job_manager.py",
+        "imports": [],
+        "uses": [
+          "tasks_client"
+        ],
+        "dependencies": [
+          "tasks_client"
+        ],
+        "async_dependencies": [
+          "tasks_client"
+        ],
+        "is_critical": true,
+        "line_count": 400
+      },
+      "prompts": {
+        "file": "app/services/prompts.py",
+        "imports": [],
+        "uses": [],
+        "dependencies": [],
+        "async_dependencies": [],
+        "is_critical": false,
+        "line_count": 156
+      },
+      "audio_generation": {
+        "file": "app/services/audio_generation.py",
+        "imports": [],
+        "uses": [],
+        "dependencies": [],
+        "async_dependencies": [],
+        "is_critical": true,
+        "line_count": 159
+      },
+      "llm_client": {
+        "file": "app/services/llm_client.py",
+        "imports": [
+          "prompt_optimizer"
+        ],
+        "uses": [
+          "prompt_optimizer"
+        ],
+        "dependencies": [
+          "prompt_optimizer"
+        ],
+        "async_dependencies": [],
+        "is_critical": true,
+        "line_count": 413
+      },
+      "content_version_manager": {
+        "file": "app/services/content_version_manager.py",
+        "imports": [
+          "firestore_client",
+          "firestore_client"
+        ],
+        "uses": [
+          "firestore_client"
+        ],
+        "dependencies": [
+          "firestore_client"
+        ],
+        "async_dependencies": [],
+        "is_critical": true,
+        "line_count": 438
+      },
+      "enhanced_content_validator": {
+        "file": "app/services/enhanced_content_validator.py",
+        "imports": [],
+        "uses": [],
+        "dependencies": [],
+        "async_dependencies": [],
+        "is_critical": false,
+        "line_count": 1037
+      },
+      "quality_refinement": {
+        "file": "app/services/quality_refinement.py",
+        "imports": [],
+        "uses": [],
+        "dependencies": [],
+        "async_dependencies": [],
+        "is_critical": false,
+        "line_count": 12
+      },
+      "content_orchestration": {
+        "file": "app/services/content_orchestration.py",
+        "imports": [
+          "llm_client",
+          "parallel_processor",
+          "prompt_optimizer",
+          "prompts"
+        ],
+        "uses": [
+          "parallel_processor",
+          "prompts",
+          "llm_client"
+        ],
+        "dependencies": [
+          "prompts",
+          "prompt_optimizer",
+          "parallel_processor",
+          "llm_client"
+        ],
+        "async_dependencies": [],
+        "is_critical": true,
+        "line_count": 360
+      },
+      "firestore_client": {
+        "file": "app/services/job/firestore_client.py",
+        "imports": [],
+        "uses": [],
+        "dependencies": [],
+        "async_dependencies": [],
+        "is_critical": true,
+        "line_count": 234
+      },
+      "tasks_client": {
+        "file": "app/services/job/tasks_client.py",
+        "imports": [],
+        "uses": [],
+        "dependencies": [],
+        "async_dependencies": [],
+        "is_critical": true,
+        "line_count": 272
+      }
+    },
+    "dependency_graph": {
+      "content_generation_service": [
+        "content_cache",
+        "content_orchestration",
+        "quality_metrics",
+        "llm_client",
+        "parallel_processor",
+        "enhanced_content_validator",
+        "prompt_optimizer",
+        "comprehensive_content_validator",
+        "prompts"
+      ],
+      "progress_tracker": [
+        "quality_metrics"
+      ],
+      "content_validation": [
+        "quality_metrics"
+      ],
+      "multi_step_content_generation_final": [
+        "content_cache",
+        "quality_metrics",
+        "parallel_processor",
+        "enhanced_content_validator",
+        "prompt_optimizer",
+        "comprehensive_content_validator",
+        "prompts",
+        "quality_refinement"
+      ],
+      "prompt_optimizer": [
+        "prompts"
+      ],
+      "multi_step_content_generation": [
+        "multi_step_content_generation_final"
+      ],
+      "comprehensive_content_validator": [
+        "prompts",
+        "enhanced_content_validator"
+      ],
+      "job_manager": [
+        "tasks_client"
+      ],
+      "llm_client": [
+        "prompt_optimizer"
+      ],
+      "content_version_manager": [
+        "firestore_client"
+      ],
+      "content_orchestration": [
+        "prompts",
+        "prompt_optimizer",
+        "parallel_processor",
+        "llm_client"
+      ]
+    },
+    "circular_dependencies": [],
+    "orphan_services": [
+      "parallel_processor",
+      "quality_metrics",
+      "content_cache",
+      "prompts",
+      "audio_generation",
+      "enhanced_content_validator",
+      "quality_refinement",
+      "firestore_client",
+      "tasks_client"
+    ],
+    "call_chains": {},
+    "async_patterns": {
+      "job_manager": [
+        "tasks_client"
+      ]
+    },
+    "critical_paths": [
+      [
+        "quality_metrics",
+        4
+      ],
+      [
+        "parallel_processor",
+        3
+      ],
+      [
+        "enhanced_content_validator",
+        3
+      ],
+      [
+        "prompt_optimizer",
+        4
+      ],
+      [
+        "prompts",
+        5
+      ]
+    ]
+  },
+  "prompts": {
+    "prompt_files": {
+      "app/core/prompts/v1/strict_json_instructions.md": {
+        "content_types": [],
+        "sections": 7,
+        "has_json_examples": true,
+        "instruction_count": 16,
+        "estimated_tokens": 422,
+        "file_type": "markdown"
+      },
+      "app/core/prompts/v1/master_content_outline.md": {
+        "content_types": [
+          "outline"
+        ],
+        "sections": 0,
+        "has_json_examples": true,
+        "instruction_count": 20,
+        "estimated_tokens": 1157,
+        "file_type": "markdown"
+      },
+      "app/core/prompts/v1/reading_guide_questions.md": {
+        "content_types": [
+          "reading",
+          "questions"
+        ],
+        "sections": 0,
+        "has_json_examples": true,
+        "instruction_count": 13,
+        "estimated_tokens": 714,
+        "file_type": "markdown"
+      },
+      "app/core/prompts/v1/podcast_script.md": {
+        "content_types": [
+          "podcast"
+        ],
+        "sections": 0,
+        "has_json_examples": true,
+        "instruction_count": 22,
+        "estimated_tokens": 948,
+        "file_type": "markdown"
+      },
+      "app/core/prompts/v1/detailed_reading_material.md": {
+        "content_types": [
+          "reading"
+        ],
+        "sections": 0,
+        "has_json_examples": true,
+        "instruction_count": 20,
+        "estimated_tokens": 1056,
+        "file_type": "markdown"
+      },
+      "app/core/prompts/v1/one_pager_summary.md": {
+        "content_types": [
+          "summary"
+        ],
+        "sections": 0,
+        "has_json_examples": true,
+        "instruction_count": 17,
+        "estimated_tokens": 766,
+        "file_type": "markdown"
+      },
+      "app/core/prompts/v1/study_guide.md": {
+        "content_types": [
+          "study_guide"
+        ],
+        "sections": 0,
+        "has_json_examples": true,
+        "instruction_count": 18,
+        "estimated_tokens": 882,
+        "file_type": "markdown"
+      },
+      "app/core/prompts/v1/faq_collection.md": {
+        "content_types": [
+          "faq"
+        ],
+        "sections": 0,
+        "has_json_examples": true,
+        "instruction_count": 17,
+        "estimated_tokens": 838,
+        "file_type": "markdown"
+      },
+      "app/core/prompts/v1/study_guide_enhanced.md": {
+        "content_types": [
+          "study_guide"
+        ],
+        "sections": 13,
+        "has_json_examples": true,
+        "instruction_count": 12,
+        "estimated_tokens": 1147,
+        "file_type": "markdown"
+      },
+      "app/core/prompts/v1/flashcards.md": {
+        "content_types": [
+          "flashcard"
+        ],
+        "sections": 0,
+        "has_json_examples": true,
+        "instruction_count": 17,
+        "estimated_tokens": 881,
+        "file_type": "markdown"
+      }
+    },
+    "content_type_mapping": {
+      "outline": [
+        "app/core/prompts/v1/master_content_outline.md"
+      ],
+      "reading": [
+        "app/core/prompts/v1/reading_guide_questions.md",
+        "app/core/prompts/v1/detailed_reading_material.md"
+      ],
+      "questions": [
+        "app/core/prompts/v1/reading_guide_questions.md"
+      ],
+      "podcast": [
+        "app/core/prompts/v1/podcast_script.md"
+      ],
+      "summary": [
+        "app/core/prompts/v1/one_pager_summary.md"
+      ],
+      "study_guide": [
+        "app/core/prompts/v1/study_guide.md",
+        "app/core/prompts/v1/study_guide_enhanced.md"
+      ],
+      "faq": [
+        "app/core/prompts/v1/faq_collection.md"
+      ],
+      "flashcard": [
+        "app/core/prompts/v1/flashcards.md"
+      ]
+    },
+    "prompt_complexity": {},
+    "gemini_instructions": [],
+    "token_estimates": {
+      "strict_json_instructions": 422,
+      "master_content_outline": 1157,
+      "reading_guide_questions": 714,
+      "podcast_script": 948,
+      "detailed_reading_material": 1056,
+      "one_pager_summary": 766,
+      "study_guide": 882,
+      "faq_collection": 838,
+      "study_guide_enhanced": 1147,
+      "flashcards": 881
+    },
+    "prompt_chains": {
+      "master_outline": "app/core/prompts/v1/master_content_outline.md",
+      "derived_from_outline": [
+        "app/core/prompts/v1/podcast_script.md",
+        "app/core/prompts/v1/study_guide.md",
+        "app/core/prompts/v1/faq_collection.md",
+        "app/core/prompts/v1/study_guide_enhanced.md"
+      ]
+    }
+  },
+  "models": {
+    "models": {
+      "UserBase": {
+        "file": "app/models/pydantic/user.py",
+        "fields": {
+          "email": "EmailStr"
+        },
+        "validators": [],
+        "field_count": 1,
+        "has_validators": false,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "TokenData": {
+        "file": "app/models/pydantic/user.py",
+        "fields": {
+          "username": "Optional[str]"
+        },
+        "validators": [],
+        "field_count": 1,
+        "has_validators": false,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "UserResponse": {
+        "file": "app/models/pydantic/user.py",
+        "fields": {
+          "id": "EmailStr",
+          "email": "EmailStr",
+          "full_name": "Optional[str]",
+          "is_active": "bool"
+        },
+        "validators": [],
+        "field_count": 4,
+        "has_validators": false,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "FeedbackBase": {
+        "file": "app/models/pydantic/feedback.py",
+        "fields": {
+          "rating": "bool",
+          "comment": "Optional[str]"
+        },
+        "validators": [],
+        "field_count": 2,
+        "has_validators": false,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "JobError": {
+        "file": "app/models/pydantic/job.py",
+        "fields": {
+          "code": "JobErrorCode",
+          "message": "str",
+          "details": "Optional[Dict[str, Union[str, int, float, bool]]]"
+        },
+        "validators": [],
+        "field_count": 3,
+        "has_validators": false,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "JobProgress": {
+        "file": "app/models/pydantic/job.py",
+        "fields": {
+          "current_step": "str",
+          "total_steps": "int",
+          "completed_steps": "int",
+          "percentage": "float",
+          "estimated_time_remaining": "Optional[float]"
+        },
+        "validators": [],
+        "field_count": 5,
+        "has_validators": false,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "Job": {
+        "file": "app/models/pydantic/job.py",
+        "fields": {
+          "id": "UUID",
+          "status": "JobStatus",
+          "created_at": "datetime",
+          "updated_at": "datetime",
+          "completed_at": "Optional[datetime]",
+          "error": "Optional[JobError]",
+          "progress": "Optional[JobProgress]",
+          "result": "Optional[GeneratedContent]",
+          "metadata": "Dict[str, Union[str, int, float, bool]]"
+        },
+        "validators": [],
+        "field_count": 9,
+        "has_validators": false,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "JobCreate": {
+        "file": "app/models/pydantic/job.py",
+        "fields": {
+          "metadata": "Dict[str, Union[str, int, float, bool]]"
+        },
+        "validators": [],
+        "field_count": 1,
+        "has_validators": false,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "JobUpdate": {
+        "file": "app/models/pydantic/job.py",
+        "fields": {
+          "status": "Optional[JobStatus]",
+          "error": "Optional[JobError]",
+          "progress": "Optional[JobProgress]",
+          "result": "Optional[GeneratedContent]",
+          "metadata": "Optional[Dict[str, Union[str, int, float, bool]]]"
+        },
+        "validators": [],
+        "field_count": 5,
+        "has_validators": false,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "JobList": {
+        "file": "app/models/pydantic/job.py",
+        "fields": {
+          "jobs": "List[Job]",
+          "total": "int",
+          "page": "int",
+          "page_size": "int",
+          "total_pages": "int"
+        },
+        "validators": [],
+        "field_count": 5,
+        "has_validators": false,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "ContentRequest": {
+        "file": "app/models/pydantic/content.py",
+        "fields": {
+          "syllabus_text": "str",
+          "target_format": "TargetFormat",
+          "target_duration": "Optional[float]",
+          "target_pages": "Optional[int]",
+          "use_parallel": "bool",
+          "use_cache": "bool"
+        },
+        "validators": [],
+        "field_count": 6,
+        "has_validators": false,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "ContentMetadata": {
+        "file": "app/models/pydantic/content.py",
+        "fields": {
+          "source_syllabus_length": "Optional[int]",
+          "source_format": "Optional[str]",
+          "target_duration_minutes": "Optional[float]",
+          "target_pages_count": "Optional[int]",
+          "calculated_total_word_count": "Optional[int]",
+          "calculated_total_duration": "Optional[float]",
+          "generation_timestamp": "datetime",
+          "ai_model_used": "Optional[str]",
+          "tokens_consumed": "Optional[int]",
+          "estimated_cost": "Optional[float]"
+        },
+        "validators": [],
+        "field_count": 10,
+        "has_validators": false,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "QualityMetrics": {
+        "file": "app/models/pydantic/content.py",
+        "fields": {
+          "overall_score": "Optional[float]",
+          "readability_score": "Optional[float]",
+          "structure_score": "Optional[float]",
+          "relevance_score": "Optional[float]",
+          "engagement_score": "Optional[float]",
+          "format_compliance_score": "Optional[float]",
+          "content_length_compliance": "Optional[bool]",
+          "validation_errors": "List[str]"
+        },
+        "validators": [],
+        "field_count": 8,
+        "has_validators": false,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "OutlineSection": {
+        "file": "app/models/pydantic/content.py",
+        "fields": {
+          "section_number": "int",
+          "title": "str",
+          "description": "str",
+          "estimated_duration_minutes": "Optional[float]",
+          "key_points": "List[str]"
+        },
+        "validators": [
+          "validate_key_points"
+        ],
+        "field_count": 5,
+        "has_validators": true,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "ContentOutline": {
+        "file": "app/models/pydantic/content.py",
+        "fields": {
+          "title": "str",
+          "overview": "str",
+          "learning_objectives": "List[str]",
+          "sections": "List[OutlineSection]",
+          "estimated_total_duration": "Optional[float]",
+          "target_audience": "Optional[str]",
+          "difficulty_level": "Optional[str]"
+        },
+        "validators": [
+          "validate_learning_objectives",
+          "validate_difficulty"
+        ],
+        "field_count": 7,
+        "has_validators": true,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "PodcastScript": {
+        "file": "app/models/pydantic/content.py",
+        "fields": {
+          "title": "str",
+          "introduction": "str",
+          "main_content": "str",
+          "conclusion": "str",
+          "speaker_notes": "Optional[List[str]]",
+          "estimated_duration_minutes": "Optional[float]"
+        },
+        "validators": [
+          "validate_content_length"
+        ],
+        "field_count": 6,
+        "has_validators": true,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "StudyGuide": {
+        "file": "app/models/pydantic/content.py",
+        "fields": {
+          "title": "str",
+          "overview": "str",
+          "key_concepts": "List[str]",
+          "detailed_content": "str",
+          "summary": "str",
+          "recommended_reading": "Optional[List[str]]"
+        },
+        "validators": [
+          "validate_key_concepts"
+        ],
+        "field_count": 6,
+        "has_validators": true,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "OnePagerSummary": {
+        "file": "app/models/pydantic/content.py",
+        "fields": {
+          "title": "str",
+          "executive_summary": "str",
+          "key_takeaways": "List[str]",
+          "main_content": "str"
+        },
+        "validators": [
+          "validate_takeaways"
+        ],
+        "field_count": 4,
+        "has_validators": true,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "DetailedReadingMaterial": {
+        "file": "app/models/pydantic/content.py",
+        "fields": {
+          "title": "str",
+          "introduction": "str",
+          "sections": "List[Dict[str, str]]",
+          "conclusion": "str",
+          "references": "Optional[List[str]]"
+        },
+        "validators": [
+          "validate_sections"
+        ],
+        "field_count": 5,
+        "has_validators": true,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "FAQItem": {
+        "file": "app/models/pydantic/content.py",
+        "fields": {
+          "question": "str",
+          "answer": "str",
+          "category": "Optional[str]"
+        },
+        "validators": [
+          "validate_question"
+        ],
+        "field_count": 3,
+        "has_validators": true,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "FAQCollection": {
+        "file": "app/models/pydantic/content.py",
+        "fields": {
+          "title": "str",
+          "items": "List[FAQItem]"
+        },
+        "validators": [
+          "validate_faq_count"
+        ],
+        "field_count": 2,
+        "has_validators": true,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "FlashcardItem": {
+        "file": "app/models/pydantic/content.py",
+        "fields": {
+          "term": "str",
+          "definition": "str",
+          "category": "Optional[str]",
+          "difficulty": "Optional[str]"
+        },
+        "validators": [
+          "validate_difficulty"
+        ],
+        "field_count": 4,
+        "has_validators": true,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "FlashcardCollection": {
+        "file": "app/models/pydantic/content.py",
+        "fields": {
+          "title": "str",
+          "items": "List[FlashcardItem]"
+        },
+        "validators": [
+          "validate_flashcard_count"
+        ],
+        "field_count": 2,
+        "has_validators": true,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "ReadingGuideQuestions": {
+        "file": "app/models/pydantic/content.py",
+        "fields": {
+          "title": "str",
+          "questions": "List[str]"
+        },
+        "validators": [
+          "validate_questions"
+        ],
+        "field_count": 2,
+        "has_validators": true,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "GeneratedContent": {
+        "file": "app/models/pydantic/content.py",
+        "fields": {
+          "content_outline": "ContentOutline",
+          "podcast_script": "Optional[PodcastScript]",
+          "study_guide": "Optional[StudyGuide]",
+          "one_pager_summary": "Optional[OnePagerSummary]",
+          "detailed_reading_material": "Optional[DetailedReadingMaterial]",
+          "faqs": "Optional[FAQCollection]",
+          "flashcards": "Optional[FlashcardCollection]",
+          "reading_guide_questions": "Optional[ReadingGuideQuestions]"
+        },
+        "validators": [
+          "validate_content_consistency"
+        ],
+        "field_count": 8,
+        "has_validators": true,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "ContentResponse": {
+        "file": "app/models/pydantic/content.py",
+        "fields": {
+          "job_id": "Optional[str]",
+          "content": "GeneratedContent",
+          "metadata": "ContentMetadata",
+          "quality_metrics": "Optional[QualityMetrics]",
+          "version_id": "Optional[str]",
+          "status": "str",
+          "created_at": "datetime"
+        },
+        "validators": [
+          "validate_status"
+        ],
+        "field_count": 7,
+        "has_validators": true,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "ErrorDetail": {
+        "file": "app/models/pydantic/content.py",
+        "fields": {
+          "loc": "List[Union[str, int]]",
+          "msg": "str",
+          "type": "str"
+        },
+        "validators": [],
+        "field_count": 3,
+        "has_validators": false,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "HTTPValidationError": {
+        "file": "app/models/pydantic/content.py",
+        "fields": {
+          "detail": "List[ErrorDetail]"
+        },
+        "validators": [],
+        "field_count": 1,
+        "has_validators": false,
+        "bases": [
+          "BaseModel"
+        ]
+      },
+      "APIErrorResponse": {
+        "file": "app/models/pydantic/content.py",
+        "fields": {
+          "error": "str",
+          "code": "Optional[str]",
+          "details": "Optional[Any]",
+          "content_status": "Optional[Dict[str, str]]"
+        },
+        "validators": [],
+        "field_count": 4,
+        "has_validators": false,
+        "bases": [
+          "BaseModel"
+        ]
+      }
+    },
+    "inheritance_tree": {},
+    "content_flow": {
+      "ContentOutline": [
+        "OutlineSection"
+      ],
+      "FAQCollection": [
+        "FAQItem"
+      ]
+    },
+    "validation_complexity": {},
+    "field_relationships": {
+      "JobError": [
+        {
+          "field": "code",
+          "references": "JobError",
+          "type": "JobErrorCode"
+        },
+        {
+          "field": "code",
+          "references": "Job",
+          "type": "JobErrorCode"
+        }
+      ],
+      "Job": [
+        {
+          "field": "status",
+          "references": "Job",
+          "type": "JobStatus"
+        },
+        {
+          "field": "error",
+          "references": "JobError",
+          "type": "Optional[JobError]"
+        },
+        {
+          "field": "error",
+          "references": "Job",
+          "type": "Optional[JobError]"
+        },
+        {
+          "field": "progress",
+          "references": "JobProgress",
+          "type": "Optional[JobProgress]"
+        },
+        {
+          "field": "progress",
+          "references": "Job",
+          "type": "Optional[JobProgress]"
+        },
+        {
+          "field": "result",
+          "references": "GeneratedContent",
+          "type": "Optional[GeneratedContent]"
+        }
+      ],
+      "JobUpdate": [
+        {
+          "field": "status",
+          "references": "Job",
+          "type": "Optional[JobStatus]"
+        },
+        {
+          "field": "error",
+          "references": "JobError",
+          "type": "Optional[JobError]"
+        },
+        {
+          "field": "error",
+          "references": "Job",
+          "type": "Optional[JobError]"
+        },
+        {
+          "field": "progress",
+          "references": "JobProgress",
+          "type": "Optional[JobProgress]"
+        },
+        {
+          "field": "progress",
+          "references": "Job",
+          "type": "Optional[JobProgress]"
+        },
+        {
+          "field": "result",
+          "references": "GeneratedContent",
+          "type": "Optional[GeneratedContent]"
+        }
+      ],
+      "JobList": [
+        {
+          "field": "jobs",
+          "references": "Job",
+          "type": "List[Job]"
+        }
+      ],
+      "ContentOutline": [
+        {
+          "field": "sections",
+          "references": "OutlineSection",
+          "type": "List[OutlineSection]"
+        }
+      ],
+      "FAQCollection": [
+        {
+          "field": "items",
+          "references": "FAQItem",
+          "type": "List[FAQItem]"
+        }
+      ],
+      "FlashcardCollection": [
+        {
+          "field": "items",
+          "references": "FlashcardItem",
+          "type": "List[FlashcardItem]"
+        }
+      ],
+      "GeneratedContent": [
+        {
+          "field": "content_outline",
+          "references": "ContentOutline",
+          "type": "ContentOutline"
+        },
+        {
+          "field": "podcast_script",
+          "references": "PodcastScript",
+          "type": "Optional[PodcastScript]"
+        },
+        {
+          "field": "study_guide",
+          "references": "StudyGuide",
+          "type": "Optional[StudyGuide]"
+        },
+        {
+          "field": "one_pager_summary",
+          "references": "OnePagerSummary",
+          "type": "Optional[OnePagerSummary]"
+        },
+        {
+          "field": "detailed_reading_material",
+          "references": "DetailedReadingMaterial",
+          "type": "Optional[DetailedReadingMaterial]"
+        },
+        {
+          "field": "faqs",
+          "references": "FAQCollection",
+          "type": "Optional[FAQCollection]"
+        },
+        {
+          "field": "flashcards",
+          "references": "FlashcardCollection",
+          "type": "Optional[FlashcardCollection]"
+        },
+        {
+          "field": "reading_guide_questions",
+          "references": "ReadingGuideQuestions",
+          "type": "Optional[ReadingGuideQuestions]"
+        }
+      ],
+      "ContentResponse": [
+        {
+          "field": "content",
+          "references": "GeneratedContent",
+          "type": "GeneratedContent"
+        },
+        {
+          "field": "metadata",
+          "references": "ContentMetadata",
+          "type": "ContentMetadata"
+        },
+        {
+          "field": "quality_metrics",
+          "references": "QualityMetrics",
+          "type": "Optional[QualityMetrics]"
+        }
+      ],
+      "HTTPValidationError": [
+        {
+          "field": "detail",
+          "references": "ErrorDetail",
+          "type": "List[ErrorDetail]"
+        }
+      ]
+    },
+    "validation_chains": {
+      "OutlineSection": {
+        "validator_count": 1,
+        "validators": [
+          "validate_key_points"
+        ],
+        "complexity": "medium"
+      },
+      "ContentOutline": {
+        "validator_count": 2,
+        "validators": [
+          "validate_learning_objectives",
+          "validate_difficulty"
+        ],
+        "complexity": "medium"
+      },
+      "PodcastScript": {
+        "validator_count": 1,
+        "validators": [
+          "validate_content_length"
+        ],
+        "complexity": "medium"
+      },
+      "StudyGuide": {
+        "validator_count": 1,
+        "validators": [
+          "validate_key_concepts"
+        ],
+        "complexity": "medium"
+      },
+      "OnePagerSummary": {
+        "validator_count": 1,
+        "validators": [
+          "validate_takeaways"
+        ],
+        "complexity": "medium"
+      },
+      "DetailedReadingMaterial": {
+        "validator_count": 1,
+        "validators": [
+          "validate_sections"
+        ],
+        "complexity": "medium"
+      },
+      "FAQItem": {
+        "validator_count": 1,
+        "validators": [
+          "validate_question"
+        ],
+        "complexity": "medium"
+      },
+      "FAQCollection": {
+        "validator_count": 1,
+        "validators": [
+          "validate_faq_count"
+        ],
+        "complexity": "medium"
+      },
+      "FlashcardItem": {
+        "validator_count": 1,
+        "validators": [
+          "validate_difficulty"
+        ],
+        "complexity": "medium"
+      },
+      "FlashcardCollection": {
+        "validator_count": 1,
+        "validators": [
+          "validate_flashcard_count"
+        ],
+        "complexity": "medium"
+      },
+      "ReadingGuideQuestions": {
+        "validator_count": 1,
+        "validators": [
+          "validate_questions"
+        ],
+        "complexity": "medium"
+      },
+      "GeneratedContent": {
+        "validator_count": 1,
+        "validators": [
+          "validate_content_consistency"
+        ],
+        "complexity": "medium"
+      },
+      "ContentResponse": {
+        "validator_count": 1,
+        "validators": [
+          "validate_status"
+        ],
+        "complexity": "medium"
+      }
+    }
+  },
+  "coverage": {
+    "test_files": {
+      "tests/unit/test_utils.py": {
+        "test_type": "unit",
+        "tests_modules": [
+          "utils/text_cleanup",
+          "utils/content_validation",
+          "models/pydantic/content",
+          "utils"
+        ],
+        "test_count": 43,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": true,
+          "patches": 12,
+          "fixtures": 0,
+          "mocked_services": []
+        }
+      },
+      "tests/unit/test_elevenlabs.py": {
+        "test_type": "unit",
+        "tests_modules": [],
+        "test_count": 1,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": false,
+          "patches": 0,
+          "fixtures": 0,
+          "mocked_services": []
+        }
+      },
+      "tests/unit/test_enhanced_multi_step_content_generation_service.py": {
+        "test_type": "unit",
+        "tests_modules": [
+          "services/multi_step_content_generation_final",
+          "models/pydantic/content",
+          "services/comprehensive_content_validator",
+          "core/config/settings"
+        ],
+        "test_count": 5,
+        "mocking": {
+          "pytest_mock": true,
+          "unittest_mock": true,
+          "patches": 10,
+          "fixtures": 5,
+          "mocked_services": []
+        }
+      },
+      "tests/unit/test_audio_generation_service.py": {
+        "test_type": "unit",
+        "tests_modules": [
+          "services/audio_generation",
+          "core/config/settings"
+        ],
+        "test_count": 8,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": true,
+          "patches": 14,
+          "fixtures": 2,
+          "mocked_services": []
+        }
+      },
+      "tests/unit/test_job_manager.py": {
+        "test_type": "unit",
+        "tests_modules": [
+          "services/job_manager",
+          "models/pydantic/job",
+          "models/pydantic/content",
+          "core/config/settings"
+        ],
+        "test_count": 10,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": true,
+          "patches": 0,
+          "fixtures": 3,
+          "mocked_services": []
+        }
+      },
+      "tests/unit/test_app_production_final.py": {
+        "test_type": "unit",
+        "tests_modules": [
+          "api/deps",
+          "main",
+          "services/job_manager"
+        ],
+        "test_count": 19,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": true,
+          "patches": 0,
+          "fixtures": 5,
+          "mocked_services": []
+        }
+      },
+      "tests/unit/test_content_cache_service.py": {
+        "test_type": "unit",
+        "tests_modules": [
+          "services/content_cache",
+          "core/config/settings",
+          "models/pydantic/content"
+        ],
+        "test_count": 12,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": true,
+          "patches": 2,
+          "fixtures": 8,
+          "mocked_services": []
+        }
+      },
+      "tests/unit/test_enhanced_multi_step_content_generation_service_part2.py": {
+        "test_type": "unit",
+        "tests_modules": [
+          "models/pydantic/content",
+          "services/multi_step_content_generation_final",
+          "services/comprehensive_content_validator",
+          "core/config/settings"
+        ],
+        "test_count": 2,
+        "mocking": {
+          "pytest_mock": true,
+          "unittest_mock": true,
+          "patches": 4,
+          "fixtures": 2,
+          "mocked_services": []
+        }
+      },
+      "tests/unit/test_prompt_service.py": {
+        "test_type": "unit",
+        "tests_modules": [
+          "services/prompts"
+        ],
+        "test_count": 10,
+        "mocking": {
+          "pytest_mock": true,
+          "unittest_mock": true,
+          "patches": 9,
+          "fixtures": 2,
+          "mocked_services": []
+        }
+      },
+      "tests/unit/test_pydantic_models.py": {
+        "test_type": "unit",
+        "tests_modules": [
+          "models/pydantic/job",
+          "models/pydantic/content",
+          "models/pydantic/user",
+          "models/pydantic/feedback"
+        ],
+        "test_count": 78,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": false,
+          "patches": 0,
+          "fixtures": 0,
+          "mocked_services": []
+        }
+      },
+      "tests/unit/test_app_final.py": {
+        "test_type": "unit",
+        "tests_modules": [
+          "main"
+        ],
+        "test_count": 15,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": true,
+          "patches": 2,
+          "fixtures": 1,
+          "mocked_services": []
+        }
+      },
+      "tests/unit/test_api_dependencies.py": {
+        "test_type": "unit",
+        "tests_modules": [
+          "api/deps",
+          "core/config/settings",
+          "models/pydantic/user"
+        ],
+        "test_count": 10,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": true,
+          "patches": 1,
+          "fixtures": 1,
+          "mocked_services": []
+        }
+      },
+      "tests/unit/test_llm_response_handling.py": {
+        "test_type": "unit",
+        "tests_modules": [
+          "services/llm_client",
+          "models/pydantic/content",
+          "core/exceptions/custom_exceptions"
+        ],
+        "test_count": 17,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": true,
+          "patches": 0,
+          "fixtures": 2,
+          "mocked_services": []
+        }
+      },
+      "tests/unit/test_lightweight_nlp.py": {
+        "test_type": "unit",
+        "tests_modules": [
+          "utils/lightweight_nlp"
+        ],
+        "test_count": 25,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": false,
+          "patches": 0,
+          "fixtures": 0,
+          "mocked_services": []
+        }
+      },
+      "tests/unit/test_app_fixed.py": {
+        "test_type": "unit",
+        "tests_modules": [
+          "main"
+        ],
+        "test_count": 8,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": true,
+          "patches": 2,
+          "fixtures": 1,
+          "mocked_services": []
+        }
+      },
+      "tests/unit/test_quality_services.py": {
+        "test_type": "unit",
+        "tests_modules": [
+          "services/enhanced_content_validator",
+          "services/semantic_validator",
+          "services/quality_refinement",
+          "services/prompt_optimizer",
+          "models/pydantic/content",
+          "models/pydantic/feedback",
+          "services/comprehensive_content_validator"
+        ],
+        "test_count": 45,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": true,
+          "patches": 0,
+          "fixtures": 6,
+          "mocked_services": []
+        }
+      },
+      "tests/unit/test_app.py": {
+        "test_type": "unit",
+        "tests_modules": [
+          "main",
+          "models/pydantic/content"
+        ],
+        "test_count": 8,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": true,
+          "patches": 2,
+          "fixtures": 1,
+          "mocked_services": []
+        }
+      },
+      "tests/unit/test_settings.py": {
+        "test_type": "unit",
+        "tests_modules": [
+          "core/config",
+          "core/config/settings"
+        ],
+        "test_count": 9,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": true,
+          "patches": 3,
+          "fixtures": 1,
+          "mocked_services": []
+        }
+      },
+      "tests/unit/test_app_production_ready.py": {
+        "test_type": "unit",
+        "tests_modules": [
+          "main"
+        ],
+        "test_count": 12,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": true,
+          "patches": 2,
+          "fixtures": 1,
+          "mocked_services": []
+        }
+      },
+      "tests/integration/test_endpoints.py": {
+        "test_type": "integration",
+        "tests_modules": [
+          "main",
+          "models/pydantic/job",
+          "api/routes/jobs",
+          "models/pydantic/job",
+          "services/multi_step_content_generation_final",
+          "models/pydantic/job"
+        ],
+        "test_count": 9,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": true,
+          "patches": 0,
+          "fixtures": 3,
+          "mocked_services": []
+        }
+      },
+      "tests/integration/test_api_routes.py": {
+        "test_type": "integration",
+        "tests_modules": [],
+        "test_count": 0,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": false,
+          "patches": 0,
+          "fixtures": 0,
+          "mocked_services": []
+        }
+      },
+      "tests/integration/test_api.py": {
+        "test_type": "integration",
+        "tests_modules": [
+          "core/config/settings",
+          "main",
+          "models/pydantic/content",
+          "models/pydantic/job"
+        ],
+        "test_count": 7,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": true,
+          "patches": 0,
+          "fixtures": 7,
+          "mocked_services": []
+        }
+      },
+      "tests/integration/test_service_interactions.py": {
+        "test_type": "integration",
+        "tests_modules": [],
+        "test_count": 0,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": false,
+          "patches": 0,
+          "fixtures": 0,
+          "mocked_services": []
+        }
+      },
+      "tests/integration/test_firestore_client_integration.py": {
+        "test_type": "integration",
+        "tests_modules": [],
+        "test_count": 0,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": false,
+          "patches": 0,
+          "fixtures": 0,
+          "mocked_services": []
+        }
+      },
+      "tests/e2e/test_error_handling_e2e.py": {
+        "test_type": "e2e",
+        "tests_modules": [],
+        "test_count": 0,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": false,
+          "patches": 0,
+          "fixtures": 0,
+          "mocked_services": []
+        }
+      },
+      "tests/e2e/test_auth_e2e.py": {
+        "test_type": "e2e",
+        "tests_modules": [],
+        "test_count": 0,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": false,
+          "patches": 0,
+          "fixtures": 0,
+          "mocked_services": []
+        }
+      },
+      "tests/e2e/test_content_generation_e2e.py": {
+        "test_type": "e2e",
+        "tests_modules": [],
+        "test_count": 8,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": false,
+          "patches": 0,
+          "fixtures": 1,
+          "mocked_services": []
+        }
+      },
+      "tests/e2e/test_content_generation_flow.py": {
+        "test_type": "e2e",
+        "tests_modules": [],
+        "test_count": 0,
+        "mocking": {
+          "pytest_mock": false,
+          "unittest_mock": false,
+          "patches": 0,
+          "fixtures": 0,
+          "mocked_services": []
+        }
+      }
+    },
+    "service_coverage": {
+      "multi_step_content_generation_final": [
+        "tests/unit/test_enhanced_multi_step_content_generation_service.py",
+        "tests/unit/test_enhanced_multi_step_content_generation_service_part2.py",
+        "tests/integration/test_endpoints.py"
+      ],
+      "comprehensive_content_validator": [
+        "tests/unit/test_enhanced_multi_step_content_generation_service.py",
+        "tests/unit/test_enhanced_multi_step_content_generation_service_part2.py",
+        "tests/unit/test_quality_services.py"
+      ],
+      "audio_generation": [
+        "tests/unit/test_audio_generation_service.py"
+      ],
+      "job_manager": [
+        "tests/unit/test_job_manager.py",
+        "tests/unit/test_app_production_final.py"
+      ],
+      "content_cache": [
+        "tests/unit/test_content_cache_service.py"
+      ],
+      "prompts": [
+        "tests/unit/test_prompt_service.py"
+      ],
+      "llm_client": [
+        "tests/unit/test_llm_response_handling.py"
+      ],
+      "enhanced_content_validator": [
+        "tests/unit/test_quality_services.py"
+      ],
+      "semantic_validator": [
+        "tests/unit/test_quality_services.py"
+      ],
+      "quality_refinement": [
+        "tests/unit/test_quality_services.py"
+      ],
+      "prompt_optimizer": [
+        "tests/unit/test_quality_services.py"
+      ]
+    },
+    "mock_strategies": {},
+    "coverage_gaps": [
+      "services/content_generation_service",
+      "services/parallel_processor",
+      "services/progress_tracker",
+      "services/content_validation",
+      "services/quality_metrics",
+      "services/multi_step_content_generation",
+      "services/content_version_manager",
+      "services/content_orchestration",
+      "services/firestore_client",
+      "services/tasks_client"
+    ],
+    "risk_assessment": {
+      "content_generation_service": {
+        "risk_level": "high",
+        "has_tests": false,
+        "reason": "No test coverage found"
+      },
+      "parallel_processor": {
+        "risk_level": "medium",
+        "has_tests": false,
+        "reason": "No test coverage found"
+      },
+      "progress_tracker": {
+        "risk_level": "low",
+        "has_tests": false,
+        "reason": "No test coverage found"
+      },
+      "content_validation": {
+        "risk_level": "high",
+        "has_tests": false,
+        "reason": "No test coverage found"
+      },
+      "quality_metrics": {
+        "risk_level": "low",
+        "has_tests": false,
+        "reason": "No test coverage found"
+      },
+      "multi_step_content_generation_final": {
+        "risk_level": "low",
+        "has_tests": true,
+        "test_count": 3,
+        "test_files": [
+          "tests/unit/test_enhanced_multi_step_content_generation_service.py",
+          "tests/unit/test_enhanced_multi_step_content_generation_service_part2.py",
+          "tests/integration/test_endpoints.py"
+        ]
+      },
+      "prompt_optimizer": {
+        "risk_level": "low",
+        "has_tests": true,
+        "test_count": 1,
+        "test_files": [
+          "tests/unit/test_quality_services.py"
+        ]
+      },
+      "multi_step_content_generation": {
+        "risk_level": "high",
+        "has_tests": false,
+        "reason": "No test coverage found"
+      },
+      "content_cache": {
+        "risk_level": "low",
+        "has_tests": true,
+        "test_count": 1,
+        "test_files": [
+          "tests/unit/test_content_cache_service.py"
+        ]
+      },
+      "comprehensive_content_validator": {
+        "risk_level": "low",
+        "has_tests": true,
+        "test_count": 3,
+        "test_files": [
+          "tests/unit/test_enhanced_multi_step_content_generation_service.py",
+          "tests/unit/test_enhanced_multi_step_content_generation_service_part2.py",
+          "tests/unit/test_quality_services.py"
+        ]
+      },
+      "job_manager": {
+        "risk_level": "low",
+        "has_tests": true,
+        "test_count": 2,
+        "test_files": [
+          "tests/unit/test_job_manager.py",
+          "tests/unit/test_app_production_final.py"
+        ]
+      },
+      "prompts": {
+        "risk_level": "low",
+        "has_tests": true,
+        "test_count": 1,
+        "test_files": [
+          "tests/unit/test_prompt_service.py"
+        ]
+      },
+      "audio_generation": {
+        "risk_level": "low",
+        "has_tests": true,
+        "test_count": 1,
+        "test_files": [
+          "tests/unit/test_audio_generation_service.py"
+        ]
+      },
+      "llm_client": {
+        "risk_level": "low",
+        "has_tests": true,
+        "test_count": 1,
+        "test_files": [
+          "tests/unit/test_llm_response_handling.py"
+        ]
+      },
+      "content_version_manager": {
+        "risk_level": "high",
+        "has_tests": false,
+        "reason": "No test coverage found"
+      },
+      "enhanced_content_validator": {
+        "risk_level": "low",
+        "has_tests": true,
+        "test_count": 1,
+        "test_files": [
+          "tests/unit/test_quality_services.py"
+        ]
+      },
+      "quality_refinement": {
+        "risk_level": "low",
+        "has_tests": true,
+        "test_count": 1,
+        "test_files": [
+          "tests/unit/test_quality_services.py"
+        ]
+      },
+      "content_orchestration": {
+        "risk_level": "high",
+        "has_tests": false,
+        "reason": "No test coverage found"
+      },
+      "firestore_client": {
+        "risk_level": "high",
+        "has_tests": false,
+        "reason": "No test coverage found"
+      },
+      "tasks_client": {
+        "risk_level": "high",
+        "has_tests": false,
+        "reason": "No test coverage found"
+      }
+    },
+    "integration_tests": [
+      "tests/integration/test_endpoints.py",
+      "tests/integration/test_api_routes.py",
+      "tests/integration/test_api.py",
+      "tests/integration/test_service_interactions.py",
+      "tests/integration/test_firestore_client_integration.py"
+    ],
+    "e2e_tests": [
+      "tests/e2e/test_error_handling_e2e.py",
+      "tests/e2e/test_auth_e2e.py",
+      "tests/e2e/test_content_generation_e2e.py",
+      "tests/e2e/test_content_generation_flow.py"
+    ]
+  },
+  "config": {
+    "config_sources": {
+      "GCP_PROJECT_ID": {
+        "sources": [
+          "app/core/config/settings.py"
+        ],
+        "default": null
+      },
+      "API_KEY": {
+        "sources": [
+          "app/core/config/settings.py",
+          "app/core/config/settings.py"
+        ],
+        "default": null
+      },
+      "ELEVENLABS_API_KEY": {
+        "sources": [
+          "app/core/config/settings.py",
+          "app/core/config/settings.py"
+        ],
+        "default": null
+      },
+      "JWT_SECRET_KEY": {
+        "sources": [
+          "app/core/config/settings.py",
+          "app/core/config/settings.py"
+        ],
+        "default": null
+      },
+      "SENTRY_DSN": {
+        "sources": [
+          "app/core/config/settings.py",
+          "app/core/config/settings.py"
+        ],
+        "default": null
+      },
+      "CORS_ORIGINS": {
+        "sources": [
+          "app/core/config/settings.py"
+        ],
+        "default": null
+      }
+    },
+    "env_variables": "{'API_KEY', 'CORS_ORIGINS', 'ELEVENLABS_API_KEY', 'JWT_SECRET_KEY', 'GCP_PROJECT_ID', 'SENTRY_DSN'}",
+    "secret_manager_refs": [
+      "\n            )\n            if cls._secrets_client is None:\n                cls._secrets_client = SecretManagerClient(project_id=gcp_project_id)\n\n            if (\n                cls._secrets_client and cls._secrets_client.client\n            ):  # Check if client was initialized successfully\n                logger.info(\n                    ",
+      "\n                )\n                # Try to load api_key if not already provided (e.g., by a .env file directly for the field)\n                if not values.get(",
+      "\n                )\n        else:\n            logger.info(\n                "
+    ],
+    "docker_configs": {
+      "base_image": "node:18-alpine",
+      "env_vars": [],
+      "exposed_ports": [
+        "8080"
+      ],
+      "build_args": [],
+      "multi_stage": true
+    },
+    "terraform_resources": [
+      "google_cloud_run_v2_service/default",
+      "google_cloud_run_v2_service_iam_member/allow_public",
+      "google_firestore_database/default",
+      "google_firestore_index/jobs_status_created_at",
+      "google_firestore_index/jobs_status_updated_at",
+      "google_firestore_index/jobs_status_only",
+      "google_firestore_index/content_cache_key_expires",
+      "google_firestore_index/content_cache_created_at",
+      "google_firestore_index/content_versions_type_version",
+      "google_firestore_index/quality_metrics_job_type",
+      "google_firestore_index/jobs_status_format_created",
+      "google_firestore_index/jobs_processing_progress",
+      "google_firestore_field/content_cache_ttl",
+      "google_firestore_field/jobs_ttl",
+      "google_artifact_registry_repository/default",
+      "google_api_gateway_api/default",
+      "google_api_gateway_api_config/default",
+      "google_api_gateway_gateway/default",
+      "google_api_gateway_api_config/ai_content_factory_config",
+      "google_api_gateway_gateway/ai_content_factory_gateway",
+      "google_service_usage_consumer_quota_override/api_quota_per_minute",
+      "google_service_usage_consumer_quota_override/api_quota_per_day",
+      "google_workflows_workflow/default",
+      "google_secret_manager_secret/default",
+      "google_cloud_tasks_queue/default",
+      "google_project_iam_custom_role/acpf_content_generator",
+      "google_project_iam_custom_role/acpf_task_processor",
+      "google_project_iam_custom_role/acpf_workflow_orchestrator",
+      "google_project_iam_custom_role/acpf_security_auditor",
+      "google_project_iam_member/cloud_run_content_generator",
+      "google_service_account/cloud_run",
+      "google_service_account/cloud_tasks_invoker",
+      "google_service_account/workflows_executor",
+      "google_project_iam_member/cloud_run_sa_secret_accessor",
+      "google_project_iam_member/cloud_run_sa_firestore_user",
+      "google_project_iam_member/cloud_run_sa_vertexai_user",
+      "google_project_iam_member/cloud_run_sa_tasks_enqueuer",
+      "google_project_iam_member/cloud_run_sa_logging_writer",
+      "google_project_iam_member/cloud_run_sa_monitoring_metricwriter",
+      "google_project_iam_member/tasks_invoker_sa_run_invoker",
+      "google_project_iam_member/workflows_executor_sa_workflows_invoker",
+      "google_project_iam_member/workflows_executor_sa_run_invoker",
+      "google_project_iam_member/workflows_executor_sa_secret_accessor",
+      "google_project_iam_member/workflows_executor_sa_tasks_enqueuer",
+      "google_project_iam_member/cloud_run_sa_vertexai_user_conditional",
+      "google_project_iam_audit_config/all_services",
+      "google_project_iam_audit_config/aiplatform_audit",
+      "google_project_iam_audit_config/secretmanager_audit",
+      "google_project_iam_audit_config/firestore_audit",
+      "google_project_iam_audit_config/iam_audit",
+      "google_project_iam_audit_config/cloudrun_audit",
+      "google_project_iam_audit_config/cloudtasks_audit",
+      "google_project_iam_audit_config/resourcemanager_audit",
+      "google_logging_project_sink/security_audit_sink",
+      "google_logging_metric/failed_auth_attempts",
+      "google_logging_metric/secret_access"
+    ],
+    "config_conflicts": [
+      {
+        "variable": "API_KEY",
+        "sources": [
+          "app/core/config/settings.py",
+          "app/core/config/settings.py"
+        ],
+        "severity": "low"
+      },
+      {
+        "variable": "ELEVENLABS_API_KEY",
+        "sources": [
+          "app/core/config/settings.py",
+          "app/core/config/settings.py"
+        ],
+        "severity": "low"
+      },
+      {
+        "variable": "JWT_SECRET_KEY",
+        "sources": [
+          "app/core/config/settings.py",
+          "app/core/config/settings.py"
+        ],
+        "severity": "low"
+      },
+      {
+        "variable": "SENTRY_DSN",
+        "sources": [
+          "app/core/config/settings.py",
+          "app/core/config/settings.py"
+        ],
+        "severity": "low"
+      }
+    ],
+    "config_dependencies": {},
+    "deployment_configs": {
+      "docker_compose_services": [],
+      "terraform": {
+        "variable_count": 55,
+        "output_count": 45,
+        "resource_types": 19
+      }
+    }
+  },
+  "errors": {
+    "custom_exceptions": {
+      "app/core/exceptions/__init__.py": {
+        "exceptions": [],
+        "error_codes": []
+      },
+      "app/core/exceptions/custom_exceptions.py": {
+        "exceptions": [],
+        "error_codes": [
+          "DATABASE_ERROR",
+          "PIPELINE_ERROR",
+          "EXTERNAL_SERVICE_ERROR",
+          "CONFIGURATION_ERROR",
+          "AUDIO_GENERATION_FAILED",
+          "CONTENT_TYPE_GENERATION_FAILED",
+          "OUTLINE_GENERATION_FAILED",
+          "INPUT_VALIDATION_FAILED",
+          "JOB_CREATION_FAILED",
+          "TASK_ENQUEUE_FAILED",
+          "UNKNOWN_ERROR"
+        ]
+      }
+    },
+    "error_handlers": {
+      "content_generation_service": {
+        "try_except_blocks": 7,
+        "has_retry": false,
+        "error_logs": 3,
+        "http_errors": 0
+      },
+      "parallel_processor": {
+        "try_except_blocks": 4,
+        "has_retry": true,
+        "error_logs": 1,
+        "http_errors": 0
+      },
+      "progress_tracker": {
+        "try_except_blocks": 3,
+        "has_retry": true,
+        "error_logs": 4,
+        "http_errors": 0
+      },
+      "content_validation": {
+        "try_except_blocks": 3,
+        "has_retry": false,
+        "error_logs": 2,
+        "http_errors": 0
+      },
+      "quality_metrics": {
+        "try_except_blocks": 1,
+        "has_retry": false,
+        "error_logs": 0,
+        "http_errors": 0
+      },
+      "multi_step_content_generation_final": {
+        "try_except_blocks": 11,
+        "has_retry": true,
+        "error_logs": 9,
+        "http_errors": 0
+      },
+      "prompt_optimizer": {
+        "try_except_blocks": 1,
+        "has_retry": false,
+        "error_logs": 1,
+        "http_errors": 0
+      },
+      "content_cache": {
+        "try_except_blocks": 17,
+        "has_retry": true,
+        "error_logs": 12,
+        "http_errors": 0
+      },
+      "comprehensive_content_validator": {
+        "try_except_blocks": 1,
+        "has_retry": false,
+        "error_logs": 1,
+        "http_errors": 0
+      },
+      "job_manager": {
+        "try_except_blocks": 7,
+        "has_retry": false,
+        "error_logs": 8,
+        "http_errors": 0
+      },
+      "prompts": {
+        "try_except_blocks": 4,
+        "has_retry": false,
+        "error_logs": 6,
+        "http_errors": 0
+      },
+      "audio_generation": {
+        "try_except_blocks": 4,
+        "has_retry": false,
+        "error_logs": 0,
+        "http_errors": 0
+      },
+      "llm_client": {
+        "try_except_blocks": 7,
+        "has_retry": true,
+        "error_logs": 8,
+        "http_errors": 0
+      },
+      "content_version_manager": {
+        "try_except_blocks": 1,
+        "has_retry": false,
+        "error_logs": 1,
+        "http_errors": 0
+      },
+      "enhanced_content_validator": {
+        "try_except_blocks": 3,
+        "has_retry": false,
+        "error_logs": 0,
+        "http_errors": 0
+      },
+      "firestore_client": {
+        "try_except_blocks": 1,
+        "has_retry": false,
+        "error_logs": 1,
+        "http_errors": 0
+      },
+      "tasks_client": {
+        "try_except_blocks": 6,
+        "has_retry": true,
+        "error_logs": 6,
+        "http_errors": 0
+      }
+    },
+    "retry_patterns": {
+      "parallel_processor": 23,
+      "progress_tracker": 6,
+      "multi_step_content_generation_final": 13,
+      "content_cache": 9,
+      "llm_client": 16,
+      "tasks_client": 24
+    },
+    "error_mappings": {},
+    "propagation_paths": []
+  },
+  "performance": {
+    "timeouts": [
+      "PerformanceMetric(metric_type='timeout', value=30, unit='seconds', location='app/utils/github_issues.py', context='timeout=30')",
+      "PerformanceMetric(metric_type='timeout', value=30, unit='seconds', location='app/utils/github_issues.py', context='timeout=30')",
+      "PerformanceMetric(metric_type='timeout', value=30, unit='seconds', location='app/utils/github_issues.py', context='timeout=30')"
+    ],
+    "rate_limits": [],
+    "concurrency_patterns": {
+      "content_generation_service": {
+        "has_concurrency": true,
+        "async_functions": 0,
+        "await_calls": 0
+      },
+      "parallel_processor": {
+        "has_concurrency": true,
+        "async_functions": 3,
+        "await_calls": 3
+      },
+      "multi_step_content_generation_final": {
+        "has_concurrency": true,
+        "async_functions": 0,
+        "await_calls": 0
+      },
+      "content_orchestration": {
+        "has_concurrency": true,
+        "async_functions": 0,
+        "await_calls": 0
+      },
+      "tasks_client": {
+        "has_concurrency": true,
+        "async_functions": 2,
+        "await_calls": 0
+      }
+    },
+    "cache_usage": {
+      "content_generation_service": 2,
+      "content_cache": 1,
+      "prompts": 4,
+      "settings": 2,
+      "oidc": 2,
+      "secrets": 2
+    },
+    "batch_processing": [
+      "content_version_manager"
+    ]
+  },
+  "pipeline": {
+    "entry_points": [],
+    "generation_sequence": [
+      "multi_step_generation_calls_total",
+      "multi_step_generation_duration_seconds",
+      "Coherence"
+    ],
+    "parallel_stages": [
+      "_processor",
+      "Processor",
+      "_processor",
+      "Processor",
+      "_processor",
+      "_processor",
+      "Processor",
+      "bool",
+      "_processor",
+      "result_tuple",
+      "_processor",
+      "Processor",
+      "_processor",
+      "Processor",
+      "bool",
+      "_processor",
+      "result_tuple",
+      "bool",
+      "use_parallel"
+    ],
+    "validation_points": [
+      "content_validation",
+      "comprehensive_content_validator",
+      "enhanced_content_validator"
+    ],
+    "output_formats": {}
+  }
+}

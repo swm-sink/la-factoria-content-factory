@@ -6,30 +6,36 @@ existing tokens for user authentication.
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from jose import JWTError, jwt
-from pydantic import BaseModel
 
 from app.core.config.settings import get_settings
+from app.models.pydantic.user import (  # Import TokenData from the central location
+    TokenData,
+)
+
+# from pydantic import BaseModel # BaseModel no longer needed here if TokenData is removed
+
 
 settings = get_settings()
 
-ALGORITHM = "HS256"
+ALGORITHM = settings.jwt_algorithm  # Use algorithm from settings
 ACCESS_TOKEN_EXPIRE_MINUTES = (
     settings.access_token_expire_minutes
 )  # Directly from settings
 
 
-class TokenData(BaseModel):
-    """
-    Pydantic model for data extracted from a JWT token.
-
-    Attributes:
-        username: The username (or email/user_id) extracted from the token's 'sub' claim.
-    """
-
-    username: Optional[str] = None  # Or email, or user_id
-    # Add other claims like scopes if needed
+# class TokenData(BaseModel): # Removed duplicate TokenData model
+#     \"\"\"
+#     Pydantic model for data extracted from a JWT token.
+#
+#     Attributes:
+#         username: The username (or email/user_id) extracted from the token\'s \'sub\' claim.
+#     \"\"\"
+#
+#     username: Optional[str] = None  # Or email, or user_id
+#     # Add other claims like scopes if needed
 
 
 def create_access_token(

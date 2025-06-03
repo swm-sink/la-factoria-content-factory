@@ -1,389 +1,452 @@
 # AI Content Factory
 
+An AI-powered content and podcast factory that transforms textual input (e.g., a topic, syllabus) into comprehensive educational materials including podcast scripts, study guides, summaries, FAQs, flashcards, and more.
+
 ## Overview
 
-The AI Content Factory is a web application designed to generate various types of educational content using AI. It leverages Google's Vertex AI for content generation and ElevenLabs for text-to-speech conversion. The application is built with a React frontend and a FastAPI backend.
-
-This project aims to provide a modular, scalable, and easy-to-use platform for creating:
-- Content Outlines
-- Podcast Scripts
-- Study Guides
-- One-Pager Summaries
-- Detailed Reading Materials
-- FAQs
-- Flashcards
-- Reading Guide Questions
+The AI Content Factory uses Google Cloud Vertex AI (Gemini models) to generate structured, educational content from simple text inputs. The system follows an outline-driven approach where a master content outline is first generated, then used as the foundation for creating various derivative content types in parallel.
 
 ## Features
 
-- **Versatile Content Generation**: Create a wide range of educational materials from a single topic.
-- **AI-Powered**: Utilizes state-of-the-art AI models for high-quality content.
-- **Text-to-Speech**: Convert generated text content into natural-sounding audio.
-- **Secure API**: Endpoints protected by API key authentication.
-- **Modular Architecture**: Separated frontend and backend services for better maintainability and scalability.
-- **Containerized**: Dockerized for easy setup and deployment.
-- **CI/CD**: GitHub Actions for automated linting, testing, building, and deployment.
-- **Asynchronous Job Processing**: Utilizes Firestore and Cloud Tasks for scalable, asynchronous content generation jobs.
+- **Master Content Outline Generation**: Creates structured learning frameworks from input text
+- **Multi-Format Content Generation**: Supports podcast scripts, study guides, one-pagers, detailed reading materials, FAQs, flashcards, and reading guide questions
+- **Quality Validation**: Comprehensive content quality assessment and iterative refinement
+- **Intelligent Caching**: High-quality content caching with TTL and quality-based retention
+- **Cost Optimization**: Token limit monitoring and cost tracking for AI API usage
+- **Async Processing**: Background job processing for complex content generation tasks
 
-## Tech Stack
+## Architecture
 
-- **Frontend**: React, TypeScript, Vite, Tailwind CSS, Zustand, React Router, Axios
-- **Backend**: Python 3.11+, FastAPI, Uvicorn, Pydantic
-- **AI Services**: Google Vertex AI (Gemini), ElevenLabs (or Google Cloud TTS)
-- **Cloud Platform**: Google Cloud Platform (Cloud Run, Firestore, Cloud Tasks, Secret Manager, Artifact Registry, API Gateway, Workflows)
-- **Containerization**: Docker, Docker Compose
-- **Infrastructure as Code (IaC)**: Terraform
-- **CI/CD**: GitHub Actions
-- **Linting/Formatting**: Flake8, Black, MyPy (Python); ESLint, Prettier (Frontend)
-- **Retry Logic**: Tenacity (for resilient API calls to AI services)
-- **Task Management**: YAML-based atomic tasks, Markdown for meta-tasks and details.
-
-## Project Structure
-
+```mermaid
+graph TB
+    Client[Client Application] --> API[FastAPI Application]
+    API --> Auth[API Key Authentication]
+    API --> ContentGen[Content Generation Service]
+    ContentGen --> LLM[LLM Client Service]
+    LLM --> VertexAI[Vertex AI Gemini]
+    ContentGen --> Cache[Redis Cache]
+    ContentGen --> Jobs[Job Management]
+    Jobs --> Firestore[Firestore Database]
 ```
-.                           # Project Root
-├── .cursor/                # Cursor AI assistant rules and configuration
-│   └── rules/
-│       └── project.mdc     # Core project rules for AI interaction
-├── .github/                # GitHub specific files
-│   └── workflows/          # CI/CD pipeline definitions
-├── app/                    # FastAPI backend application
-│   ├── __init__.py
-│   ├── api/                # API layer: routes and dependencies
-│   │   ├── routes/         # Modular route definitions (jobs, worker, auth, etc.)
-│   │   └── routes.py       # (If used as an aggregator)
-│   ├── core/               # Core components (config, security, prompts, exceptions)
-│   │   ├── config/
-│   │   ├── prompts/
-│   │   ├── schemas/        # Pydantic schemas (e.g., app/core/schemas/job.py)
-│   │   └── security/
-│   ├── models/             # Data models
-│   │   └── pydantic/       # Pydantic models for API requests, responses, content structures (e.g., content.py, user.py, feedback.py)
-│   ├── services/           # Business logic (content generation, job management)
-│   │   └── job/
-│   ├── utils/              # Utility functions
-│   └── main.py             # FastAPI application entrypoint
-├── docker/                 # Docker-related files (e.g., nginx config)
-│   └── nginx/
-├── docs/                   # Project documentation (architecture, deployment, operational guides)
-├── frontend/               # React frontend application (if applicable)
-│   ├── public/
-│   ├── src/
-│   ├── package.json
-│   └── ...
-├── iac/                    # Infrastructure as Code (Terraform)
-│   ├── modules/            # Reusable Terraform modules
-│   └── main.tf             # Root Terraform configuration
-├── memory/                 # AI operational guidelines
-│   └── guidelines.md
-├── scripts/                # Utility scripts (e.g., local run scripts)
-├── tasks/                  # Authoritative task management system
-│   ├── atomic_tasks.yaml   # AI-executable tasks
-│   ├── meta_tasks.md       # High-level goals and sprints
-│   └── task_details.md     # Detailed context for atomic tasks
-├── tests/                  # Automated tests
-│   ├── unit/
-│   ├── integration/
-│   └── e2e/
-├── .env.example            # Example environment variables
-├── .gitignore
-├── Dockerfile              # Root Dockerfile (multi-stage)
-├── docker-compose.yml      # Docker Compose for local development
-├── README.md               # This file
-├── requirements.txt        # Python dependencies
-└── start.sh                # Container startup script
+
+For detailed architecture information, see [docs/architecture-map.md](docs/architecture-map.md).
+
+## API Endpoints
+
+### Health Checks
+
+#### Unprotected Health Check
+```bash
+GET /healthz
+```
+Basic service health check (no authentication required).
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+#### Protected Health Check
+```bash
+GET /api/v1/health
+Headers: X-API-Key: your-api-key
+```
+Comprehensive health check including AI service connectivity (requires API key).
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "services": {
+    "vertex_ai": "connected",
+    "cache": "connected",
+    "firestore": "connected"
+  },
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+### Content Generation
+
+#### Generate Content
+```bash
+POST /api/v1/content/generate
+Headers:
+  Content-Type: application/json
+  X-API-Key: your-api-key
+```
+
+**Request Body:**
+```json
+{
+  "syllabus_text": "Introduction to Machine Learning: supervised learning, unsupervised learning, neural networks, and practical applications using Python.",
+  "target_format": "comprehensive",
+  "enable_caching": true
+}
+```
+
+**Response:**
+```json
+{
+  "content": {
+    "content_outline": {
+      "title": "Introduction to Machine Learning",
+      "overview": "Comprehensive guide covering ML fundamentals...",
+      "sections": [...]
+    },
+    "podcast_script": {
+      "title": "ML Fundamentals Podcast",
+      "introduction": "Welcome to our exploration of machine learning...",
+      "main_content": "...",
+      "conclusion": "..."
+    },
+    "study_guide": {
+      "title": "Machine Learning Study Guide",
+      "overview": "...",
+      "key_concepts": [...],
+      "detailed_content": "...",
+      "summary": "..."
+    },
+    "faqs": {
+      "items": [
+        {
+          "question": "What is machine learning?",
+          "answer": "Machine learning is a subset of artificial intelligence..."
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "generation_time": "45.2s",
+    "cache_hit": false,
+    "quality_score": 0.87
+  }
+}
+```
+
+#### Target Formats
+- `guide`: Study guide only
+- `podcast`: Podcast script only
+- `one_pager`: One-page summary only
+- `comprehensive`: All content types (default)
+
+### Job Management
+
+#### Create Async Job
+```bash
+POST /api/v1/jobs
+Headers:
+  Content-Type: application/json
+  X-API-Key: your-api-key
+```
+
+#### Get Job Status
+```bash
+GET /api/v1/jobs/{job_id}
+Headers: X-API-Key: your-api-key
 ```
 
 ## Getting Started
 
 ### Prerequisites
 
-- Docker and Docker Compose
 - Python 3.11+
-- Node.js 18+ and npm (for frontend development if not using Docker for frontend)
-- Access to Google Cloud Platform with Vertex AI API enabled.
-- An ElevenLabs API key.
+- Google Cloud Project with Vertex AI enabled
+- Redis (for caching)
+- Firestore (for job persistence)
 
-### Setup Environment Variables
+### Installation
 
-1.  Copy `.env.example` (from the project root) to a new file named `.env` in the **project root**:
-    ```bash
-    cp .env.example .env
-    ```
-2.  Update `.env` with your actual API keys and GCP project ID. Key variables include:
-    - `API_KEY`: A secure, unique key you define for clients to access *this application's* API.
-    - `GCP_PROJECT_ID`: Your Google Cloud Project ID.
-    - `ELEVENLABS_API_KEY`: Your API key from ElevenLabs (if using ElevenLabs for TTS).
-    - `JWT_SECRET_KEY`: A long, random string for signing JWTs (if auth is enabled).
-    - `SENTRY_DSN` (Optional): For error tracking with Sentry.
-    - `APP_PORT`: Port for the backend API server (default 8080).
-    Refer to `app/core/config/settings.py` for a complete list and descriptions. These can also be loaded from Google Secret Manager in a GCP environment.
-
-### Local Development (using Docker Compose)
-
-This is the recommended way to run the application locally.
-
-1.  **Ensure Docker Desktop is running.**
-2.  **Build and run the services:**
-    From the project root directory:
-   ```bash
-    docker-compose up --build
-    ```
-    - The application (served by Nginx, proxying to FastAPI) will be available based on your `docker-compose.yml` port mapping. Typically, if `docker-compose.yml` maps `"8080:8080"`, it will be `http://localhost:8080`.
-    - Nginx inside the container listens on the port specified by the `NGINX_PORT` environment variable (default 8080, which is also the default `APP_PORT` for backend settings).
-
-3.  **Accessing the application:**
-    - Application UI: Open `http://localhost:YOUR_MAPPED_PORT` (e.g., `http://localhost:8080`) in your browser.
-    - Backend API Docs (Swagger UI): `http://localhost:YOUR_MAPPED_PORT/docs` (e.g., `http://localhost:8080/docs`).
-
-### Local Development (Manual - Backend)
-
-If you prefer to run the backend directly without Docker:
-
-1.  **Navigate to the project root directory.** (The application `app/` is at the root).
-2.  **Create and activate a virtual environment:**
-   ```bash
-    python3 -m venv venv
-    source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-3.  **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-    ```
-4.  **Ensure your root `.env` file is configured.**
-5.  **Run the FastAPI development server:**
-    From the project root directory:
-   ```bash
-    uvicorn app.main:app --reload --port ${APP_PORT:-8080} 
-    ```
-    (Ensure `APP_PORT` is set in your environment or `.env` file, or it defaults to the value in `app/core/config/settings.py`, typically 8080)
-
-### Local Development (Manual - Frontend)
-
-(Instructions remain similar if frontend exists and is developed separately)
-
-1.  **Navigate to the `frontend` directory.**
-2.  **Install dependencies:**
-   ```bash
-    npm install
-   ```
-3.  **Run the Vite development server:**
+1. **Clone the repository:**
 ```bash
-    npm run dev
-    ```
-    The frontend will be available at `http://localhost:5173` (or another port). Ensure its proxy settings in `vite.config.ts` point to your running backend API (e.g., `http://localhost:8080`).
+git clone <repository-url>
+cd ai-content-factory
+```
 
-## API Usage
+2. **Install dependencies:**
+```bash
+pip install -r requirements.txt
+pip install -r requirements-dev.txt  # For development
+```
 
-Most API endpoints under `/api/v1/` require an `X-API-Key` header for authentication, as defined in `app.core.config.settings.API_KEY`.
-Endpoints under `/api/v1/auth/` (for registration and login) do not require this API key.
-The root `/healthz` endpoint (for GCP health checks) also does not require an API key.
+3. **Set up environment variables:**
+```bash
+cp .env.example .env
+# Edit .env with your configuration
+```
 
-### Core Endpoints
+Required environment variables:
+```bash
+# Core API Configuration
+API_KEY=your-secret-api-key
+GCP_PROJECT_ID=your-gcp-project-id
+GCP_LOCATION=us-central1
 
--   **`POST /api/v1/jobs`**: Creates a new asynchronous content generation job.
-    -   **Request Body** (conforms to `ContentRequest` model from `app/models/pydantic/content.py`):
-        ```json
-        {
-          "syllabus_text": "Detailed topic on the principles of quantum mechanics for beginners.",
-          "target_format": "podcast_script",
-          "target_duration": 10,
-          "target_pages": null,
-          "use_parallel": true,
-          "use_cache": true
-        }
-        ```
-    -   **Response Body** (conforms to `Job` model from `app/core/schemas/job.py`, status `pending`):
-        ```json
-        {
-          "id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
-          "status": "pending",
-          "created_at": "2024-07-27T10:00:00Z",
-          "updated_at": "2024-07-27T10:00:00Z",
-          "completed_at": null,
-          "error": null,
-          "progress": null,
-          "result": null,
-          "metadata": {
-            "syllabus_text": "Detailed topic on the principles of quantum mechanics for beginners.",
-            "target_format": "podcast_script",
-            "target_duration": 10,
-            "target_pages": null,
-            "use_parallel": true,
-            "use_cache": true
-          }
-        }
-        ```
+# AI Service Configuration
+GEMINI_MODEL_NAME=models/gemini-2.5-flash-preview-05-20
 
--   **`GET /api/v1/jobs/{job_id}`**: Retrieves the status and results of a specific job.
-    -   **Response Body** (conforms to `Job` model, example if completed. The `result` field will contain the `GeneratedContent` structure from `app/models/pydantic/content.py`):
-        ```json
-        {
-          "id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
-          "status": "completed",
-          "created_at": "2024-07-27T10:00:00Z",
-          "updated_at": "2024-07-27T10:05:00Z",
-          "completed_at": "2024-07-27T10:05:00Z",
-          "error": null,
-          "progress": {
-            "current_step": "Content generation complete",
-            "total_steps": 5,
-            "completed_steps": 5,
-            "percentage": 100.0,
-            "estimated_time_remaining": 0.0
-          },
-          "result": {
-            "content_outline": { /* ... outline data ... */ },
-            "podcast_script": { /* ... podcast script data ... */ },
-            "study_guide": { /* ... study guide data ... */ },
-            "faqs": { /* ... faqs data ... */ }
-            // ... other generated content types as per app/models/pydantic/content.py ...
-          },
-          "metadata": { /* ... original request metadata ... */ }
-        }
-        ```
+# Required API Keys
+ELEVENLABS_API_KEY=your-elevenlabs-key
+JWT_SECRET_KEY=your-jwt-secret-key-minimum-32-characters-long
 
--   **`GET /api/v1/health`**: Health check endpoint for the backend API. Returns `{"status": "healthy"}`. (Note: This endpoint might be in `app/api/routes/content.py` or a dedicated health route).
+# Frontend Configuration
+VITE_API_BASE_URL=http://localhost:8000
 
-(Other endpoints like user authentication (`/api/v1/auth/`) and feedback (`/api/v1/feedback/`) exist. Refer to API documentation or source code for full details.)
+# CORS Configuration
+CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+```
 
-## Running Tests
+📖 **For a complete list of all configuration options, see [Configuration Guide](docs/CONFIGURATION.md)**
 
-### Backend Tests
+4. **Initialize Google Cloud authentication:**
+```bash
+gcloud auth application-default login
+```
 
-1.  **Navigate to the project root directory.**
-2.  Ensure you have a virtual environment activated with test dependencies installed (`pip install -r requirements-dev.txt` if a separate dev requirements file exists, or from `requirements.txt`).
-3.  Run pytest:
+### Local Development
+
+1. **Start the development server:**
+```bash
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
+```
+
+2. **Test the API:**
+```bash
+curl -X GET http://localhost:8080/healthz
+```
+
+3. **Test protected endpoint:**
+```bash
+curl -X GET http://localhost:8080/api/v1/health \
+  -H "X-API-Key: your-api-key"
+```
+
+### Docker Development
+
+1. **Build the container:**
+```bash
+docker build -t ai-content-factory .
+```
+
+2. **Run with Docker Compose:**
+```bash
+docker-compose up -d
+```
+
+This starts the application with Redis and other dependencies.
+
+## Testing
+
+### Running Tests
+
+**All tests:**
 ```bash
 pytest
 ```
-    Or to target specific tests:
-    ```bash
-    pytest tests/unit/
-    pytest tests/integration/
-    ```
 
-### Frontend Tests (Vitest)
-
-(If frontend is part of the current scope)
-1.  Navigate to the `frontend` directory.
-2.  Run Vitest:
+**Unit tests only:**
 ```bash
-    npm test
-    ```
-
-## Linting and Type Checking
-
-### Backend (Flake8, Black, MyPy)
-
-From the project root directory:
-
-```bash
-ruff check app/
-black --check app/
-mypy app/
+pytest tests/unit/
 ```
-(Consider using `pre-commit` for automated checks - see `DEV-6.3` task)
 
-### Frontend (ESLint & Prettier)
-
-(If frontend is part of the current scope)
-From the `frontend` directory:
+**Integration tests:**
 ```bash
-npm run lint
-npm run format # To check formatting with Prettier, or format:check if you have a specific check script
+pytest tests/integration/
+```
+
+**With coverage:**
+```bash
+pytest --cov=app --cov-report=html
+```
+
+### Test Configuration
+
+Tests use mocked external services by default. To run integration tests against real services:
+
+```bash
+export INTEGRATION_TESTS=true
+pytest tests/integration/
+```
+
+## Code Quality
+
+### Linting and Formatting
+
+**Format code:**
+```bash
+black app/ tests/
+```
+
+**Check formatting:**
+```bash
+black --check app/ tests/
+```
+
+**Lint code:**
+```bash
+flake8 app/ tests/
+```
+
+**Type checking:**
+```bash
+mypy app/
 ```
 
 ### Pre-commit Hooks
 
-This project uses pre-commit hooks to automatically lint and format code before committing.
+Install pre-commit hooks to automatically format and lint code:
 
-**Backend (Python):**
-- Uses `pre-commit` with configurations in `.pre-commit-config.yaml`.
-- Runs tools like Black (formatter), Ruff (linter), and Mypy (type checker) on staged Python files.
-- **Setup:**
-  ```bash
-  pip install pre-commit
-  pre-commit install
-  ```
-  This installs the hooks into your local `.git/hooks` directory.
+```bash
+pre-commit install
+```
 
-**Frontend (TypeScript/React):**
-- Uses `husky` and `lint-staged`.
-- Runs ESLint (linter/fixer) and Prettier (formatter) on staged `.ts` and `.tsx` files.
-- **Setup:**
-  The hooks are automatically set up when you install dependencies in the `frontend` directory due to the `prepare` script in `frontend/package.json`:
-  ```bash
-  cd frontend
-  npm install
-  ```
-  This configures Husky to run `lint-staged` on pre-commit.
+This will run `black`, `flake8`, and `mypy` on every commit.
+
+### Development Validation Script
+
+Run all quality checks:
+
+```bash
+# Check code quality
+black --check app/ tests/
+flake8 app/ tests/
+mypy app/
+
+# Run tests
+pytest
+
+# Check Docker build
+docker build --no-cache .
+```
+
+## Configuration
+
+### Settings
+
+Application settings are managed through `app/core/config/settings.py` with support for:
+
+- Environment variables
+- Google Secret Manager (for production)
+- Sensible defaults for development
+
+### Secret Management
+
+**Development:** Use `.env` file or environment variables
+**Production:** Secrets automatically loaded from Google Secret Manager
+
+### Caching Configuration
+
+```bash
+# Redis Configuration
+REDIS_URL=redis://localhost:6379
+CACHE_TTL_SECONDS=3600
+CACHE_MIN_QUALITY_RETRIEVAL=0.75
+
+# Content caching is conditional based on quality scores
+```
+
+### Cost Management
+
+```bash
+# Token and cost limits
+MAX_TOKENS_PER_CONTENT_TYPE=1000
+MAX_COST_PER_REQUEST=0.50
+ENABLE_COST_TRACKING=true
+```
 
 ## Deployment
 
-Deployment is managed via GitHub Actions workflows that build Docker images, push them to Google Artifact Registry, apply Terraform configurations, and deploy to Google Cloud Run. Refer to `.github/workflows/` and `iac/` directories for details.
+### Google Cloud Run
 
-Key deployment files:
-- `Dockerfile`: Defines the multi-stage Docker build.
-- `iac/`: Contains Terraform configurations for all GCP resources.
-- `.github/workflows/build-push-docker.yml`: Builds and pushes Docker image.
-- `.github/workflows/terraform-apply.yml`: Applies Terraform changes.
-- `.github/workflows/deploy-cloud-run.yml`: Deploys to Cloud Run.
+The application is designed for deployment on Google Cloud Run with:
+
+- Automatic scaling
+- Service-to-service authentication
+- Integration with Google Cloud services
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed deployment instructions.
+
+### Infrastructure as Code
+
+Terraform configurations are available in the `iac/` directory for provisioning:
+
+- Cloud Run services
+- Firestore database
+- Secret Manager secrets
+- IAM roles and policies
+
+## Monitoring
+
+### Health Checks
+
+- `/healthz`: Basic liveness probe
+- `/api/v1/health`: Comprehensive readiness probe with dependency checks
+
+### Metrics
+
+The application exposes Prometheus metrics for:
+
+- Request rates and latencies
+- AI API call metrics
+- Cache hit rates
+- Job processing statistics
+
+### Logging
+
+Structured JSON logging with:
+
+- Correlation IDs for request tracing
+- Cost tracking for AI API calls
+- Quality metrics for generated content
+- Performance monitoring
 
 ## Contributing
 
-Contributions are welcome! Please follow standard fork-and-pull-request workflow. Ensure your code adheres to linting and testing standards. Update relevant documentation and task files (`tasks/atomic_tasks.yaml`) with your changes.
+1. **Fork the repository**
+2. **Create a feature branch:** `git checkout -b feature/amazing-feature`
+3. **Follow coding standards:** Use `black`, `flake8`, and `mypy`
+4. **Add tests:** Ensure new functionality is tested
+5. **Update documentation:** Update relevant docs and docstrings
+6. **Submit a pull request**
+
+See [docs/developer/best_practices.md](docs/developer/best_practices.md) for detailed development guidelines.
+
+## Security
+
+- **API Key Authentication:** All endpoints require valid API keys
+- **Input Validation:** Comprehensive request validation with Pydantic
+- **Secret Management:** Secure handling of API keys and credentials
+- **Rate Limiting:** Configurable request rate limits
+- **Network Security:** Internal endpoints isolated from external access
 
 ## License
 
-(To be determined - e.g., MIT License. A `LICENSE` file should be added.)
+[License information]
 
-## Environment Variables
+## Support
 
-The application uses Pydantic Settings management, loading variables from environment variables, a `.env` file, and potentially Google Secret Manager. Create a `.env` file in the project root by copying `.env.example`.
+For questions, issues, or contributions:
 
-**Key Environment Variables (refer to `app/core/config/settings.py` for the full list and descriptions):**
+- **Issues:** Use GitHub Issues for bug reports and feature requests
+- **Documentation:** See the `docs/` directory for detailed documentation
+- **Architecture:** Review `docs/architecture-map.md` for system design
 
+---
+
+## AI Context Dump & Summary Scripts
+
+This project includes scripts to generate comprehensive context dumps for AI analysis:
+
+- **`scripts/generate_ai_context_dump.py`**: Compiles project files into `ai_context_dump.md`
+- **`scripts/generate_ai_context_summary.py`**: Creates high-level summary in `ai_context_summary.md`
+- **`scripts/generate_ai_context.py`**: Orchestrates both scripts
+
+### Usage
 ```bash
-# Application API Key (for clients accessing this API)
-API_KEY="your_strong_unique_api_key_for_clients"
-
-# Google Cloud Platform (GCP) Settings
-GCP_PROJECT_ID="your-gcp-project-id"  # Required for GCP services including Secret Manager
-GCP_LOCATION="us-central1"      # Default GCP region
-
-# AI Service API Keys (Loaded from GSM if GCP_PROJECT_ID is set, otherwise from Env)
-ELEVENLABS_API_KEY="your_elevenlabs_api_key" # Required if using ElevenLabs TTS
-
-# JWT Authentication (Loaded from GSM if GCP_PROJECT_ID is set, otherwise from Env)
-JWT_SECRET_KEY="your_very_long_and_random_jwt_secret_key_at_least_32_chars" # For signing access tokens
-
-# Optional: Sentry for error tracking (Loaded from GSM if GCP_PROJECT_ID is set, otherwise from Env)
-SENTRY_DSN="your_sentry_dsn_if_using_sentry"
-
-# Development & Operational Settings
-APP_PORT=8080 # Port for Uvicorn locally (Note: Nginx listens on NGINX_PORT, Uvicorn on APP_PORT_UVICORN internally in Docker)
-LOG_LEVEL="INFO" # DEBUG, INFO, WARNING, ERROR
-# ... other settings like database URLs, Redis URLs, model names can be found in settings.py
+python scripts/generate_ai_context.py
 ```
-**Note on Secrets:** In a deployed GCP environment, sensitive values like `API_KEY`, `ELEVENLABS_API_KEY`, and `JWT_SECRET_KEY` should be stored in Google Secret Manager and will be loaded automatically by the application if `GCP_PROJECT_ID` is configured. For local development, they can be set in the `.env` file.
 
-### Manual Testing Steps & Local Setup Notes
-
-1. **Create `.env` File:** Copy `.env.example` to `.env` in the project root and populate with your values.
-2. **Python Version:** Ensure Python 3.11+ is used.
-3. **Pre-commit Hooks:** It's recommended to install and use pre-commit hooks:
-   ```bash
-   # For backend hooks (run from project root)
-   pip install pre-commit
-   pre-commit install
-   # For frontend hooks (run from frontend directory, if not already done by npm install)
-   # cd frontend
-   # npx husky install # Generally handled by "npm install" via "prepare" script
-   ```
-4. **Docker for Local Dev:**
-   ```bash
-   docker-compose up --build -d
-   ```
-   The application UI will typically be available at `http://localhost:8080` (if your `docker-compose.yml` maps host port 8080 to the container's `NGINX_PORT` which defaults to 8080).
-   Swagger Docs: `http://localhost:8080/docs` (assuming the same port mapping).
+Generated files are available in the `ai_context/` directory and are automatically updated via CI.

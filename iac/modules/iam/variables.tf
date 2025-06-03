@@ -36,4 +36,4 @@ variable "labels" {
   description = "A map of labels to assign to all service accounts."
   type        = map(string)
   default     = {}
-} 
+}
