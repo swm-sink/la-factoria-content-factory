@@ -1,6 +1,6 @@
 # AI Content Factory - Focused Codebase Context
 
-**Generated**: 2025-06-05 10:30:27
+**Generated**: 2025-06-05 11:17:32
 **Analysis Type**: Selective & Optimized
 
 ---
@@ -9969,7 +9969,7 @@ def sanitize_folder_name(name: str) -> str:
 def create_error_report(topic: str, error: Exception, details: dict) -> str:
     """Create a detailed error report."""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
-    
+
     report = f"""# Error Report: {topic}
 
 **Timestamp**: {timestamp}
@@ -9982,14 +9982,14 @@ def create_error_report(topic: str, error: Exception, details: dict) -> str:
 
 ## Failed Content Types
 """
-    
+
     # Add failed content types
     for content_type in ["outline", "detailed_reading_guide", "podcast_script", "one_pager"]:
         report += f"- ❌ {content_type}\n"
-    
+
     if details.get("audio_failed"):
         report += "- ❌ audio_generation\n"
-    
+
     report += f"""
 ## Full Error Traceback
 ```
@@ -10000,7 +10000,7 @@ def create_error_report(topic: str, error: Exception, details: dict) -> str:
 - Request ID: {details.get('request_id', 'N/A')}
 - Model Used: {details.get('model', 'google/gemini-2.5-flash-preview-05-20')}
 """
-    
+
     return report
 
 async def process_single_doc(storage, doc_id: str, doc_name: str):
@@ -10008,39 +10008,39 @@ async def process_single_doc(storage, doc_id: str, doc_name: str):
     logger.info(f"{'='*60}")
     logger.info(f"Processing doc: {doc_name} (ID: {doc_id})")
     logger.debug(f"Doc URL: https://docs.google.com/document/d/{doc_id}/edit")
-    
+
     try:
         # Read doc content
         logger.debug("Reading document content...")
         content = storage.read_doc_content(doc_id)
         if not content:
             raise ValueError("Could not read document content")
-        
+
         logger.debug(f"Document content length: {len(content)} characters")
         logger.debug(f"First 200 chars: {content[:200]}...")
-        
+
         # Use first line as topic or the doc name
         lines = content.strip().split('\n')
         topic = lines[0].strip() if lines else doc_name.replace('.gdoc', '')
-        
+
         logger.info(f"Topic extracted: {topic}")
-        
+
         # Create output folder for this topic
         folder_name = sanitize_folder_name(topic)
         logger.debug(f"Creating output folder: {folder_name}")
         output_folder = storage.create_folder(folder_name, parent_id=OUTPUT_FOLDER_ID)
         output_folder_id = output_folder['id']
-        
+
         logger.info(f"Created output folder: {folder_name} (ID: {output_folder_id})")
         logger.info(f"Folder URL: {output_folder['url']}")
-        
+
         # Generate content
         request = GenerateRequest(
             topic=topic,
             content_types=["outline", "detailed_reading_guide", "podcast_script", "one_pager"],
             generate_audio=True
         )
-        
+
         async with ContentGenerator() as generator:
             # Generate all content types
             logger.info(f"Generating content for: {request.content_types}")
@@ -10049,7 +10049,7 @@ async def process_single_doc(storage, doc_id: str, doc_name: str):
                 content_types=request.content_types,
             )
             logger.info(f"Generated {len(content_items)} content types successfully")
-            
+
             # Upload each content type
             upload_errors = []
             for content_type, item in content_items.items():
@@ -10065,7 +10065,7 @@ async def process_single_doc(storage, doc_id: str, doc_name: str):
                 except Exception as e:
                     upload_errors.append(f"Error uploading {filename}: {str(e)}")
                     logger.error(f"Error uploading {filename}: {str(e)}", exc_info=True)
-            
+
             # Generate and upload audio
             if request.generate_audio and "podcast_script" in content_items:
                 try:
@@ -10087,7 +10087,7 @@ async def process_single_doc(storage, doc_id: str, doc_name: str):
                 except Exception as e:
                     upload_errors.append(f"Audio generation error: {str(e)}")
                     logger.error(f"Audio generation error: {str(e)}", exc_info=True)
-        
+
         # Move doc to archive on success
         if not upload_errors:
             logger.info("All content uploaded successfully! Moving to archive...")
@@ -10097,16 +10097,16 @@ async def process_single_doc(storage, doc_id: str, doc_name: str):
                 logger.warning(f"Could not move {doc_name} to Archive")
         else:
             logger.error(f"Upload errors for {doc_name}: {json.dumps(upload_errors, indent=2)}")
-        
+
         logger.info(f"✅ Completed processing: {doc_name}")
         logger.info(f"   Output folder: {output_folder['url']}")
         logger.info(f"   Errors: {len(upload_errors)}")
-        
+
         return True, output_folder['url'], upload_errors
-        
+
     except Exception as e:
         logger.error(f"Failed to process {doc_name}: {e}")
-        
+
         # Create error report
         import traceback
         error_details = {
@@ -10115,9 +10115,9 @@ async def process_single_doc(storage, doc_id: str, doc_name: str):
             'model': 'google/gemini-2.5-flash-preview-05-20',
             'audio_failed': True
         }
-        
+
         error_report = create_error_report(topic if 'topic' in locals() else doc_name, e, error_details)
-        
+
         # Create error folder and upload report
         try:
             error_folder_name = sanitize_folder_name(topic if 'topic' in locals() else doc_name)
@@ -10153,18 +10153,18 @@ def setup_drive_structure():
         print("\nTrying to authenticate using gcloud...")
         os.system("gcloud auth application-default login --scopes=https://www.googleapis.com/auth/drive")
         credentials, project = default(scopes=['https://www.googleapis.com/auth/drive'])
-    
+
     service = build('drive', 'v3', credentials=credentials)
-    
+
     # Define folder structure
     folders_to_create = [
         {"name": "📥 Input", "description": "Place Google Docs with topics here"},
         {"name": "📦 Output", "description": "Generated content organized by topic"},
         {"name": "✅ Archive", "description": "Successfully processed input docs"}
     ]
-    
+
     created_folders = {}
-    
+
     # Create each folder
     for folder_info in folders_to_create:
         folder_metadata = {
@@ -10173,21 +10173,21 @@ def setup_drive_structure():
             'parents': [PARENT_FOLDER_ID],
             'description': folder_info["description"]
         }
-        
+
         # Check if folder already exists
         query = f"name='{folder_info['name']}' and '{PARENT_FOLDER_ID}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
         results = service.files().list(q=query, fields="files(id, name)").execute()
         existing_folders = results.get('files', [])
-        
+
         if existing_folders:
             folder = existing_folders[0]
             print(f"Folder '{folder_info['name']}' already exists with ID: {folder['id']}")
         else:
             folder = service.files().create(body=folder_metadata, fields='id, name').execute()
             print(f"Created folder '{folder_info['name']}' with ID: {folder['id']}")
-        
+
         created_folders[folder_info["name"]] = folder['id']
-    
+
     # Print environment variable configuration
     print("\n" + "="*80)
     print("Add these to your environment variables or .env file:")
@@ -10196,16 +10196,16 @@ def setup_drive_structure():
     print(f"DRIVE_OUTPUT_FOLDER_ID={created_folders['📦 Output']}")
     print(f"DRIVE_ARCHIVE_FOLDER_ID={created_folders['✅ Archive']}")
     print("="*80)
-    
+
     # Also save to a local file for reference
     with open('.env.drive_folders', 'w') as f:
         f.write(f"# New Drive Folder Structure IDs\n")
         f.write(f"DRIVE_INPUT_FOLDER_ID={created_folders['📥 Input']}\n")
         f.write(f"DRIVE_OUTPUT_FOLDER_ID={created_folders['📦 Output']}\n")
         f.write(f"DRIVE_ARCHIVE_FOLDER_ID={created_folders['✅ Archive']}\n")
-    
+
     print(f"\nFolder IDs also saved to .env.drive_folders")
-    
+
     return created_folders
 
 if __name__ == "__main__":
@@ -10241,43 +10241,43 @@ logger = logging.getLogger(__name__)
 def generate_project_overview(project_root: Path, output_dir: Path) -> None:
     """Generate project overview and status."""
     logger.info("Generating project overview...")
-    
+
     content = []
-    
+
     # Header
     content.append("# Project Overview - AI Content Factory")
     content.append(f"\n**Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     content.append("\n---\n")
-    
+
     # Current status
     content.append("## 🎯 Current Project Status\n")
-    
+
     # Check key files
     key_files = [
         "app/main.py",
-        "requirements.txt", 
+        "requirements.txt",
         "Dockerfile",
         "docker-compose.yml",
         ".env.example"
     ]
-    
+
     content.append("### Key Files Status\n")
     for file in key_files:
         file_path = project_root / file
         status = "✅" if file_path.exists() else "❌"
         content.append(f"- {status} `{file}`")
-    
+
     content.append("\n")
-    
+
     # Environment check
     content.append("### Environment Configuration\n")
     env_vars = [
         "GCP_PROJECT_ID",
-        "OPENAI_API_KEY", 
+        "OPENAI_API_KEY",
         "GEMINI_API_KEY",
         "ELEVENLABS_API_KEY"
     ]
-    
+
     for var in env_vars:
         value = os.getenv(var, "NOT_SET")
         if value == "NOT_SET":
@@ -10288,9 +10288,9 @@ def generate_project_overview(project_root: Path, output_dir: Path) -> None:
             status = "✅"
             value = "SET" if len(value) > 10 else value
         content.append(f"- {status} `{var}`: {value}")
-    
+
     content.append("\n")
-    
+
     # Recent activity
     content.append("### Recent Activity\n")
     try:
@@ -10309,29 +10309,29 @@ def generate_project_overview(project_root: Path, output_dir: Path) -> None:
             content.append("*No git history available*\n")
     except Exception:
         content.append("*Unable to check git history*\n")
-    
+
     # Write file
     output_file = output_dir / "project_overview.md"
     with open(output_file, "w", encoding="utf-8") as f:
         f.write("\n".join(content))
-    
+
     logger.info(f"Project overview saved: {output_file}")
 
 
 def generate_quick_reference(project_root: Path, output_dir: Path) -> None:
     """Generate quick reference for API endpoints and common commands."""
     logger.info("Generating quick reference...")
-    
+
     content = []
-    
+
     # Header
     content.append("# Quick Reference - AI Content Factory")
     content.append(f"\n**Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     content.append("\n---\n")
-    
+
     # API Endpoints
     content.append("## 🚀 API Endpoints\n")
-    
+
     # Common endpoints
     endpoints = [
         ("GET", "/", "Root endpoint"),
@@ -10340,16 +10340,16 @@ def generate_quick_reference(project_root: Path, output_dir: Path) -> None:
         ("GET", "/api/v1/jobs/{job_id}", "Get job status"),
         ("GET", "/api/v1/jobs/{job_id}/result", "Get job result"),
     ]
-    
+
     content.append("### Main Endpoints\n")
     for method, path, description in endpoints:
         content.append(f"- **{method}** `{path}` - {description}")
-    
+
     content.append("\n")
-    
+
     # Common commands
     content.append("## ⚡ Common Commands\n")
-    
+
     commands = [
         ("Start local server", "uvicorn app.main:app --reload --host 0.0.0.0 --port 8080"),
         ("Test health endpoint", "curl http://localhost:8080/healthz"),
@@ -10359,13 +10359,13 @@ def generate_quick_reference(project_root: Path, output_dir: Path) -> None:
         ("Start with Docker Compose", "docker-compose up -d"),
         ("Update AI context", "python scripts/smart_ai_context.py"),
     ]
-    
+
     for desc, cmd in commands:
         content.append(f"### {desc}\n```bash\n{cmd}\n```\n")
-    
+
     # Debug commands
     content.append("## 🔍 Debug Commands\n")
-    
+
     debug_commands = [
         ("Check environment", "printenv | grep -E '(GCP|API|KEY)'"),
         ("Test Firestore connection", "gcloud firestore databases list"),
@@ -10373,15 +10373,15 @@ def generate_quick_reference(project_root: Path, output_dir: Path) -> None:
         ("View logs", "docker-compose logs -f api"),
         ("Test job creation", "curl -X POST http://localhost:8080/api/v1/jobs -H 'Content-Type: application/json' -d '{\"syllabus_text\":\"Test topic\", \"options\":{}}'"),
     ]
-    
+
     for desc, cmd in debug_commands:
         content.append(f"### {desc}\n```bash\n{cmd}\n```\n")
-    
+
     # Write file
     output_file = output_dir / "quick_reference.md"
     with open(output_file, "w", encoding="utf-8") as f:
         f.write("\n".join(content))
-    
+
     logger.info(f"Quick reference saved: {output_file}")
 
 
@@ -10389,19 +10389,19 @@ def generate_focused_context() -> None:
     """Generate all focused context files."""
     project_root = Path.cwd()
     output_dir = project_root / "ai_context"
-    
+
     # Ensure output directory exists
     output_dir.mkdir(exist_ok=True)
-    
+
     # Generate focused files
     generate_project_overview(project_root, output_dir)
     generate_quick_reference(project_root, output_dir)
-    
+
     logger.info("Focused context generation complete")
 
 
 if __name__ == "__main__":
-    generate_focused_context() 
+    generate_focused_context()
 ```
 
 ### `scripts/openai_codebase_analyzer.py`
@@ -10415,11 +10415,11 @@ Uses OpenAI GPT-4 to analyze the complete codebase and provide insights.
 Only runs if OPENAI_API_KEY is available.
 """
 
+import logging
 import os
 import sys
-from pathlib import Path
 from datetime import datetime
-import logging
+from pathlib import Path
 
 # Configure logging
 logging.basicConfig(
@@ -10434,9 +10434,10 @@ def check_openai_availability() -> bool:
     if not api_key:
         logger.info("No OpenAI API key found - analysis skipped")
         return False
-    
+
     try:
         import openai
+
         return True
     except ImportError:
         logger.error("OpenAI package not installed - run: pip install openai")
@@ -10447,20 +10448,22 @@ def analyze_codebase_with_openai(codebase_file: Path, output_file: Path) -> bool
     """Analyze codebase using OpenAI GPT-4."""
     if not check_openai_availability():
         return False
-    
+
     try:
         import openai
-        
+
         # Read the codebase dump
         with open(codebase_file, "r", encoding="utf-8") as f:
             codebase_content = f.read()
-        
+
         # Truncate if too large (GPT-4 token limits)
         max_tokens = 100000  # Conservative limit
         if len(codebase_content) > max_tokens:
-            logger.info(f"Codebase too large ({len(codebase_content)} chars), truncating...")
+            logger.info(
+                f"Codebase too large ({len(codebase_content)} chars), truncating..."
+            )
             codebase_content = codebase_content[:max_tokens] + "\n\n[TRUNCATED]"
-        
+
         # Analysis prompt
         analysis_prompt = f"""
 You are a senior software engineer analyzing the AI Content Factory project.
@@ -10468,7 +10471,7 @@ You are a senior software engineer analyzing the AI Content Factory project.
 Based on the codebase below, provide a comprehensive analysis covering:
 
 1. **Architecture Assessment**: Overall structure, design patterns, strengths/weaknesses
-2. **Critical Issues**: Bugs, security concerns, performance bottlenecks  
+2. **Critical Issues**: Bugs, security concerns, performance bottlenecks
 3. **Code Quality**: Best practices, maintainability, documentation
 4. **Priority Tasks**: Top 5 most important items to work on next
 5. **Risk Assessment**: What could break or cause problems
@@ -10480,28 +10483,31 @@ Focus on actionable insights that would help a developer working on this project
 Codebase:
 {codebase_content}
 """
-        
+
         logger.info("Sending request to OpenAI GPT-4...")
-        
+
         # Make API call
         client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        
+
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4.1-mini",
             messages=[
-                {"role": "system", "content": "You are a senior software engineer providing code analysis."},
-                {"role": "user", "content": analysis_prompt}
+                {
+                    "role": "system",
+                    "content": "You are a senior software engineer providing code analysis.",
+                },
+                {"role": "user", "content": analysis_prompt},
             ],
             max_tokens=2000,
-            temperature=0.3
+            temperature=0.3,
         )
-        
+
         analysis_result = response.choices[0].message.content
-        
+
         # Create analysis report
         report_content = f"""# AI Codebase Analysis
 **Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-**Analyzer**: OpenAI GPT-4
+**Analyzer**: OpenAI GPT-4.1-Mini
 **Source**: {codebase_file.name}
 
 ---
@@ -10511,20 +10517,20 @@ Codebase:
 ---
 
 **Generation Info**:
-- Model: gpt-4
+- Model: gpt-4.1-mini
 - Tokens used: ~{response.usage.total_tokens if response.usage else 'unknown'}
 - Analysis date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 *This analysis is AI-generated and should be reviewed by a human developer.*
 """
-        
+
         # Write analysis
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(report_content)
-        
+
         logger.info(f"AI analysis saved: {output_file}")
         return True
-        
+
     except Exception as e:
         logger.error(f"OpenAI analysis failed: {e}")
         return False
@@ -10534,18 +10540,18 @@ def main():
     """Main entry point."""
     project_root = Path.cwd()
     ai_context_dir = project_root / "ai_context"
-    
+
     # Input and output files
     codebase_file = ai_context_dir / "complete_codebase.md"
     output_file = ai_context_dir / "ai_analysis.md"
-    
+
     if not codebase_file.exists():
         logger.error(f"Codebase file not found: {codebase_file}")
         sys.exit(1)
-    
+
     # Run analysis
     success = analyze_codebase_with_openai(codebase_file, output_file)
-    
+
     if success:
         print(f"✅ AI analysis complete: {output_file}")
     else:
@@ -10554,7 +10560,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()
+
 ```
 
 ### `scripts/setup_drive_folders_complete.py`
@@ -10589,11 +10596,11 @@ def run_command(cmd):
 def create_or_update_secret(secret_name, secret_value):
     """Create or update a secret in Google Cloud Secret Manager."""
     print(f"\nConfiguring secret: {secret_name}")
-    
+
     # Check if secret exists
     check_cmd = f"gcloud secrets describe {secret_name} --format='value(name)' 2>/dev/null"
     exists = run_command(check_cmd)
-    
+
     if exists:
         # Update existing secret
         print(f"Updating existing secret {secret_name}...")
@@ -10610,7 +10617,7 @@ def create_or_update_secret(secret_name, secret_value):
         if result is not None:
             print(f"✓ Created {secret_name}")
             return True
-    
+
     print(f"✗ Failed to configure {secret_name}")
     return False
 
@@ -10619,7 +10626,7 @@ def main():
     print("="*80)
     print("AI Content Factory - Complete Drive Folder Setup")
     print("="*80)
-    
+
     # Get parent folder ID
     parent_folder_id = get_secret("DRIVE_FOLDER_ID")
     if not parent_folder_id:
@@ -10627,12 +10634,12 @@ def main():
         print("Please set it first using:")
         print("echo -n 'YOUR_PARENT_FOLDER_ID' | gcloud secrets create DRIVE_FOLDER_ID --data-file=-")
         return
-    
+
     print(f"\n📁 Parent folder ID: {parent_folder_id}")
-    
+
     # Initialize storage
     storage = get_storage()
-    
+
     # Define the new folders
     folders_to_create = [
         {
@@ -10641,7 +10648,7 @@ def main():
             "secret_name": "DRIVE_INPUT_FOLDER_ID"
         },
         {
-            "name": "📦 Output", 
+            "name": "📦 Output",
             "description": "Generated content organized by topic",
             "secret_name": "DRIVE_OUTPUT_FOLDER_ID"
         },
@@ -10651,23 +10658,23 @@ def main():
             "secret_name": "DRIVE_ARCHIVE_FOLDER_ID"
         }
     ]
-    
+
     created_folders = {}
     folder_urls = {}
-    
+
     print("\n🗂️  Creating folders in Google Drive...")
     print("-" * 50)
-    
+
     for folder_info in folders_to_create:
         folder_name = folder_info["name"]
         print(f"\nCreating folder: {folder_name}")
-        
+
         try:
             # Check if folder already exists
             query = f"name='{folder_name}' and '{parent_folder_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
             existing = storage.service.files().list(q=query, fields="files(id, name, webViewLink)").execute()
             existing_folders = existing.get('files', [])
-            
+
             if existing_folders:
                 # Use existing folder
                 folder = existing_folders[0]
@@ -10680,23 +10687,23 @@ def main():
                 folder_id = folder_result['id']
                 folder_url = folder_result['url']
                 print(f"  ✓ Created new folder with ID: {folder_id}")
-            
+
             created_folders[folder_info["secret_name"]] = folder_id
             folder_urls[folder_name] = folder_url
-            
+
         except Exception as e:
             print(f"  ✗ Error: {e}")
             continue
-    
+
     # Update secrets in Google Cloud Secret Manager
     print("\n🔐 Updating Google Cloud Secret Manager...")
     print("-" * 50)
-    
+
     success_count = 0
     for secret_name, folder_id in created_folders.items():
         if create_or_update_secret(secret_name, folder_id):
             success_count += 1
-    
+
     # Save local reference file
     print("\n💾 Saving local reference file...")
     with open('.env.drive_folders', 'w') as f:
@@ -10705,31 +10712,31 @@ def main():
         for secret_name, folder_id in created_folders.items():
             f.write(f"{secret_name}={folder_id}\n")
     print("✓ Saved to .env.drive_folders")
-    
+
     # Display summary
     print("\n" + "="*80)
     print("✅ SETUP COMPLETE!")
     print("="*80)
-    
+
     print("\n📊 Summary:")
     print(f"  - Folders created/found: {len(created_folders)}")
     print(f"  - Secrets configured: {success_count}")
-    
+
     print("\n🔗 Folder URLs:")
     for name, url in folder_urls.items():
         print(f"  {name}: {url}")
-    
+
     print("\n📝 Folder IDs:")
     for secret_name, folder_id in created_folders.items():
         print(f"  {secret_name}: {folder_id}")
-    
+
     print("\n🚀 Next Steps:")
     print("1. Test the setup by running:")
     print("   python scripts/test_folder_access.py")
     print("\n2. Process documents from Input folder:")
     print("   python scripts/process_input_docs.py")
     print("\n3. Or use the API endpoint as usual")
-    
+
     print("\n✨ Your new folder structure is ready to use!")
 
 if __name__ == "__main__":
@@ -10756,18 +10763,18 @@ PARENT_FOLDER_ID = get_secret("DRIVE_FOLDER_ID") or "1QKW63RJXXEsca8Y3yKUcP0b3nP
 def main():
     """Create the new folder structure."""
     print(f"Creating folders in parent: {PARENT_FOLDER_ID}")
-    
+
     storage = GoogleDriveStorage()
-    
+
     # Define folders to create
     folders = {
         "📥 Input": "Place Google Docs with topics here",
-        "📦 Output": "Generated content organized by topic", 
+        "📦 Output": "Generated content organized by topic",
         "✅ Archive": "Successfully processed input docs"
     }
-    
+
     created_folders = {}
-    
+
     for folder_name, description in folders.items():
         try:
             # Create folder using the existing storage service
@@ -10776,7 +10783,7 @@ def main():
             print(f"✓ Created/Found folder '{folder_name}' with ID: {folder_info['id']}")
         except Exception as e:
             print(f"✗ Error creating folder '{folder_name}': {e}")
-    
+
     # Print configuration
     print("\n" + "="*80)
     print("Add these to Google Cloud Secret Manager:")
@@ -10788,7 +10795,7 @@ def main():
     if "✅ Archive" in created_folders:
         print(f"DRIVE_ARCHIVE_FOLDER_ID = {created_folders['✅ Archive']}")
     print("="*80)
-    
+
     # Save to file
     with open('.env.drive_folders', 'w') as f:
         f.write("# New Drive Folder Structure IDs\n")
@@ -10798,9 +10805,9 @@ def main():
             f.write(f"DRIVE_OUTPUT_FOLDER_ID={created_folders['📦 Output']}\n")
         if "✅ Archive" in created_folders:
             f.write(f"DRIVE_ARCHIVE_FOLDER_ID={created_folders['✅ Archive']}\n")
-    
+
     print(f"\nFolder IDs saved to .env.drive_folders")
-    
+
     # Print Drive URLs
     print("\n" + "="*80)
     print("Google Drive URLs:")
@@ -10819,7 +10826,7 @@ if __name__ == "__main__":
 ```json
 {
   "python.defaultInterpreterPath": "./venv/bin/python"
-} 
+}
 ```
 
 ## 📄 File Summaries
@@ -11163,6 +11170,6 @@ if __name__ == "__main__":
 - **Essential files (full content)**: 91
 - **Additional files (summarized)**: 74
 - **Total files analyzed**: 165
-- **Generated**: 2025-06-05 10:30:27
+- **Generated**: 2025-06-05 11:17:32
 
 *This focused dump prioritizes essential files and provides intelligent summaries to maintain practical AI context size.*

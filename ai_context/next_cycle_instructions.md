@@ -1,5 +1,5 @@
 # Next Development Cycle Instructions
-**Generated**: 2025-06-05 10:30:28
+**Generated**: 2025-06-05 10:38:34
 
 ## 🎯 Current Project Status
 
@@ -31,8 +31,8 @@ Before starting new development:
 
 Consider addressing these TODO items:
 
-- Review TODOs in `app/services/comprehensive_content_validator.py`
 - Review TODOs in `scripts/smart_ai_context.py`
+- Review TODOs in `app/services/comprehensive_content_validator.py`
 
 ## 🔄 Development Cycle Guidance
 
@@ -227,7 +227,7 @@ Please provide a recommendation with detailed reasoning.
 - **File Consistency**: NEEDS_ATTENTION
 - **Critical Issues**: NO
 - **TODO Items**: 22
-- **Last Updated**: 2025-06-05 10:30:28
+- **Last Updated**: 2025-06-05 10:38:34
 
 ---
 *This guide is automatically generated. Re-run `python scripts/smart_ai_context.py` after significant changes.*
