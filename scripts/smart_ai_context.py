@@ -816,25 +816,32 @@ Please provide a recommendation with detailed reasoning.""",
                 diff_analysis["summary"] = {"status": "no_recent_changes", "commits": 0}
                 return diff_analysis
                 
+            commit_count = len(commits_result.stdout.strip().split())
+            
+            # Limit to reasonable number of commits to avoid going too far back
+            safe_commit_count = min(commit_count, 10)
+            
             # Get diff stats
             diff_stats_result = subprocess.run(
-                ["git", "diff", f"HEAD~{len(commits_result.stdout.strip().split())}", "HEAD", "--stat"],
+                ["git", "diff", f"HEAD~{safe_commit_count}", "HEAD", "--stat"],
                 cwd=self.project_root,
                 capture_output=True,
                 text=True,
             )
             
-            # Get detailed diff
+            # Get detailed diff  
             diff_result = subprocess.run(
-                ["git", "diff", f"HEAD~{len(commits_result.stdout.strip().split())}", "HEAD"],
+                ["git", "diff", f"HEAD~{safe_commit_count}", "HEAD"],
                 cwd=self.project_root,
                 capture_output=True,
                 text=True,
             )
             
-            if diff_result.returncode == 0:
+            if diff_result.returncode == 0 and diff_result.stdout.strip():
                 diff_text = diff_result.stdout
                 diff_stats = diff_stats_result.stdout if diff_stats_result.returncode == 0 else ""
+                
+                logger.info(f"Found diff data: {len(diff_text)} chars, {len(diff_stats)} stats chars")
                 
                 # Analyze files changed
                 files_changed = self._analyze_changed_files(diff_text, diff_stats)
@@ -852,7 +859,7 @@ Please provide a recommendation with detailed reasoning.""",
                 # Generate summary
                 diff_analysis["summary"] = {
                     "status": "analyzed",
-                    "commits": len(commits_result.stdout.strip().split()),
+                    "commits": commit_count,
                     "files_modified": len(files_changed.get("modified", [])),
                     "files_added": len(files_changed.get("added", [])),
                     "files_deleted": len(files_changed.get("deleted", [])),
@@ -860,6 +867,9 @@ Please provide a recommendation with detailed reasoning.""",
                     "lines_removed": code_insights.get("lines_removed", 0),
                     "primary_activity": development_activity.get("primary_category", "unknown"),
                 }
+            else:
+                logger.warning(f"Diff command failed or returned empty: returncode={diff_result.returncode}")
+                diff_analysis["summary"] = {"status": "no_diff_data", "commits": commit_count}
                 
         except Exception as e:
             logger.error(f"Error analyzing diffs: {e}")
