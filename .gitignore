@@ -192,11 +192,21 @@ yarn-debug.log*
 yarn-error.log*
 
 # Terraform
-terraform.tfstate
-terraform.tfstate.backup
+.terraform/
+*.tfstate
+*.tfstate.*
 *.tfvars
-# .terraform.lock.hcl should typically be committed
-iac/.terraform/
+.terraformrc
+terraform.rc
+.terraform.lock.hcl
+crash.log
+crash.*.log
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform/providers/
 
 # Docker
 docker-compose.override.yml
