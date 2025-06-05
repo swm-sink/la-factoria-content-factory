@@ -1,6 +1,6 @@
 # AI Content Factory - Complete Codebase Context
 
-**Generated**: 2025-06-05 09:23:04
+**Generated**: 2025-06-05 09:27:49
 **Project Root**: /Users/smenssink/Documents/Github personal projects/ai-content-factory
 
 ---
@@ -60457,4 +60457,4 @@ This document provides a simplified analysis of common errors found during testi
 
 - **Files processed**: 301
 - **Total lines**: 58,658
-- **Generated**: 2025-06-05 09:23:04
+- **Generated**: 2025-06-05 09:27:49

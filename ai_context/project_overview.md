@@ -1,6 +1,6 @@
 # Project Overview - AI Content Factory
 
-**Generated**: 2025-06-05 09:23:05
+**Generated**: 2025-06-05 09:27:49
 
 ---
 
@@ -26,9 +26,9 @@
 ### Recent Activity
 
 ```
+3e04d4ea Complete AI context system: add missing scripts and fix pre-commit integration
 23c1d691 Fix AI context system: restore missing script and enable auto-generation
 31f81564 Complete docs cleanup: organize structure, update learn-as-you-go glossary, and restore smart AI context system
 80c72d3f Clean up task management: archive old versions and organize current files
 4e2f0511 Clean up project structure: archive development artifacts and create clean documentation structure
-babd48a7 Update .gitignore with comprehensive Terraform exclusions
 ```
