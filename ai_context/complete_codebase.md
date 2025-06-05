@@ -1,6 +1,6 @@
 # AI Content Factory - Complete Codebase Context
 
-**Generated**: 2025-06-05 09:27:49
+**Generated**: 2025-06-05 10:07:42
 **Project Root**: /Users/smenssink/Documents/Github personal projects/ai-content-factory
 
 ---
@@ -13,20 +13,14 @@
 ├── README.md
 ├── __pycache__
 ├── ai_context
-│   ├── INDEX.md
 │   ├── README.md
 │   ├── complete_codebase.md
 │   ├── cycle_transition.md
+│   ├── diff_analysis.md
 │   ├── issue_analysis.md
 │   ├── next_cycle_instructions.md
-│   ├── project_analysis_raw.json
-│   ├── project_deep_analysis.md
 │   ├── project_overview.md
-│   ├── quick_reference.md
-│   ├── robust_summary.md
-│   ├── simple_summary.md
-│   ├── system_state.json
-│   └── user_actions_required.md
+│   └── quick_reference.md
 ├── app
 │   ├── __init__.py
 │   ├── api
@@ -60457,4 +60451,4 @@ This document provides a simplified analysis of common errors found during testi
 
 - **Files processed**: 301
 - **Total lines**: 58,658
-- **Generated**: 2025-06-05 09:27:49
+- **Generated**: 2025-06-05 10:07:42
