@@ -1,6 +1,6 @@
 # AI Content Factory - Focused Codebase Context
 
-**Generated**: 2025-06-05 11:17:32
+**Generated**: 2025-06-05 11:35:13
 **Analysis Type**: Selective & Optimized
 
 ---
@@ -133,6 +133,7 @@ pytest-mock
 pytest-cov
 pytest-asyncio
 pytest-xdist
+pydantic-settings==2.9.1
 
 ```
 
@@ -11112,6 +11113,12 @@ if __name__ == "__main__":
 - **Functions**: 2 (e.g., count_words, main)
 
 
+### `scripts/test_folder_config.py`
+**Python Module** (60 lines)
+- **Imports**: 3 (e.g., import os, import sys, from dotenv import load_dotenv)
+- **Functions**: 1 (e.g., test_folder_config)
+
+
 ### `scripts/test_drive_content.py`
 **Python Module** (143 lines)
 - **Imports**: 5 (e.g., import os, import json, import time)
@@ -11168,8 +11175,8 @@ if __name__ == "__main__":
 ## 📊 Summary
 
 - **Essential files (full content)**: 91
-- **Additional files (summarized)**: 74
-- **Total files analyzed**: 165
-- **Generated**: 2025-06-05 11:17:32
+- **Additional files (summarized)**: 75
+- **Total files analyzed**: 166
+- **Generated**: 2025-06-05 11:35:13
 
 *This focused dump prioritizes essential files and provides intelligent summaries to maintain practical AI context size.*

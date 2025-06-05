@@ -32,3 +32,4 @@ pytest-mock
 pytest-cov
 pytest-asyncio
 pytest-xdist
+pydantic-settings==2.9.1
