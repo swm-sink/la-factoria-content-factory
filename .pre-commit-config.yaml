@@ -50,14 +50,13 @@ repos:
 #         additional_dependencies: ["pydantic>=2.0", "types-python-jose", "types-passlib"] # Add types for libraries mypy needs to check
 #         # exclude: ^(tests/unit/test_app.py) # Example: Mypy can be strict, exclude problematic files initially
 #         enabled: false # Temporarily disabled
-# -   repo: local # Temporarily disabled
-#     hooks:
-#     -   id: smart-ai-context
-#         name: Generate Smart AI Context
-#         entry: python scripts/smart_ai_context.py
-#         language: system
-#         pass_filenames: false
-#         always_run: true
-#         stages: [pre-commit]
-#         verbose: true
-#         enabled: false # Temporarily disabled
+-   repo: local
+    hooks:
+    -   id: smart-ai-context
+        name: Generate Smart AI Context
+        entry: python scripts/smart_ai_context.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+        verbose: true
