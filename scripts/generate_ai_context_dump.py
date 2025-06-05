@@ -1,202 +1,161 @@
 #!/usr/bin/env python3
 """
-AI Context Dump Generator
+AI Context Dump Generator - Optimized & Selective
 
-Generates a comprehensive codebase dump for AI analysis and context sharing.
-This script creates a single markdown file containing all relevant project information.
+Generates a focused, practical codebase dump for AI analysis.
+Prioritizes essential files and provides intelligent summaries.
 """
 
-import logging
 import os
 import sys
-from datetime import datetime
 from pathlib import Path
+from datetime import datetime
+import logging
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
-def should_include_file(file_path: Path, project_root: Path) -> bool:
-    """Determine if a file should be included in the context dump."""
+def should_include_file(file_path: Path, project_root: Path) -> dict:
+    """Determine if a file should be included and at what detail level."""
+    
+    # Essential files - full content
+    essential_files = {
+        "main.py", "app.py", "__init__.py", "settings.py", "config.py",
+        "Dockerfile", "requirements.txt", "pyproject.toml", "docker-compose.yml",
+        "README.md", "PROJECT_STATUS.md"
+    }
+    
+    # Important files - summary only
+    important_extensions = {".py", ".yaml", ".yml", ".json", ".toml"}
+    
+    # Documentation files - brief summary
+    doc_extensions = {".md"}
+    
+    # Skip these entirely
+    skip_patterns = {
+        "__pycache__", ".git", "venv", "node_modules", ".terraform",
+        "ai_context", "archive", ".pytest_cache", ".mypy_cache"
+    }
+    
+    # Check if file should be skipped
+    if any(pattern in str(file_path) for pattern in skip_patterns):
+        return {"include": False}
+    
+    # Check for essential files
+    if file_path.name in essential_files:
+        return {"include": True, "level": "full"}
+    
+    # Check for important files
+    if file_path.suffix.lower() in important_extensions:
+        # Skip test files and very large files
+        if "test" in file_path.name.lower() or file_path.stat().st_size > 50000:  # 50KB limit
+            return {"include": True, "level": "summary"}
+        return {"include": True, "level": "full"}
+    
+    # Documentation files
+    if file_path.suffix.lower() in doc_extensions and file_path.stat().st_size < 10000:  # 10KB limit
+        return {"include": True, "level": "summary"}
+    
+    return {"include": False}
 
-    # Convert to relative path for easier checking
+
+def get_file_summary(file_path: Path) -> str:
+    """Generate a smart summary of a file instead of full content."""
     try:
-        rel_path = file_path.relative_to(project_root)
-    except ValueError:
-        return False
-
-    # Exclude patterns
-    exclude_patterns = [
-        ".git",
-        "__pycache__",
-        ".pytest_cache",
-        ".mypy_cache",
-        ".ruff_cache",
-        "venv",
-        "node_modules",
-        ".coverage",
-        "coverage.xml",
-        ".env",
-        ".env.local",
-        ".env.production",
-        "ai_context",  # Don't include existing AI context to avoid recursion
-        ".terraform",
-        "*.pyc",
-        "*.pyo",
-        "*.log",
-    ]
-
-    # Check if any part of the path matches exclude patterns
-    path_parts = str(rel_path).split(os.sep)
-    for part in path_parts:
-        for pattern in exclude_patterns:
-            if pattern.startswith("*"):
-                if part.endswith(pattern[1:]):
-                    return False
-            elif pattern in part:
-                return False
-
-    # Include only text files and common config files
-    include_extensions = {
-        ".py",
-        ".md",
-        ".txt",
-        ".yaml",
-        ".yml",
-        ".json",
-        ".toml",
-        ".cfg",
-        ".conf",
-        ".ini",
-        ".env.example",
-        ".gitignore",
-        ".dockerignore",
-        ".tf",
-        ".sh",
-        ".js",
-        ".ts",
-        ".tsx",
-        ".jsx",
-        ".css",
-        ".html",
-        ".sql",
-    }
-
-    # Special files to include
-    special_files = {
-        "Dockerfile",
-        "requirements.txt",
-        "pyproject.toml",
-        "setup.py",
-        "package.json",
-        "README",
-        "LICENSE",
-        "CHANGELOG",
-        "docker-compose.yml",
-    }
-
-    if file_path.suffix.lower() in include_extensions:
-        return True
-
-    if file_path.name in special_files:
-        return True
-
-    return False
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        
+        lines = content.split("\n")
+        total_lines = len(lines)
+        
+        # For Python files, extract key information
+        if file_path.suffix == ".py":
+            imports = [line.strip() for line in lines if line.strip().startswith(("import ", "from "))]
+            classes = [line.strip() for line in lines if line.strip().startswith("class ")]
+            functions = [line.strip() for line in lines if line.strip().startswith("def ")]
+            
+            summary = f"**Python Module** ({total_lines} lines)\n"
+            if imports:
+                summary += f"- **Imports**: {len(imports)} (e.g., {', '.join(imports[:3])})\n"
+            if classes:
+                summary += f"- **Classes**: {len(classes)} (e.g., {', '.join([c.split('(')[0].replace('class ', '') for c in classes[:3]])})\n"
+            if functions:
+                summary += f"- **Functions**: {len(functions)} (e.g., {', '.join([f.split('(')[0].replace('def ', '') for f in functions[:3]])})\n"
+            
+            return summary
+        
+        # For other files, provide basic info
+        else:
+            return f"**{file_path.suffix.upper().replace('.', '')} File** ({total_lines} lines, {len(content)} chars)"
+    
+    except Exception as e:
+        return f"*[Could not analyze: {e}]*"
 
 
 def generate_codebase_dump(project_root: Path, output_file: Path) -> None:
-    """Generate a comprehensive codebase dump."""
+    """Generate a focused, practical codebase dump."""
 
-    logger.info(f"Starting codebase dump generation...")
+    logger.info(f"Starting optimized codebase dump generation...")
     logger.info(f"Project root: {project_root}")
     logger.info(f"Output file: {output_file}")
 
     content = []
 
     # Header
-    content.append("# AI Content Factory - Complete Codebase Context")
+    content.append("# AI Content Factory - Focused Codebase Context")
     content.append(f"\n**Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    content.append(f"**Project Root**: {project_root}")
+    content.append(f"**Analysis Type**: Selective & Optimized")
     content.append("\n---\n")
 
-    # Project structure
-    content.append("## 📁 Project Structure\n")
-    content.append("```")
+    # Key project info
+    content.append("## 🎯 Project Overview\n")
+    content.append("**Type**: AI Content Generation API")
+    content.append("**Tech Stack**: Python, FastAPI, Google Cloud Platform")
+    content.append("**Purpose**: Generate educational content from text input\n")
 
-    def add_tree_structure(
-        path: Path, prefix: str = "", max_depth: int = 3, current_depth: int = 0
-    ):
-        if current_depth >= max_depth:
-            return
-
-        items = []
-        try:
-            items = sorted([p for p in path.iterdir() if not p.name.startswith(".")])
-        except PermissionError:
-            return
-
-        for i, item in enumerate(items):
-            is_last = i == len(items) - 1
-            current_prefix = "└── " if is_last else "├── "
-            content.append(f"{prefix}{current_prefix}{item.name}")
-
-            if item.is_dir() and not any(
-                exclude in item.name
-                for exclude in ["__pycache__", ".git", "venv", "node_modules"]
-            ):
-                next_prefix = prefix + ("    " if is_last else "│   ")
-                add_tree_structure(item, next_prefix, max_depth, current_depth + 1)
-
-    add_tree_structure(project_root)
-    content.append("```\n")
-
-    # File contents
-    content.append("## 📄 File Contents\n")
-
-    file_count = 0
-    total_lines = 0
-
-    # Walk through all files
+    # Essential files section
+    content.append("## 📋 Essential Files (Full Content)\n")
+    
+    essential_count = 0
+    summary_count = 0
+    
+    # Walk through files with intelligent selection
     for root, dirs, files in os.walk(project_root):
         # Skip excluded directories
-        dirs[:] = [
-            d
-            for d in dirs
-            if not any(
-                exclude in d
-                for exclude in [
-                    "__pycache__",
-                    ".git",
-                    "venv",
-                    "node_modules",
-                    "ai_context",
-                    ".terraform",
-                ]
-            )
-        ]
+        dirs[:] = [d for d in dirs if not any(
+            exclude in d for exclude in [
+                "__pycache__", ".git", "venv", "node_modules", 
+                "ai_context", "archive", ".terraform", ".pytest_cache"
+            ]
+        )]
 
         root_path = Path(root)
 
         for file in files:
             file_path = root_path / file
-
-            if should_include_file(file_path, project_root):
-                try:
-                    rel_path = file_path.relative_to(project_root)
-
+            
+            try:
+                file_info = should_include_file(file_path, project_root)
+                
+                if not file_info.get("include"):
+                    continue
+                
+                rel_path = file_path.relative_to(project_root)
+                
+                if file_info.get("level") == "full":
+                    essential_count += 1
                     content.append(f"### `{rel_path}`\n")
-
-                    # Read file content
+                    
                     try:
                         with open(file_path, "r", encoding="utf-8") as f:
                             file_content = f.read()
 
-                        lines = file_content.split("\n")
-                        total_lines += len(lines)
-                        file_count += 1
+                        # Limit content size for very large files
+                        if len(file_content) > 10000:  # 10KB limit
+                            lines = file_content.split("\n")
+                            file_content = "\n".join(lines[:200]) + f"\n\n... [File truncated: {len(lines)-200} more lines] ..."
 
                         # Add file content with proper markdown formatting
                         file_extension = file_path.suffix.lower()
@@ -209,30 +168,56 @@ def generate_codebase_dump(project_root: Path, output_file: Path) -> None:
                             content.append("```json")
                         elif file_extension == ".md":
                             content.append("```markdown")
-                        elif file_extension in [".sh", ".bash"]:
-                            content.append("```bash")
-                        elif file_extension in [".js", ".jsx"]:
-                            content.append("```javascript")
-                        elif file_extension in [".ts", ".tsx"]:
-                            content.append("```typescript")
                         else:
                             content.append("```")
 
                         content.append(file_content)
                         content.append("```\n")
 
-                    except (UnicodeDecodeError, PermissionError) as e:
+                    except Exception as e:
                         content.append(f"*[File could not be read: {e}]*\n")
+                
+            except Exception as e:
+                logger.warning(f"Error processing {file_path}: {e}")
+                continue
 
-                except ValueError:
-                    # Skip files outside project root
-                    continue
+    # File summaries section
+    content.append("## 📄 File Summaries\n")
+    
+    for root, dirs, files in os.walk(project_root):
+        dirs[:] = [d for d in dirs if not any(
+            exclude in d for exclude in [
+                "__pycache__", ".git", "venv", "node_modules", 
+                "ai_context", "archive", ".terraform"
+            ]
+        )]
+
+        root_path = Path(root)
+
+        for file in files:
+            file_path = root_path / file
+            
+            try:
+                file_info = should_include_file(file_path, project_root)
+                
+                if file_info.get("include") and file_info.get("level") == "summary":
+                    summary_count += 1
+                    rel_path = file_path.relative_to(project_root)
+                    
+                    content.append(f"### `{rel_path}`")
+                    content.append(get_file_summary(file_path))
+                    content.append("")
+                    
+            except Exception as e:
+                continue
 
     # Summary
     content.append(f"## 📊 Summary\n")
-    content.append(f"- **Files processed**: {file_count}")
-    content.append(f"- **Total lines**: {total_lines:,}")
+    content.append(f"- **Essential files (full content)**: {essential_count}")
+    content.append(f"- **Additional files (summarized)**: {summary_count}")
+    content.append(f"- **Total files analyzed**: {essential_count + summary_count}")
     content.append(f"- **Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    content.append("\n*This focused dump prioritizes essential files and provides intelligent summaries to maintain practical AI context size.*")
 
     # Write to output file
     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -240,8 +225,8 @@ def generate_codebase_dump(project_root: Path, output_file: Path) -> None:
     with open(output_file, "w", encoding="utf-8") as f:
         f.write("\n".join(content))
 
-    logger.info(f"Codebase dump generated successfully: {output_file}")
-    logger.info(f"Processed {file_count} files with {total_lines:,} total lines")
+    logger.info(f"Optimized codebase dump generated: {output_file}")
+    logger.info(f"Essential files: {essential_count}, Summaries: {summary_count}")
 
 
 def main():
@@ -255,7 +240,7 @@ def main():
 
     try:
         generate_codebase_dump(project_root, output_file)
-        print(f"✅ Successfully generated codebase dump: {output_file}")
+        print(f"✅ Successfully generated optimized codebase dump: {output_file}")
     except Exception as e:
         logger.error(f"Failed to generate codebase dump: {e}")
         sys.exit(1)
