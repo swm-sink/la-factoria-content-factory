@@ -1,0 +1,1854 @@
+#!/usr/bin/env python3
+"""
+Smart AI Context Generator
+
+Simple, effective system that:
+1. Generates one comprehensive codebase file for manual LLM use
+2. Automatically analyzes it with Gemini API for actionable insights
+3. Produces clear next steps and recommendations
+4. No complex chunking or multiple files to manage
+"""
+
+import os
+import sys
+import logging
+from pathlib import Path
+from datetime import datetime
+import subprocess
+from typing import Dict, Any, List
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+
+class SmartAIContext:
+    """Smart AI context system focused on user efficiency."""
+
+    def __init__(self, project_root: Path):
+        self.project_root = project_root
+        self.context_dir = project_root / "ai_context"
+        self.scripts_dir = project_root / "scripts"
+
+    def generate_comprehensive_dump(self) -> bool:
+        """Generate the comprehensive codebase dump."""
+        logger.info("Generating comprehensive codebase dump...")
+
+        dump_script = self.scripts_dir / "generate_ai_context_dump.py"
+        output_file = self.context_dir / "complete_codebase.md"
+
+        try:
+            subprocess.run(
+                [sys.executable, str(dump_script), str(output_file)],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            logger.info(f"Comprehensive dump generated: {output_file}")
+            return True
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to generate dump: {e.stderr}")
+            return False
+
+    def generate_focused_context(self) -> bool:
+        """Generate focused context files for LLM debugging."""
+        logger.info("Generating focused context files...")
+
+        focused_script = self.scripts_dir / "generate_focused_context.py"
+
+        try:
+            subprocess.run(
+                [sys.executable, str(focused_script)],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            logger.info("Focused context files generated")
+            return True
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to generate focused context: {e.stderr}")
+            return False
+
+    def run_openai_analysis(self) -> bool:
+        """Run OpenAI analysis if API key is available."""
+        # Check if OpenAI API key is available
+        api_key = os.getenv("OPENAI_API_KEY")
+
+        if not api_key:
+            logger.info("No OpenAI API key found - skipping automated analysis")
+            logger.info("Set OPENAI_API_KEY to enable automated analysis")
+            return False
+
+        logger.info("Running automated OpenAI GPT-4 analysis...")
+
+        analyzer_script = self.scripts_dir / "openai_codebase_analyzer.py"
+
+        try:
+            subprocess.run(
+                [sys.executable, str(analyzer_script)],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            logger.info("OpenAI analysis completed successfully")
+            return True
+        except subprocess.CalledProcessError as e:
+            logger.error(f"OpenAI analysis failed: {e.stderr}")
+            return False
+
+    def generate_simple_overview(self) -> None:
+        """Generate a simple overview file."""
+        overview_content = f"""# AI Content Factory - Context Overview
+
+**Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+## 📁 Available Files
+
+### For Quick Debugging
+- **`project_overview.md`** - Current state, blockers, immediate goals
+  - What's working, what's broken, what's next
+  - Perfect for "what should I work on?" questions
+  - Current task status and known issues
+
+- **`quick_reference.md`** - API endpoints, models, debug commands
+  - All endpoints and data models at a glance
+  - Common debug commands and quick fixes
+  - Perfect for "how do I test this?" questions
+
+### For Deep Analysis
+- **`complete_codebase.md`** - Complete technical context (402KB)
+  - All source code, configs, documentation
+  - For comprehensive code review and architecture questions
+  - Everything needed for complex debugging
+
+### For Issue Resolution
+- **`issue_analysis.md`** - Built-in issue analysis and quick fixes
+  - Identifies critical blockers (like Firestore configuration issues)
+  - Provides exact commands to fix common problems
+  - Always generated, no API key required
+
+- **`ai_analysis.md`** - AI-generated analysis (optional)
+  - Automated issue identification and recommendations
+  - Prioritized task list with specific actions
+  - Only available if OPENAI_API_KEY is set
+
+## 🚀 Quick Usage
+
+### Common Debugging Scenarios
+**"What's broken?"** → Use `project_overview.md`
+**"How do I test the API?"** → Use `quick_reference.md`
+**"Why isn't this working?"** → Use `complete_codebase.md`
+**"What should I do next?"** → Use `ai_analysis.md` (if available)
+
+### Get Automated Insights
+1. Set your OpenAI API key: `export OPENAI_API_KEY=your_key`
+2. Run: `python scripts/smart_ai_context.py`
+3. Check `ai_analysis.md` for AI-generated recommendations
+
+## 🔄 Updates
+
+To regenerate context (recommended after significant code changes):
+```bash
+python scripts/smart_ai_context.py
+```
+
+This system focuses on simplicity and effectiveness:
+- One comprehensive file for manual use
+- Automated analysis when API key is available
+- Clear next steps and actionable recommendations
+"""
+
+        overview_path = self.context_dir / "README.md"
+        with open(overview_path, "w", encoding="utf-8") as f:
+            f.write(overview_content)
+
+        logger.info(f"Overview generated: {overview_path}")
+
+    def analyze_project_issues(self) -> bool:
+        """Analyze current project issues and provide solutions."""
+        logger.info("Analyzing project issues...")
+
+        issues = []
+        solutions = []
+
+        # Issue 1: GCP Project ID Configuration
+        gcp_project_id = os.getenv("GCP_PROJECT_ID")
+        if gcp_project_id == "FAKE_PROJECT_ID":
+            issues.append(
+                {
+                    "severity": "CRITICAL",
+                    "title": "GCP Project ID set to placeholder",
+                    "description": 'GCP_PROJECT_ID is "FAKE_PROJECT_ID" which blocks all GCP services',
+                    "impact": "Cannot connect to Firestore, Secret Manager, or Cloud Tasks",
+                }
+            )
+            solutions.append(
+                {
+                    "issue": "Fix GCP Project ID",
+                    "priority": "HIGH",
+                    "steps": [
+                        "export GCP_PROJECT_ID=ai-content-factory-460918",
+                        'echo "GCP_PROJECT_ID=ai-content-factory-460918" >> .env',
+                        "Restart application",
+                    ],
+                }
+            )
+
+        # Issue 2: Firestore Database Missing
+        if gcp_project_id and gcp_project_id != "FAKE_PROJECT_ID":
+            issues.append(
+                {
+                    "severity": "CRITICAL",
+                    "title": "Firestore database does not exist",
+                    "description": "Database needs to be created in the GCP project",
+                    "impact": "All API calls requiring database access fail with 404 errors",
+                }
+            )
+            solutions.append(
+                {
+                    "issue": "Create Firestore Database",
+                    "priority": "HIGH",
+                    "steps": [
+                        "gcloud auth application-default login",
+                        f"gcloud config set project {gcp_project_id}",
+                        f"gcloud firestore databases create --location=nam5 --project={gcp_project_id}",
+                    ],
+                }
+            )
+
+        # Issue 3: Authentication Setup
+        issues.append(
+            {
+                "severity": "HIGH",
+                "title": "Authentication may not be configured",
+                "description": "Secret Manager access failures indicate auth issues",
+                "impact": "Cannot load API keys and configuration from Secret Manager",
+            }
+        )
+        solutions.append(
+            {
+                "issue": "Setup Authentication",
+                "priority": "MEDIUM",
+                "steps": [
+                    "gcloud auth application-default login",
+                    "gcloud config set project ai-content-factory-460918",
+                    "Verify: gcloud auth application-default print-access-token",
+                ],
+            }
+        )
+
+        # Generate issue analysis report
+        report_lines = [
+            "# Project Issue Analysis",
+            f"**Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            "",
+            "## 🚨 Critical Issues Found",
+            "",
+        ]
+
+        critical_issues = [i for i in issues if i["severity"] == "CRITICAL"]
+        if critical_issues:
+            for i, issue in enumerate(critical_issues, 1):
+                report_lines.extend(
+                    [
+                        f"### {i}. {issue['title']}",
+                        f"**Impact**: {issue['impact']}",
+                        f"**Description**: {issue['description']}",
+                        "",
+                    ]
+                )
+        else:
+            report_lines.append("✅ No critical issues detected!")
+            report_lines.append("")
+
+        # Add quick fix guide
+        report_lines.extend(
+            [
+                "## ⚡ Quick Fix Guide",
+                "",
+                "**Run these commands to fix the main blockers:**",
+                "",
+                "```bash",
+            ]
+        )
+
+        for solution in solutions:
+            if solution["priority"] == "HIGH":
+                report_lines.append(f"# {solution['issue']}")
+                for step in solution["steps"]:
+                    report_lines.append(step)
+                report_lines.append("")
+
+        report_lines.extend(
+            [
+                "```",
+                "",
+                "## 🎯 Next Steps",
+                "",
+                "1. Run the commands above",
+                "2. Test API endpoints: curl http://localhost:8080/healthz",
+                "3. Try creating a job: POST /api/v1/jobs",
+                "4. Re-run analysis: python scripts/smart_ai_context.py",
+                "",
+                f"**Last Analysis**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            ]
+        )
+
+        # Save the analysis
+        analysis_path = self.context_dir / "issue_analysis.md"
+        with open(analysis_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(report_lines))
+
+        logger.info(f"Issue analysis saved: {analysis_path}")
+        return len(critical_issues) == 0
+
+    def check_project_file_consistency(self) -> Dict[str, Any]:
+        """Check if all project files are up-to-date and consistent."""
+        logger.info("Checking project file consistency...")
+
+        checks = []
+        issues = []
+        recommendations = []
+
+        # Check if key project files exist and are recent
+        key_files = {
+            "project_blockers.md": "Project blockers documentation",
+            "tasks/atomic_tasks.yaml": "Task management system",
+            "tasks/meta_tasks.md": "High-level project goals",
+            "CHANGELOG.md": "Version history",
+            "README.md": "Project documentation",
+            "requirements.txt": "Python dependencies",
+        }
+
+        current_time = datetime.now()
+        for file_path, description in key_files.items():
+            full_path = self.project_root / file_path
+            if full_path.exists():
+                # Check if file was modified recently (within last 7 days)
+                mod_time = datetime.fromtimestamp(full_path.stat().st_mtime)
+                days_old = (current_time - mod_time).days
+
+                checks.append(
+                    {
+                        "file": file_path,
+                        "exists": True,
+                        "days_old": days_old,
+                        "status": (
+                            "RECENT"
+                            if days_old <= 7
+                            else "STALE" if days_old <= 30 else "OLD"
+                        ),
+                    }
+                )
+
+                if days_old > 30:
+                    issues.append(f"{file_path} hasn't been updated in {days_old} days")
+                    recommendations.append(f"Review and update {description}")
+            else:
+                checks.append({"file": file_path, "exists": False, "status": "MISSING"})
+                issues.append(f"Missing {file_path}")
+                recommendations.append(f"Create {description}")
+
+        # Check for TODO comments in key files
+        todo_count = 0
+        todo_files = []
+
+        try:
+            # Search for TODOs in app and scripts directories
+            # The -r flag makes grep search recursively.
+            # We pass both directories as arguments to grep.
+            result = subprocess.run(
+                [
+                    "grep",
+                    "-r",
+                    "-n",
+                    "TODO",
+                    str(self.project_root / "app"),
+                    str(self.project_root / "scripts"),
+                ],
+                capture_output=True,
+                text=True,
+                # Do not check=True, as grep returns 1 if no matches are found (not an error for this use case)
+            )
+            if result.returncode == 0:  # Matches found
+                todo_lines = result.stdout.strip().split("\n")
+                # Filter out potential empty strings if stdout is empty but returncode is 0 (unlikely for grep -n)
+                valid_todo_lines = [line for line in todo_lines if line]
+                if valid_todo_lines:
+                    todo_count = len(valid_todo_lines)
+                    # Ensure a line has a colon before splitting to prevent errors on malformed grep output
+                    todo_files = list(
+                        set(
+                            [
+                                line.split(":", 1)[0]
+                                for line in valid_todo_lines
+                                if ":" in line
+                            ]
+                        )
+                    )
+            elif result.returncode > 1:  # An actual error occurred with grep
+                logger.warning(
+                    f"TODO scan using grep encountered an error (return code {result.returncode}): {result.stderr}"
+                )
+            # If result.returncode == 1, it means no TODOs were found, which is not an error condition to log.
+        except FileNotFoundError:
+            logger.warning(
+                "TODO scan using grep failed: 'grep' command not found. Ensure 'grep' is installed and in your PATH."
+            )
+        except Exception as e:
+            logger.warning(
+                f"TODO scan using grep failed with an unexpected Python exception: {e}"
+            )
+
+        if todo_count > 0:
+            issues.append(f"Found {todo_count} TODO comments in code")
+            recommendations.append("Review and address TODO items for completeness")
+
+        return {
+            "checks": checks,
+            "issues": issues,
+            "recommendations": recommendations,
+            "todo_count": todo_count,
+            "todo_files": todo_files[:5],  # Limit to first 5 files
+            "status": "GOOD" if len(issues) == 0 else "NEEDS_ATTENTION",
+        }
+
+    def generate_development_cycle_prompts(
+        self,
+    ) -> List[Dict[str, str]]:  # Corrected return type
+        """Generate prompts and instructions for the next development cycle."""
+        logger.info("Generating development cycle prompts...")
+
+        # Analyze current project state
+        gcp_project_id = os.getenv("GCP_PROJECT_ID")
+        has_critical_issues = gcp_project_id == "FAKE_PROJECT_ID"
+
+        # Check task files
+        # task_files_exist = (
+        #     self.project_root / "tasks" / "atomic_tasks.yaml"
+        # ).exists() and (self.project_root / "tasks" / "meta_tasks.md").exists() # F841 unused
+
+        prompts = []
+
+        # Basic context prompt
+        prompts.append(
+            {
+                "title": "Project Context Prompt",
+                "use_case": "Starting a new debugging/development session",
+                "prompt": """# AI Content Factory - Development Session Context
+
+I'm working on the AI Content Factory project (FastAPI + GCP + Vertex AI). Here's the current context:
+
+**Project Mission**: Transform textual input into comprehensive educational content (podcast scripts, study guides, summaries, audio).
+
+**Current Architecture**: FastAPI backend, Vertex AI Gemini for content generation, ElevenLabs for audio, Firestore for persistence, Cloud Run deployment.
+
+**Latest Context Files**:
+- See `ai_context/complete_codebase.md` for full technical context
+- See `ai_context/project_overview.md` for current state and blockers
+- See `ai_context/issue_analysis.md` for specific problems and solutions
+
+**What I need help with**: [Describe your specific issue/goal here]
+
+Please analyze the context and provide specific, actionable guidance for moving forward.""",
+            }
+        )
+
+        # Issue-specific prompts
+        if has_critical_issues:
+            prompts.append(
+                {
+                    "title": "Critical Issue Resolution Prompt",
+                    "use_case": "When blocked by configuration issues",
+                    "prompt": """# Critical Blocker - Need Immediate Help
+
+The AI Content Factory project has critical configuration issues preventing progress:
+
+**Main Problem**: GCP Project ID is set to "FAKE_PROJECT_ID" blocking all cloud services.
+
+**Context Files**:
+- `ai_context/issue_analysis.md` contains specific fix commands
+- `ai_context/complete_codebase.md` has full technical details
+
+**What I need**:
+1. Verify the fix commands in issue_analysis.md are correct
+2. Help me execute them safely
+3. Identify any other critical blockers I might have missed
+4. Provide a step-by-step recovery plan
+
+Please prioritize getting the basic infrastructure working before any feature development.""",
+                }
+            )
+
+        # Feature development prompt
+        prompts.append(
+            {
+                "title": "Feature Development Prompt",
+                "use_case": "Adding new functionality or improving existing features",
+                "prompt": """# Feature Development Session
+
+Working on AI Content Factory feature development.
+
+**Current Status**: [Describe current state - working/blocked/partially complete]
+
+**Target Feature**: [Describe what you want to build/improve]
+
+**Context Available**:
+- Full codebase: `ai_context/complete_codebase.md`
+- API reference: `ai_context/quick_reference.md`
+- Current issues: `ai_context/issue_analysis.md`
+
+**Development Approach Needed**:
+- Follow project patterns (Pydantic models, FastAPI routes, async patterns)
+- Maintain consistency with existing code style
+- Add proper error handling and logging
+- Include unit tests where appropriate
+
+**Questions**:
+1. How should I implement [specific functionality]?
+2. What existing patterns should I follow?
+3. Are there any architectural considerations I should know about?
+
+Please provide specific implementation guidance with code examples.""",
+            }
+        )
+
+        # Code review prompt
+        prompts.append(
+            {
+                "title": "Code Review Prompt",
+                "use_case": "Getting feedback on implementation",
+                "prompt": """# Code Review Request
+
+I've implemented [describe what you built] in the AI Content Factory project.
+
+**Files Changed**: [List the files you modified/created]
+
+**Implementation Approach**: [Briefly describe your approach]
+
+**Context for Review**:
+- Project architecture: See `ai_context/complete_codebase.md`
+- Existing patterns: See `ai_context/quick_reference.md`
+- Project standards: Follow FastAPI, Pydantic, async patterns
+
+**Review Focus Areas**:
+1. Code quality and consistency with project patterns
+2. Error handling and edge cases
+3. Performance considerations
+4. Security implications
+5. Testing coverage
+
+**Specific Questions**:
+- [Any specific concerns or areas you want feedback on]
+
+Please provide detailed feedback and specific improvement suggestions.""",
+            }
+        )
+
+        # Debugging prompt
+        prompts.append(
+            {
+                "title": "Debugging Session Prompt",
+                "use_case": "When something is broken and you need help debugging",
+                "prompt": """# Debugging Session - Need Help
+
+Something is broken in the AI Content Factory project and I need debugging help.
+
+**Problem Description**: [Describe what's not working]
+
+**Error Messages**:
+```
+[Paste any error messages here]
+```
+
+**Steps to Reproduce**:
+1. [List the steps that trigger the issue]
+
+**Expected vs Actual Behavior**:
+- Expected: [What should happen]
+- Actual: [What actually happens]
+
+**Context Files**:
+- Full codebase: `ai_context/complete_codebase.md`
+- Known issues: `ai_context/issue_analysis.md`
+- API reference: `ai_context/quick_reference.md`
+
+**What I've Tried**: [List debugging steps you've already attempted]
+
+Please help me:
+1. Identify the root cause
+2. Provide a fix with explanation
+3. Suggest how to prevent similar issues
+4. Recommend any additional testing""",
+            }
+        )
+
+        # Architecture/design prompt
+        prompts.append(
+            {
+                "title": "Architecture Decision Prompt",
+                "use_case": "Making significant architectural or design decisions",
+                "prompt": """# Architecture Decision Needed
+
+I need to make an architectural decision for the AI Content Factory project.
+
+**Decision Context**: [Describe the situation requiring a decision]
+
+**Options Considered**:
+1. [Option 1 with pros/cons]
+2. [Option 2 with pros/cons]
+3. [Other options...]
+
+**Current Architecture Context**:
+- See `ai_context/complete_codebase.md` for full system overview
+- Current tech stack: FastAPI, GCP, Vertex AI, Firestore, Cloud Run
+- See `ai_context/quick_reference.md` for current patterns
+
+**Constraints**:
+- [Technical constraints]
+- [Business constraints]
+- [Time/resource constraints]
+
+**Questions**:
+1. Which approach aligns best with the existing architecture?
+2. What are the long-term implications of each option?
+3. How does this impact testing, deployment, and maintenance?
+4. Are there better alternatives I haven't considered?
+
+Please provide a recommendation with detailed reasoning.""",
+            }
+        )
+
+        return prompts
+
+    def generate_next_cycle_instructions(self) -> str:
+        """Generate specific instructions for the next development cycle."""
+
+        consistency_check = self.check_project_file_consistency()
+        development_prompts = self.generate_development_cycle_prompts()
+        gcp_project_id = os.getenv("GCP_PROJECT_ID")
+        has_critical_issues = gcp_project_id == "FAKE_PROJECT_ID"
+
+        instructions = [
+            "# Next Development Cycle Instructions",
+            f"**Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            "",
+            "## 🎯 Current Project Status",
+            "",
+        ]
+
+        # Add status based on consistency check
+        if consistency_check["status"] == "GOOD":
+            instructions.append("✅ **Project files are up-to-date and consistent**")
+        else:
+            instructions.append("⚠️ **Project files need attention**")
+            instructions.extend(["", "### Files Needing Update:", ""])
+            for issue in consistency_check["issues"]:
+                instructions.append(f"- {issue}")
+
+        # Add critical issues section
+        if has_critical_issues:
+            instructions.extend(
+                [
+                    "",
+                    "## 🚨 CRITICAL: Fix Infrastructure First",
+                    "",
+                    "**STOP**: Before any feature development, fix critical infrastructure issues:",
+                    "",
+                    "1. **Run the fix commands** in `ai_context/issue_analysis.md`",
+                    "2. **Verify fixes work** by testing API endpoints",
+                    "3. **Re-run this analysis** to confirm issues are resolved",
+                    "",
+                    "**Use this prompt** for getting help:",
+                    "```",
+                    development_prompts[1]["prompt"],  # Critical issue prompt
+                    "```",
+                    "",
+                ]
+            )
+        else:
+            instructions.extend(
+                [
+                    "",
+                    "## 🚀 Ready for Feature Development",
+                    "",
+                    "Infrastructure appears to be configured correctly. Ready for:",
+                    "- API endpoint development",
+                    "- Content generation features",
+                    "- Testing and validation",
+                    "- Performance optimization",
+                    "",
+                ]
+            )
+
+        # Add file consistency recommendations
+        if consistency_check["recommendations"]:
+            instructions.extend(
+                [
+                    "## 📋 File Maintenance Tasks",
+                    "",
+                    "Before starting new development:",
+                    "",
+                ]
+            )
+            for rec in consistency_check["recommendations"]:
+                instructions.append(f"- {rec}")
+            instructions.append("")
+
+        # Add TODO items if found
+        if consistency_check["todo_count"] > 0:
+            instructions.extend(
+                [
+                    f"## 🔧 Code Cleanup ({consistency_check['todo_count']} TODOs)",
+                    "",
+                    "Consider addressing these TODO items:",
+                    "",
+                ]
+            )
+            for todo_file in consistency_check["todo_files"]:
+                rel_path = str(Path(todo_file).relative_to(self.project_root))
+                instructions.append(f"- Review TODOs in `{rel_path}`")
+            instructions.append("")
+
+        # Add development cycle guidance
+        instructions.extend(
+            [
+                "## 🔄 Development Cycle Guidance",
+                "",
+                "### For Your Next Development Session:",
+                "",
+                "1. **Start with the right context** - Choose the appropriate prompt below",
+                "2. **Check current status** - Always review `ai_context/issue_analysis.md` first",
+                "3. **Follow project patterns** - Use existing code as templates",
+                "4. **Test incrementally** - Verify each change works before moving on",
+                "5. **Update documentation** - Keep project files current",
+                "",
+                "### Ready-to-Use Prompts for Different Scenarios:",
+                "",
+            ]
+        )
+
+        # Add all the development prompts
+        for prompt_info in development_prompts:  # Corrected variable name
+            instructions.extend(
+                [
+                    f"#### {prompt_info['title']}",
+                    f"**Use when**: {prompt_info['use_case']}",
+                    "",
+                    "```",
+                    prompt_info["prompt"],
+                    "```",
+                    "",
+                ]
+            )
+
+        # Add workflow integration
+        instructions.extend(
+            [
+                "## 🔧 Workflow Integration",
+                "",
+                "### Before Each Development Session:",
+                "",
+                "1. **Update context**: `python scripts/smart_ai_context.py`",
+                "2. **Check for issues**: Review `ai_context/issue_analysis.md`",
+                "3. **Choose your prompt**: Use appropriate prompt from above",
+                "4. **Start with small steps**: Test frequently",
+                "",
+                "### After Major Changes:",
+                "",
+                "1. **Run tests**: `python -m pytest`",
+                "2. **Update documentation**: Modify README, CHANGELOG as needed",
+                "3. **Regenerate context**: `python scripts/smart_ai_context.py`",
+                "4. **Commit changes**: Git commit with descriptive message",
+                "",
+                "### For Complex Features:",
+                "",
+                "1. **Plan first**: Use Architecture Decision Prompt",
+                "2. **Implement incrementally**: Break into small, testable pieces",
+                "3. **Get feedback**: Use Code Review Prompt",
+                "4. **Document decisions**: Update project files",
+                "",
+                "## 📊 Project Health Summary",
+                "",
+                f"- **File Consistency**: {consistency_check['status']}",
+                f"- **Critical Issues**: {'YES' if has_critical_issues else 'NO'}",
+                f"- **TODO Items**: {consistency_check['todo_count']}",
+                f"- **Last Updated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                "",
+                "---",
+                "*This guide is automatically generated. Re-run `python scripts/smart_ai_context.py` after significant changes.*",
+            ]
+        )
+
+        return "\n".join(instructions)
+
+    def analyze_git_diffs(self, since_hours: int = 24) -> Dict[str, Any]:
+        """Analyze git diffs to understand what actually changed in the code."""
+        logger.info(f"Analyzing git diffs from last {since_hours} hours...")
+        
+        diff_analysis = {
+            "summary": {},
+            "files_changed": {},
+            "code_insights": {},
+            "feature_development": {},
+            "maintenance_work": {},
+        }
+        
+        try:
+            # Get recent commits
+            commits_result = subprocess.run(
+                ["git", "log", f'--since="{since_hours} hours ago"', "--oneline", "--no-merges"],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+            )
+            
+            if commits_result.returncode != 0 or not commits_result.stdout.strip():
+                diff_analysis["summary"] = {"status": "no_recent_changes", "commits": 0}
+                return diff_analysis
+                
+            # Get diff stats
+            diff_stats_result = subprocess.run(
+                ["git", "diff", f"HEAD~{len(commits_result.stdout.strip().split())}", "HEAD", "--stat"],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+            )
+            
+            # Get detailed diff
+            diff_result = subprocess.run(
+                ["git", "diff", f"HEAD~{len(commits_result.stdout.strip().split())}", "HEAD"],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+            )
+            
+            if diff_result.returncode == 0:
+                diff_text = diff_result.stdout
+                diff_stats = diff_stats_result.stdout if diff_stats_result.returncode == 0 else ""
+                
+                # Analyze files changed
+                files_changed = self._analyze_changed_files(diff_text, diff_stats)
+                diff_analysis["files_changed"] = files_changed
+                
+                # Analyze type of changes
+                code_insights = self._analyze_code_changes(diff_text)
+                diff_analysis["code_insights"] = code_insights
+                
+                # Categorize development activities
+                development_activity = self._categorize_development_activity(diff_text, files_changed)
+                diff_analysis["feature_development"] = development_activity["features"]
+                diff_analysis["maintenance_work"] = development_activity["maintenance"]
+                
+                # Generate summary
+                diff_analysis["summary"] = {
+                    "status": "analyzed",
+                    "commits": len(commits_result.stdout.strip().split()),
+                    "files_modified": len(files_changed.get("modified", [])),
+                    "files_added": len(files_changed.get("added", [])),
+                    "files_deleted": len(files_changed.get("deleted", [])),
+                    "lines_added": code_insights.get("lines_added", 0),
+                    "lines_removed": code_insights.get("lines_removed", 0),
+                    "primary_activity": development_activity.get("primary_category", "unknown"),
+                }
+                
+        except Exception as e:
+            logger.error(f"Error analyzing diffs: {e}")
+            diff_analysis["summary"] = {"status": "error", "error": str(e)}
+            
+        return diff_analysis
+    
+    def _analyze_changed_files(self, diff_text: str, diff_stats: str) -> Dict[str, Any]:
+        """Analyze which files were changed and categorize them."""
+        files_analysis = {
+            "modified": [],
+            "added": [],
+            "deleted": [],
+            "categories": {
+                "core_app": [],
+                "tests": [],
+                "documentation": [],
+                "configuration": [],
+                "scripts": [],
+                "frontend": [],
+                "infrastructure": [],
+            }
+        }
+        
+        # Parse diff stats for files
+        for line in diff_stats.split('\n'):
+            if '|' in line and ('+' in line or '-' in line):
+                file_path = line.split('|')[0].strip()
+                if file_path:
+                    files_analysis["modified"].append(file_path)
+                    
+                    # Categorize file
+                    if file_path.startswith('app/'):
+                        files_analysis["categories"]["core_app"].append(file_path)
+                    elif file_path.startswith('test') or 'test_' in file_path:
+                        files_analysis["categories"]["tests"].append(file_path)
+                    elif file_path.startswith('docs/') or file_path.endswith('.md'):
+                        files_analysis["categories"]["documentation"].append(file_path)
+                    elif file_path.startswith('scripts/'):
+                        files_analysis["categories"]["scripts"].append(file_path)
+                    elif file_path.startswith('frontend/'):
+                        files_analysis["categories"]["frontend"].append(file_path)
+                    elif file_path.startswith('iac/') or 'docker' in file_path.lower():
+                        files_analysis["categories"]["infrastructure"].append(file_path)
+                    elif any(config in file_path for config in ['.env', '.yaml', '.yml', '.json', '.toml', 'requirements']):
+                        files_analysis["categories"]["configuration"].append(file_path)
+        
+        # Identify new/deleted files from diff
+        for line in diff_text.split('\n'):
+            if line.startswith('+++') and '/dev/null' not in line:
+                file_path = line[6:].strip()  # Remove '+++ b/'
+                if file_path not in files_analysis["modified"]:
+                    files_analysis["added"].append(file_path)
+            elif line.startswith('---') and '/dev/null' not in line:
+                file_path = line[6:].strip()  # Remove '--- a/'
+                if '/dev/null' in line:
+                    files_analysis["deleted"].append(file_path)
+        
+        return files_analysis
+    
+    def _analyze_code_changes(self, diff_text: str) -> Dict[str, Any]:
+        """Analyze the nature of code changes."""
+        code_analysis = {
+            "lines_added": 0,
+            "lines_removed": 0,
+            "functions_added": [],
+            "functions_modified": [],
+            "classes_added": [],
+            "imports_changed": [],
+            "comments_added": 0,
+            "code_patterns": {
+                "new_endpoints": [],
+                "new_models": [],
+                "error_handling": 0,
+                "logging_added": 0,
+                "tests_added": 0,
+            }
+        }
+        
+        current_file = None
+        
+        for line in diff_text.split('\n'):
+            # Track current file
+            if line.startswith('+++'):
+                current_file = line[6:].strip()
+                continue
+                
+            # Count additions/deletions
+            if line.startswith('+') and not line.startswith('+++'):
+                code_analysis["lines_added"] += 1
+                line_content = line[1:].strip()
+                
+                # Analyze what was added
+                if line_content.startswith('def '):
+                    func_name = line_content.split('(')[0].replace('def ', '').strip()
+                    code_analysis["functions_added"].append(f"{current_file}:{func_name}")
+                elif line_content.startswith('class '):
+                    class_name = line_content.split('(')[0].replace('class ', '').strip().rstrip(':')
+                    code_analysis["classes_added"].append(f"{current_file}:{class_name}")
+                elif line_content.startswith('import ') or line_content.startswith('from '):
+                    code_analysis["imports_changed"].append(line_content)
+                elif line_content.startswith('#'):
+                    code_analysis["comments_added"] += 1
+                
+                # Detect patterns
+                if '@app.' in line_content or '@router.' in line_content:
+                    code_analysis["code_patterns"]["new_endpoints"].append(line_content)
+                elif 'class ' in line_content and 'BaseModel' in line_content:
+                    code_analysis["code_patterns"]["new_models"].append(line_content)
+                elif 'except' in line_content or 'try:' in line_content:
+                    code_analysis["code_patterns"]["error_handling"] += 1
+                elif 'logger.' in line_content or 'logging.' in line_content:
+                    code_analysis["code_patterns"]["logging_added"] += 1
+                elif 'def test_' in line_content or 'test_' in current_file:
+                    code_analysis["code_patterns"]["tests_added"] += 1
+                    
+            elif line.startswith('-') and not line.startswith('---'):
+                code_analysis["lines_removed"] += 1
+        
+        return code_analysis
+    
+    def _categorize_development_activity(self, diff_text: str, files_changed: Dict) -> Dict[str, Any]:
+        """Categorize the type of development work done."""
+        activity = {
+            "primary_category": "maintenance",
+            "features": {
+                "new_features": [],
+                "feature_improvements": [],
+                "api_changes": [],
+            },
+            "maintenance": {
+                "bug_fixes": [],
+                "refactoring": [],
+                "documentation": [],
+                "configuration": [],
+                "cleanup": [],
+            }
+        }
+        
+        # Analyze based on file categories
+        if files_changed["categories"]["core_app"]:
+            if any("new" in f.lower() for f in files_changed["categories"]["core_app"]):
+                activity["features"]["new_features"].extend(files_changed["categories"]["core_app"])
+                activity["primary_category"] = "feature_development"
+            else:
+                activity["features"]["feature_improvements"].extend(files_changed["categories"]["core_app"])
+                activity["primary_category"] = "feature_development"
+        
+        if files_changed["categories"]["documentation"]:
+            activity["maintenance"]["documentation"].extend(files_changed["categories"]["documentation"])
+            
+        if files_changed["categories"]["configuration"]:
+            activity["maintenance"]["configuration"].extend(files_changed["categories"]["configuration"])
+            
+        if files_changed["categories"]["tests"]:
+            activity["features"]["feature_improvements"].extend(files_changed["categories"]["tests"])
+            
+        # Analyze commit patterns from diff
+        diff_lower = diff_text.lower()
+        if any(word in diff_lower for word in ["fix", "bug", "error", "issue"]):
+            activity["maintenance"]["bug_fixes"].append("Bug fixes detected in changes")
+            
+        if any(word in diff_lower for word in ["refactor", "cleanup", "reorganize"]):
+            activity["maintenance"]["refactoring"].append("Code refactoring detected")
+            
+        if any(word in diff_lower for word in ["endpoint", "route", "@app", "@router"]):
+            activity["features"]["api_changes"].append("API endpoint changes detected")
+            
+        return activity
+
+    def analyze_development_cycle_completion(self) -> Dict[str, Any]:
+        """Analyze what was accomplished in the current development cycle."""
+        logger.info("Analyzing development cycle completion...")
+
+        completion_analysis = {
+            "cycle_progress": {},
+            "code_changes": {},
+            "diff_analysis": {},
+            "issues_resolved": {},
+            "new_issues_discovered": {},
+            "next_cycle_recommendations": {},
+            "user_decision_points": {},
+        }
+
+        # Analyze recent git changes if available
+        try:
+            # Check for recent commits (last 24 hours)
+            result = subprocess.run(
+                ["git", "log", '--since="24 hours ago"', "--oneline", "--no-merges"],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+            )
+
+            if result.returncode == 0 and result.stdout.strip():
+                recent_commits = result.stdout.strip().split("\n")
+                completion_analysis["code_changes"] = {
+                    "recent_commits": len(recent_commits),
+                    "commit_messages": recent_commits[:5],  # Last 5 commits
+                    "activity_level": (
+                        "HIGH"
+                        if len(recent_commits) > 3
+                        else "MEDIUM" if len(recent_commits) > 0 else "LOW"
+                    ),
+                }
+                
+                # Add comprehensive diff analysis
+                completion_analysis["diff_analysis"] = self.analyze_git_diffs(24)
+                
+            else:
+                completion_analysis["code_changes"] = {
+                    "recent_commits": 0,
+                    "commit_messages": [],
+                    "activity_level": "LOW",
+                }
+                completion_analysis["diff_analysis"] = {"summary": {"status": "no_recent_changes"}}
+        except Exception:
+            completion_analysis["code_changes"] = {"status": "unable_to_analyze"}
+            completion_analysis["diff_analysis"] = {"summary": {"status": "error"}}
+
+        # Analyze if critical issues were addressed
+        gcp_project_id = os.getenv("GCP_PROJECT_ID")
+        firestore_configured = gcp_project_id != "FAKE_PROJECT_ID"
+
+        completion_analysis["issues_resolved"] = {
+            "gcp_project_configured": firestore_configured,
+            "infrastructure_status": "READY" if firestore_configured else "BLOCKED",
+        }
+
+        # Check for new TODO items or issues
+        consistency_check = self.check_project_file_consistency()
+        completion_analysis["new_issues_discovered"] = {
+            "file_consistency_issues": len(consistency_check["issues"]),
+            "todo_count": consistency_check["todo_count"],
+            "maintenance_needed": consistency_check["status"] == "NEEDS_ATTENTION",
+        }
+
+        return completion_analysis
+
+    def generate_cycle_transition_recommendations(
+        self, completion_analysis: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """Generate intelligent recommendations for the next development cycle based on current completion."""
+
+        recommendations = []
+
+        # Analyze current state to determine logical next steps
+        infrastructure_ready = (
+            completion_analysis["issues_resolved"]["infrastructure_status"] == "READY"
+        )
+        high_activity = completion_analysis["code_changes"]["activity_level"] == "HIGH"
+        maintenance_needed = completion_analysis["new_issues_discovered"][
+            "maintenance_needed"
+        ]
+
+        # Generate context-aware recommendations
+        if not infrastructure_ready:
+            recommendations.append(
+                {
+                    "priority": "CRITICAL",
+                    "category": "Infrastructure",
+                    "title": "Complete Infrastructure Setup",
+                    "description": "Critical infrastructure issues prevent feature development",
+                    "estimated_effort": "30-60 minutes",
+                    "user_decision": "Should I focus on fixing infrastructure first?",
+                    "next_actions": [
+                        "Run fix commands from issue_analysis.md",
+                        "Test database connectivity",
+                        "Verify API endpoints work",
+                        "Confirm authentication setup",
+                    ],
+                    "success_criteria": "API endpoints respond without infrastructure errors",
+                    "blocks_other_work": True,
+                }
+            )
+        else:
+            # Infrastructure is ready - suggest feature development paths
+            if high_activity:
+                # Recent high activity suggests continuing momentum
+                recommendations.append(
+                    {
+                        "priority": "HIGH",
+                        "category": "Feature Development",
+                        "title": "Continue Current Development Momentum",
+                        "description": "High recent activity suggests good development flow",
+                        "estimated_effort": "2-4 hours",
+                        "user_decision": "Should I continue building on recent progress?",
+                        "next_actions": [
+                            "Review recent commits for incomplete features",
+                            "Identify logical next increments",
+                            "Add tests for recent changes",
+                            "Implement next feature components",
+                        ],
+                        "success_criteria": "Complete a significant feature or enhancement",
+                        "blocks_other_work": False,
+                    }
+                )
+            else:
+                # Low activity - suggest starting fresh with planning
+                recommendations.append(
+                    {
+                        "priority": "MEDIUM",
+                        "category": "Planning",
+                        "title": "Start New Feature Development",
+                        "description": "Infrastructure ready, good time to tackle new features",
+                        "estimated_effort": "1-3 hours",
+                        "user_decision": "What new feature should I prioritize?",
+                        "next_actions": [
+                            "Review project goals and priorities",
+                            "Choose next major feature to implement",
+                            "Design API endpoints and data models",
+                            "Start with minimal viable implementation",
+                        ],
+                        "success_criteria": "Have a working prototype of new functionality",
+                        "blocks_other_work": False,
+                    }
+                )
+
+        # Always suggest maintenance if needed
+        if maintenance_needed:
+            recommendations.append(
+                {
+                    "priority": "MEDIUM",
+                    "category": "Maintenance",
+                    "title": "Address Project Maintenance",
+                    "description": f"Found file consistency issues and {completion_analysis['new_issues_discovered']['todo_count']} TODOs",
+                    "estimated_effort": "30-90 minutes",
+                    "user_decision": "Should I clean up project maintenance items?",
+                    "next_actions": [
+                        "Create missing project files (e.g., CHANGELOG.md)",
+                        "Review and address TODO comments",
+                        "Update stale documentation",
+                        "Run tests and fix any failures",
+                    ],
+                    "success_criteria": "All project files up-to-date, reduced TODO count",
+                    "blocks_other_work": False,
+                }
+            )
+
+        # Suggest testing/validation if infrastructure is ready
+        if infrastructure_ready:
+            recommendations.append(
+                {
+                    "priority": "MEDIUM",
+                    "category": "Testing & Validation",
+                    "title": "Validate and Test Current System",
+                    "description": "Ensure current functionality works reliably",
+                    "estimated_effort": "1-2 hours",
+                    "user_decision": "Should I focus on testing and validation?",
+                    "next_actions": [
+                        "Test all API endpoints manually",
+                        "Run automated test suite",
+                        "Test content generation end-to-end",
+                        "Validate error handling scenarios",
+                    ],
+                    "success_criteria": "All tests pass, system behaves reliably",
+                    "blocks_other_work": False,
+                }
+            )
+
+        # Sort by priority
+        priority_order = {"CRITICAL": 1, "HIGH": 2, "MEDIUM": 3, "LOW": 4}
+        recommendations.sort(key=lambda x: priority_order.get(x["priority"], 5))
+
+        return recommendations
+
+    def create_cycle_transition_report(self) -> str:
+        """Create a comprehensive cycle transition report for the user."""
+
+        completion_analysis = self.analyze_development_cycle_completion()
+        recommendations = self.generate_cycle_transition_recommendations(
+            completion_analysis
+        )
+
+        report_lines = [
+            "# Development Cycle Transition Report",
+            f"**Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            "",
+            "## 📊 Current Cycle Analysis",
+            "",
+            "### What Was Accomplished",
+            "",
+        ]
+
+        # Add cycle progress summary
+        if completion_analysis["code_changes"]["recent_commits"] > 0:
+            report_lines.extend(
+                [
+                    f"✅ **{completion_analysis['code_changes']['recent_commits']} commits** in the last 24 hours",
+                    f"📈 **Activity Level**: {completion_analysis['code_changes']['activity_level']}",
+                    "",
+                    "**Recent Changes**:",
+                ]
+            )
+            for commit in completion_analysis["code_changes"]["commit_messages"]:
+                report_lines.append(f"- {commit}")
+            report_lines.append("")
+            
+            # Add comprehensive diff analysis
+            diff_analysis = completion_analysis.get("diff_analysis", {})
+            diff_summary = diff_analysis.get("summary", {})
+            if diff_summary.get("status") == "analyzed":
+                report_lines.extend([
+                    "### 📝 Code Changes Analysis",
+                    "",
+                    f"**Files Modified**: {diff_summary.get('files_modified', 0)} files",
+                    f"**Lines Added**: +{diff_summary.get('lines_added', 0)}",
+                    f"**Lines Removed**: -{diff_summary.get('lines_removed', 0)}",
+                    f"**Primary Activity**: {diff_summary.get('primary_activity', 'unknown').replace('_', ' ').title()}",
+                    "",
+                ])
+                
+                # Detailed file analysis
+                files_changed = diff_analysis.get("files_changed", {})
+                if files_changed and files_changed.get("categories"):
+                    category_summary = []
+                    for category, files in files_changed.get("categories", {}).items():
+                        if files:
+                            category_summary.append(f"{category.replace('_', ' ').title()}: {len(files)}")
+                    
+                    if category_summary:
+                        report_lines.append(f"**Files by Category**: {', '.join(category_summary)}")
+                        report_lines.append("")
+                
+                # Code insights
+                code_insights = diff_analysis.get("code_insights", {})
+                if code_insights:
+                    notable_changes = []
+                    if code_insights.get("functions_added"):
+                        notable_changes.append(f"Added {len(code_insights['functions_added'])} new functions")
+                    if code_insights.get("classes_added"):
+                        notable_changes.append(f"Added {len(code_insights['classes_added'])} new classes")
+                    patterns = code_insights.get("code_patterns", {})
+                    if patterns.get("new_endpoints"):
+                        notable_changes.append(f"Added {len(patterns['new_endpoints'])} API endpoints")
+                    if patterns.get("tests_added") > 0:
+                        notable_changes.append("Added test coverage")
+                    if patterns.get("error_handling") > 0:
+                        notable_changes.append("Improved error handling")
+                    
+                    if notable_changes:
+                        report_lines.append("**Notable Code Changes**:")
+                        for change in notable_changes:
+                            report_lines.append(f"- {change}")
+                        report_lines.append("")
+                
+                # Development activity insights
+                feature_dev = diff_analysis.get("feature_development", {})
+                maintenance = diff_analysis.get("maintenance_work", {})
+                
+                development_focus = []
+                if feature_dev.get("new_features"):
+                    development_focus.append("🆕 New feature development")
+                if feature_dev.get("feature_improvements"):
+                    development_focus.append("🔧 Feature improvements")
+                if feature_dev.get("api_changes"):
+                    development_focus.append("🔌 API changes")
+                if maintenance.get("documentation"):
+                    development_focus.append("📚 Documentation updates")
+                if maintenance.get("configuration"):
+                    development_focus.append("⚙️ Configuration changes")
+                if maintenance.get("bug_fixes"):
+                    development_focus.append("🐛 Bug fixes")
+                if maintenance.get("refactoring"):
+                    development_focus.append("🏗️ Code refactoring")
+                
+                if development_focus:
+                    report_lines.append("**Development Focus**:")
+                    for focus in development_focus:
+                        report_lines.append(f"- {focus}")
+                    report_lines.append("")
+        else:
+            report_lines.extend(
+                [
+                    "📝 **No recent commits** detected in the last 24 hours",
+                    "💡 This might be a planning or analysis cycle",
+                    "",
+                ]
+            )
+
+        # Add issues status
+        infrastructure_status = completion_analysis["issues_resolved"][
+            "infrastructure_status"
+        ]
+        if infrastructure_status == "READY":
+            report_lines.extend(
+                [
+                    "✅ **Infrastructure Status**: Ready for development",
+                    "🚀 All critical blockers appear to be resolved",
+                    "",
+                ]
+            )
+        else:
+            report_lines.extend(
+                [
+                    "🚨 **Infrastructure Status**: Critical issues remain",
+                    "⚠️  Feature development blocked until infrastructure is fixed",
+                    "",
+                ]
+            )
+
+        # Add maintenance status
+        if completion_analysis["new_issues_discovered"]["maintenance_needed"]:
+            report_lines.extend(
+                [
+                    f"🔧 **Maintenance Needed**: {completion_analysis['new_issues_discovered']['file_consistency_issues']} file issues, {completion_analysis['new_issues_discovered']['todo_count']} TODOs",
+                    "",
+                ]
+            )
+        else:
+            report_lines.extend(
+                ["✅ **Project Health**: Good - no major maintenance issues", ""]
+            )
+
+        # Add next cycle recommendations
+        report_lines.extend(
+            [
+                "## 🎯 Next Cycle Recommendations",
+                "",
+                "**Choose Your Path**: Select the option that aligns with your goals and available time:",
+                "",
+            ]
+        )
+
+        for i, rec in enumerate(recommendations, 1):
+            blocking_indicator = (
+                " 🚨 **BLOCKS OTHER WORK**"
+                if rec.get("blocks_other_work", False)
+                else ""
+            )
+
+            report_lines.extend(
+                [
+                    f"### Option {i}: {rec['title']} ({rec['priority']} Priority){blocking_indicator}",
+                    f"**Category**: {rec['category']}",
+                    f"**Estimated Time**: {rec['estimated_effort']}",
+                    f"**Description**: {rec['description']}",
+                    "",
+                    f"**Decision Point**: {rec['user_decision']}",
+                    "",
+                    "**If you choose this path:**",
+                ]
+            )
+
+            for action in rec["next_actions"]:
+                report_lines.append(f"1. {action}")
+
+            report_lines.extend(
+                ["", f"**Success Criteria**: {rec['success_criteria']}", ""]
+            )
+
+        # Add decision framework
+        report_lines.extend(
+            [
+                "## 🤔 Decision Framework",
+                "",
+                "**To help you decide, consider:**",
+                "",
+                "- **Time Available**: How much time do you have for this cycle?",
+                "- **Energy Level**: Are you in a building mood or a fixing mood?",
+                "- **Project Goals**: What outcome would provide the most value?",
+                "- **Blocking Issues**: Are there any critical blockers that must be addressed first?",
+                "",
+                "**Recommended Approach**:",
+            ]
+        )
+
+        # Add intelligent recommendation based on analysis
+        if any(rec.get("blocks_other_work", False) for rec in recommendations):
+            report_lines.extend(
+                [
+                    "🚨 **Address blocking issues first** - Option 1 prevents progress on other work",
+                    "⏱️  **Quick wins** - Fix blockers now, then choose development path",
+                    "",
+                ]
+            )
+        elif completion_analysis["code_changes"]["activity_level"] == "HIGH":
+            report_lines.extend(
+                [
+                    "🚀 **Maintain momentum** - Recent high activity suggests continuing current work",
+                    "⚡ **Build on progress** - Leverage existing development flow",
+                    "",
+                ]
+            )
+        else:
+            report_lines.extend(
+                [
+                    "🎯 **Start fresh** - Good time to begin new features or major improvements",
+                    "📋 **Plan first** - Consider doing some analysis or planning before coding",
+                    "",
+                ]
+            )
+
+        # Add workflow integration
+        report_lines.extend(
+            [
+                "## 🔄 Ready-to-Use Workflow",
+                "",
+                "**Once you've decided on your path:**",
+                "",
+                "1. **Copy the appropriate prompt** from `next_cycle_instructions.md`",
+                "2. **Include this transition report** for context about what was just completed",
+                "3. **Use the relevant context files**:",
+                "   - `complete_codebase.md` for technical details",
+                "   - `issue_analysis.md` for current blockers",
+                "   - `quick_reference.md` for API information",
+                "",
+                "## ⚡ Quick Actions",
+                "",
+                "**If you want to start immediately:**",
+                "",
+            ]
+        )
+
+        # Add quick action based on top recommendation
+        top_rec = recommendations[0] if recommendations else None
+        if top_rec:
+            report_lines.extend(
+                [
+                    f"**For {top_rec['title']}:**",
+                    "```bash",
+                    "# 1. Update your context",
+                    "python scripts/smart_ai_context.py",
+                    "",
+                    "# 2. Use this prompt with your AI assistant:",
+                ]
+            )
+
+            if top_rec["category"] == "Infrastructure":
+                report_lines.append(
+                    "# Use 'Critical Issue Resolution Prompt' from next_cycle_instructions.md"
+                )
+            elif top_rec["category"] == "Feature Development":
+                report_lines.append(
+                    "# Use 'Feature Development Prompt' from next_cycle_instructions.md"
+                )
+            elif top_rec["category"] == "Testing & Validation":
+                report_lines.append(
+                    "# Use 'Debugging Session Prompt' from next_cycle_instructions.md"
+                )
+            else:
+                report_lines.append(
+                    "# Use 'Project Context Prompt' from next_cycle_instructions.md"
+                )
+
+            report_lines.extend(["```", ""])
+
+        report_lines.extend(
+            [
+                "---",
+                f"**Next Cycle Starts**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                "",
+                "*This report is automatically generated when ending a development cycle.*",
+                "*Re-run `python scripts/smart_ai_context.py` to update analysis.*",
+            ]
+        )
+
+        return "\n".join(report_lines)
+
+    def generate_diff_analysis_report(self) -> str:
+        """Generate a detailed diff analysis report."""
+        diff_analysis = self.analyze_git_diffs(24)
+        diff_summary = diff_analysis.get("summary", {})
+        
+        if diff_summary.get("status") != "analyzed":
+            return ""  # No recent changes to analyze
+        
+        report_lines = [
+            "# Git Diff Analysis Report",
+            f"**Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            f"**Analysis Period**: Last 24 hours",
+            "",
+            "## 📊 Change Summary",
+            "",
+            f"**Commits Analyzed**: {diff_summary.get('commits', 0)}",
+            f"**Files Modified**: {diff_summary.get('files_modified', 0)}",
+            f"**Files Added**: {diff_summary.get('files_added', 0)}",
+            f"**Files Deleted**: {diff_summary.get('files_deleted', 0)}",
+            f"**Lines Added**: +{diff_summary.get('lines_added', 0)}",
+            f"**Lines Removed**: -{diff_summary.get('lines_removed', 0)}",
+            f"**Net Change**: {diff_summary.get('lines_added', 0) - diff_summary.get('lines_removed', 0):+d} lines",
+            f"**Primary Activity**: {diff_summary.get('primary_activity', 'unknown').replace('_', ' ').title()}",
+            "",
+        ]
+        
+        # Files changed analysis
+        files_changed = diff_analysis.get("files_changed", {})
+        if files_changed:
+            report_lines.extend([
+                "## 📁 Files Changed by Category",
+                "",
+            ])
+            
+            for category, files in files_changed.get("categories", {}).items():
+                if files:
+                    report_lines.extend([
+                        f"### {category.replace('_', ' ').title()} ({len(files)} files)",
+                        "",
+                    ])
+                    for file in files:
+                        report_lines.append(f"- `{file}`")
+                    report_lines.append("")
+        
+        # Code insights
+        code_insights = diff_analysis.get("code_insights", {})
+        if code_insights:
+            report_lines.extend([
+                "## 🔍 Code Analysis",
+                "",
+            ])
+            
+            # Functions and classes
+            if code_insights.get("functions_added"):
+                report_lines.extend([
+                    f"### New Functions Added ({len(code_insights['functions_added'])})",
+                    "",
+                ])
+                for func in code_insights["functions_added"]:
+                    report_lines.append(f"- `{func}`")
+                report_lines.append("")
+            
+            if code_insights.get("classes_added"):
+                report_lines.extend([
+                    f"### New Classes Added ({len(code_insights['classes_added'])})",
+                    "",
+                ])
+                for cls in code_insights["classes_added"]:
+                    report_lines.append(f"- `{cls}`")
+                report_lines.append("")
+            
+            # Import changes
+            if code_insights.get("imports_changed"):
+                report_lines.extend([
+                    f"### Import Changes ({len(code_insights['imports_changed'])})",
+                    "",
+                ])
+                for imp in code_insights["imports_changed"][:10]:  # Limit to first 10
+                    report_lines.append(f"- `{imp}`")
+                if len(code_insights["imports_changed"]) > 10:
+                    report_lines.append(f"- ... and {len(code_insights['imports_changed']) - 10} more")
+                report_lines.append("")
+            
+            # Code patterns
+            patterns = code_insights.get("code_patterns", {})
+            if any(patterns.values()):
+                report_lines.extend([
+                    "### Code Patterns Detected",
+                    "",
+                ])
+                
+                if patterns.get("new_endpoints"):
+                    report_lines.append(f"- **API Endpoints**: {len(patterns['new_endpoints'])} new endpoints")
+                if patterns.get("new_models"):
+                    report_lines.append(f"- **Data Models**: {len(patterns['new_models'])} new models")
+                if patterns.get("error_handling") > 0:
+                    report_lines.append(f"- **Error Handling**: {patterns['error_handling']} error handling additions")
+                if patterns.get("logging_added") > 0:
+                    report_lines.append(f"- **Logging**: {patterns['logging_added']} logging statements added")
+                if patterns.get("tests_added") > 0:
+                    report_lines.append(f"- **Testing**: {patterns['tests_added']} test additions")
+                
+                report_lines.append("")
+        
+        # Development activity
+        feature_dev = diff_analysis.get("feature_development", {})
+        maintenance = diff_analysis.get("maintenance_work", {})
+        
+        if any(feature_dev.values()) or any(maintenance.values()):
+            report_lines.extend([
+                "## 🎯 Development Activity Analysis",
+                "",
+            ])
+            
+            if any(feature_dev.values()):
+                report_lines.extend([
+                    "### Feature Development",
+                    "",
+                ])
+                
+                if feature_dev.get("new_features"):
+                    report_lines.append("**New Features:**")
+                    for feature in feature_dev["new_features"]:
+                        report_lines.append(f"- {feature}")
+                    report_lines.append("")
+                
+                if feature_dev.get("feature_improvements"):
+                    report_lines.append("**Feature Improvements:**")
+                    for improvement in feature_dev["feature_improvements"]:
+                        report_lines.append(f"- {improvement}")
+                    report_lines.append("")
+                
+                if feature_dev.get("api_changes"):
+                    report_lines.append("**API Changes:**")
+                    for change in feature_dev["api_changes"]:
+                        report_lines.append(f"- {change}")
+                    report_lines.append("")
+            
+            if any(maintenance.values()):
+                report_lines.extend([
+                    "### Maintenance Work",
+                    "",
+                ])
+                
+                for category, items in maintenance.items():
+                    if items:
+                        report_lines.append(f"**{category.replace('_', ' ').title()}:**")
+                        for item in items:
+                            report_lines.append(f"- {item}")
+                        report_lines.append("")
+        
+        # Add insights and recommendations
+        report_lines.extend([
+            "## 💡 Insights & Recommendations",
+            "",
+        ])
+        
+        # Generate insights based on analysis
+        insights = []
+        
+        if diff_summary.get("primary_activity") == "feature_development":
+            insights.append("🚀 **Development Momentum**: Active feature development detected. Consider maintaining this pace.")
+        elif diff_summary.get("primary_activity") == "maintenance":
+            insights.append("🔧 **Maintenance Focus**: Good time to continue cleanup and improvements.")
+        
+        if diff_summary.get("lines_added", 0) > diff_summary.get("lines_removed", 0) * 2:
+            insights.append("📈 **Code Growth**: Significant code additions. Consider reviewing for potential refactoring opportunities.")
+        
+        if code_insights.get("code_patterns", {}).get("tests_added", 0) > 0:
+            insights.append("✅ **Test Coverage**: Test additions detected. Good practice for code quality.")
+        elif diff_summary.get("lines_added", 0) > 50:
+            insights.append("⚠️ **Test Coverage**: Consider adding tests for significant code additions.")
+        
+        if code_insights.get("code_patterns", {}).get("error_handling", 0) > 0:
+            insights.append("🛡️ **Error Handling**: Error handling improvements detected. Good for robustness.")
+        
+        if files_changed.get("categories", {}).get("documentation"):
+            insights.append("📚 **Documentation**: Documentation updates help with project maintainability.")
+        
+        if not insights:
+            insights.append("📊 **Steady Progress**: Changes look consistent with normal development activity.")
+        
+        for insight in insights:
+            report_lines.append(f"- {insight}")
+        
+        report_lines.extend([
+            "",
+            "---",
+            f"**Report Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            "*This analysis helps understand the nature and impact of recent code changes.*"
+        ])
+        
+        return "\n".join(report_lines)
+
+    def run(self) -> None:
+        """Run the complete smart context generation."""
+        print("🤖 Smart AI Context Generator - Development Cycle Engine")
+        print("=" * 60)
+
+        # Ensure context directory exists
+        self.context_dir.mkdir(exist_ok=True)
+
+        # Step 1: Generate comprehensive dump
+        print("📄 Generating comprehensive codebase dump...")
+        if self.generate_comprehensive_dump():
+            print("✅ Comprehensive codebase ready for LLM use")
+            print("📁 File: ai_context/complete_codebase.md")
+        else:
+            print("❌ Failed to generate codebase dump")
+            return
+
+        # Step 2: Generate focused context files
+        print("\n📋 Generating focused context files...")
+        if self.generate_focused_context():
+            print("✅ Project overview and quick reference ready")
+            print("📁 Files: project_overview.md, quick_reference.md")
+        else:
+            print("⚠️  Failed to generate focused context")
+
+        # Step 3: Analyze cycle completion and transition
+        print("\n🔄 Analyzing development cycle transition...")
+        cycle_transition_report = self.create_cycle_transition_report()
+        transition_path = self.context_dir / "cycle_transition.md"
+        with open(transition_path, "w", encoding="utf-8") as f:
+            f.write(cycle_transition_report)
+        print("✅ Cycle transition analysis complete")
+        print("📁 Report: ai_context/cycle_transition.md")
+
+        # Step 4: Check project file consistency
+        print("\n🔍 Checking project file consistency...")
+        consistency_check = self.check_project_file_consistency()
+        if consistency_check["status"] == "GOOD":
+            print("✅ All project files are up-to-date")
+        else:
+            print(
+                f"⚠️  Found {len(consistency_check['issues'])} file consistency issues"
+            )
+            print("📁 See next_cycle_instructions.md for details")
+
+        # Step 5: Analyze project issues
+        print("\n🔍 Analyzing project issues...")
+        issues_clean = self.analyze_project_issues()
+        if issues_clean:
+            print("✅ No critical issues found!")
+        else:
+            print("🚨 Critical issues detected - check issue_analysis.md")
+            print("📁 Report: ai_context/issue_analysis.md")
+
+        # Step 6: Generate development cycle instructions
+        print("\n📝 Generating next cycle instructions...")
+        next_cycle_instructions = self.generate_next_cycle_instructions()
+        instructions_path = self.context_dir / "next_cycle_instructions.md"
+        with open(instructions_path, "w", encoding="utf-8") as f:
+            f.write(next_cycle_instructions)
+        print("✅ Development cycle guidance ready")
+        print("📁 Instructions: ai_context/next_cycle_instructions.md")
+
+        # Step 6.5: Generate detailed diff analysis report
+        print("\n📊 Generating diff analysis report...")
+        diff_report = self.generate_diff_analysis_report()
+        if diff_report:
+            diff_path = self.context_dir / "diff_analysis.md"
+            with open(diff_path, "w", encoding="utf-8") as f:
+                f.write(diff_report)
+            print("✅ Detailed diff analysis ready")
+            print("📁 Report: ai_context/diff_analysis.md")
+        else:
+            print("ℹ️  No recent changes to analyze")
+
+        # Step 7: Try automated analysis
+        print("\n🧠 Attempting automated analysis...")
+        if self.run_openai_analysis():
+            print("✅ Automated analysis complete!")
+            print("📁 Report: ai_context/ai_analysis.md")
+            print("🎯 Check the report for next steps")
+        else:
+            print("⚠️  Automated analysis skipped")
+            print("💡 Tip: Set OPENAI_API_KEY for automated analysis")
+
+        # Step 8: Generate overview
+        self.generate_simple_overview()
+
+        print("\n" + "=" * 60)
+        print("🎉 Development Cycle Engine - Complete!")
+        print("\n📋 What you have now:")
+        print("• complete_codebase.md - Complete technical context")
+        print("• project_overview.md - Current state, blockers, next steps")
+        print("• quick_reference.md - API endpoints, models, debug commands")
+        print("• issue_analysis.md - Specific problem analysis and solutions")
+        print("• next_cycle_instructions.md - Development prompts and workflow")
+        print("• cycle_transition.md - 🆕 Intelligent next cycle recommendations")
+        print("• diff_analysis.md - 🆕 Detailed git diff analysis and insights")
+
+        if os.path.exists(self.context_dir / "ai_analysis.md"):
+            print("• ai_analysis.md - AI-generated insights")
+
+        print("\n🚀 Next Cycle Decision Point:")
+        print("📖 START HERE: ai_context/cycle_transition.md")
+        print(
+            "🎯 This report analyzes what you accomplished and suggests optimal next steps"
+        )
+        print("💡 You stay in control - choose the path that aligns with your goals")
+
+        if not issues_clean:
+            print("\n🚨 CRITICAL PATH RECOMMENDATION:")
+            print(
+                "📖 Fix infrastructure issues first (see cycle_transition.md for guidance)"
+            )
+        else:
+            print("\n🚀 DEVELOPMENT READY:")
+            print(
+                "📖 Infrastructure is ready - see cycle_transition.md for feature development options"
+            )
+
+        print(
+            "\n🔄 To start next cycle: Choose your path from cycle_transition.md, then use the"
+        )
+        print(
+            "   appropriate prompt from next_cycle_instructions.md with your AI assistant"
+        )
+
+
+def main():
+    """Main function."""
+    script_dir = Path(__file__).parent
+    project_root = script_dir.parent
+
+    generator = SmartAIContext(project_root)
+    generator.run()
+
+
+if __name__ == "__main__":
+    main()
