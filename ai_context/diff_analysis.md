@@ -1,57 +1,46 @@
 # Git Diff Analysis Report
-**Generated**: 2025-06-05 10:07:42
+**Generated**: 2025-06-05 10:30:28
 **Analysis Period**: Last 24 hours
 
 ## 📊 Change Summary
 
-**Commits Analyzed**: 126
-**Files Modified**: 40
+**Commits Analyzed**: 159
+**Files Modified**: 29
 **Files Added**: 0
 **Files Deleted**: 0
-**Lines Added**: +63557
-**Lines Removed**: -11501
-**Net Change**: +52056 lines
+**Lines Added**: +64389
+**Lines Removed**: -14187
+**Net Change**: +50202 lines
 **Primary Activity**: Maintenance
 
 ## 📁 Files Changed by Category
 
-### Tests (3 files)
+### Documentation (18 files)
 
-- `.../development-artifacts/test_vertex_ai.py`
-- `.../development-artifacts/test_vertex_simple.py`
-- `.../development-artifacts/vertex_test_output.txt`
-
-### Documentation (25 files)
-
-- `PROJECT_STATUS.md`
+- `ai_context/INDEX.md`
 - `ai_context/README.md`
 - `ai_context/complete_codebase.md`
 - `ai_context/cycle_transition.md`
+- `ai_context/diff_analysis.md`
 - `ai_context/issue_analysis.md`
 - `ai_context/next_cycle_instructions.md`
+- `ai_context/project_deep_analysis.md`
 - `ai_context/project_overview.md`
 - `ai_context/quick_reference.md`
-- `archive/development-artifacts/CLEANUP_PLAN.md`
-- `.../development-artifacts/DEPLOY_NOW.md`
-- `.../development-artifacts/project_blockers.md`
-- `.../development-reports}/FINAL_PROJECT_STATUS.md`
-- `.../development-reports}/staging_e2e_results.md`
+- `ai_context/robust_summary.md`
+- `ai_context/simple_summary.md`
+- `ai_context/user_actions_required.md`
 - `.../task-management}/tasks_archive.md`
 - `.../task-management}/user_input_required.md`
 - `docs/README.md`
-- `.../development-phases}/CLEANUP_SUMMARY.md`
-- `.../development-phases}/CURRENT_STATUS.md`
-- `.../development-phases}/FINALIZATION_PLAN.md`
-- `.../development-phases}/PHASE_5_KICKOFF.md`
-- `.../development-phases}/PRODUCTION_NEXT_STEPS.md`
-- `.../development-phases}/phase4_action_plan.md`
-- `.../development-phases}/settings_review.md`
 - `docs/learn-as-you-go.md`
 - `tasks/README.md`
 
-### Configuration (5 files)
+### Configuration (7 files)
 
 - `.pre-commit-config.yaml`
+- `ai_context/project_analysis_raw.json`
+- `ai_context/system_state.json`
 - `archive/task-management/atomic_tasks.yaml`
 - `.../task-management}/atomic_tasks_reordered.yaml`
 - `tasks/atomic_tasks.yaml`
@@ -873,8 +862,8 @@
 - `ai_context/complete_codebase.md:main`
 - `ai_context/complete_codebase.md:main`
 - `scripts/generate_ai_context_dump.py:should_include_file`
+- `scripts/generate_ai_context_dump.py:get_file_summary`
 - `scripts/generate_ai_context_dump.py:generate_codebase_dump`
-- `scripts/generate_ai_context_dump.py:add_tree_structure`
 - `scripts/generate_ai_context_dump.py:main`
 - `scripts/generate_focused_context.py:generate_project_overview`
 - `scripts/generate_focused_context.py:generate_quick_reference`
@@ -1087,11 +1076,6 @@
 
 ### Feature Development
 
-**Feature Improvements:**
-- .../development-artifacts/test_vertex_ai.py
-- .../development-artifacts/test_vertex_simple.py
-- .../development-artifacts/vertex_test_output.txt
-
 **API Changes:**
 - API endpoint changes detected
 
@@ -1104,34 +1088,29 @@
 - Code refactoring detected
 
 **Documentation:**
-- PROJECT_STATUS.md
+- ai_context/INDEX.md
 - ai_context/README.md
 - ai_context/complete_codebase.md
 - ai_context/cycle_transition.md
+- ai_context/diff_analysis.md
 - ai_context/issue_analysis.md
 - ai_context/next_cycle_instructions.md
+- ai_context/project_deep_analysis.md
 - ai_context/project_overview.md
 - ai_context/quick_reference.md
-- archive/development-artifacts/CLEANUP_PLAN.md
-- .../development-artifacts/DEPLOY_NOW.md
-- .../development-artifacts/project_blockers.md
-- .../development-reports}/FINAL_PROJECT_STATUS.md
-- .../development-reports}/staging_e2e_results.md
+- ai_context/robust_summary.md
+- ai_context/simple_summary.md
+- ai_context/user_actions_required.md
 - .../task-management}/tasks_archive.md
 - .../task-management}/user_input_required.md
 - docs/README.md
-- .../development-phases}/CLEANUP_SUMMARY.md
-- .../development-phases}/CURRENT_STATUS.md
-- .../development-phases}/FINALIZATION_PLAN.md
-- .../development-phases}/PHASE_5_KICKOFF.md
-- .../development-phases}/PRODUCTION_NEXT_STEPS.md
-- .../development-phases}/phase4_action_plan.md
-- .../development-phases}/settings_review.md
 - docs/learn-as-you-go.md
 - tasks/README.md
 
 **Configuration:**
 - .pre-commit-config.yaml
+- ai_context/project_analysis_raw.json
+- ai_context/system_state.json
 - archive/task-management/atomic_tasks.yaml
 - .../task-management}/atomic_tasks_reordered.yaml
 - tasks/atomic_tasks.yaml
@@ -1146,5 +1125,5 @@
 - 📚 **Documentation**: Documentation updates help with project maintainability.
 
 ---
-**Report Generated**: 2025-06-05 10:07:42
+**Report Generated**: 2025-06-05 10:30:28
 *This analysis helps understand the nature and impact of recent code changes.*

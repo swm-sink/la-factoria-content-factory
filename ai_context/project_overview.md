@@ -1,6 +1,6 @@
 # Project Overview - AI Content Factory
 
-**Generated**: 2025-06-05 10:07:42
+**Generated**: 2025-06-05 10:30:27
 
 ---
 
@@ -26,9 +26,9 @@
 ### Recent Activity
 
 ```
+dc18e2f2 Optimize AI context dump: reduce from 60k lines to 11k lines (83% reduction) with smart file selection and intelligent summaries
+9c429772 Test commit: validate diff analysis generation and AI context system integration
 7fb5a0f8 Fix diff analysis: add commit count limits and error handling for robust git diff analysis
 ea38bd65 Add comprehensive diff analysis to AI context system: analyze code changes, file categories, development activities, and provide intelligent insights
 4bd9e6c2 Restore comprehensive AI insights documentation after testing system regeneration
-a07922ba Add comprehensive AI insights system documentation to ai_context README
-3e04d4ea Complete AI context system: add missing scripts and fix pre-commit integration
 ```
