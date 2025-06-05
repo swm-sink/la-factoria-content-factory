@@ -1,6 +1,6 @@
 # AI Content Factory - Complete Codebase Context
 
-**Generated**: 2025-06-05 09:12:21
+**Generated**: 2025-06-05 09:23:04
 **Project Root**: /Users/smenssink/Documents/Github personal projects/ai-content-factory
 
 ---
@@ -212,6 +212,8 @@
 │   ├── create_test_doc.py
 │   ├── create_test_doc_podcast.py
 │   ├── generate_ai_context_dump.py
+│   ├── generate_focused_context.py
+│   ├── openai_codebase_analyzer.py
 │   ├── process_input_docs.py
 │   ├── setup_drive_folders_complete.py
 │   ├── setup_monitoring.sh
@@ -494,6 +496,7 @@ repos:
         always_run: true
         stages: [pre-commit]
         verbose: true
+        require_serial: true
 
 ```
 
@@ -58413,6 +58416,196 @@ except Exception as e:
 
 ```
 
+### `scripts/generate_focused_context.py`
+
+```python
+#!/usr/bin/env python3
+"""
+Generate Focused Context Files
+
+Creates focused context files for specific debugging scenarios.
+This complements the comprehensive dump with targeted information.
+"""
+
+import os
+import sys
+from pathlib import Path
+from datetime import datetime
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+
+def generate_project_overview(project_root: Path, output_dir: Path) -> None:
+    """Generate project overview and status."""
+    logger.info("Generating project overview...")
+    
+    content = []
+    
+    # Header
+    content.append("# Project Overview - AI Content Factory")
+    content.append(f"\n**Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    content.append("\n---\n")
+    
+    # Current status
+    content.append("## 🎯 Current Project Status\n")
+    
+    # Check key files
+    key_files = [
+        "app/main.py",
+        "requirements.txt", 
+        "Dockerfile",
+        "docker-compose.yml",
+        ".env.example"
+    ]
+    
+    content.append("### Key Files Status\n")
+    for file in key_files:
+        file_path = project_root / file
+        status = "✅" if file_path.exists() else "❌"
+        content.append(f"- {status} `{file}`")
+    
+    content.append("\n")
+    
+    # Environment check
+    content.append("### Environment Configuration\n")
+    env_vars = [
+        "GCP_PROJECT_ID",
+        "OPENAI_API_KEY", 
+        "GEMINI_API_KEY",
+        "ELEVENLABS_API_KEY"
+    ]
+    
+    for var in env_vars:
+        value = os.getenv(var, "NOT_SET")
+        if value == "NOT_SET":
+            status = "❌"
+        elif value == "FAKE_PROJECT_ID":
+            status = "⚠️"
+        else:
+            status = "✅"
+            value = "SET" if len(value) > 10 else value
+        content.append(f"- {status} `{var}`: {value}")
+    
+    content.append("\n")
+    
+    # Recent activity
+    content.append("### Recent Activity\n")
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["git", "log", "--oneline", "-5"],
+            cwd=project_root,
+            capture_output=True,
+            text=True
+        )
+        if result.returncode == 0:
+            content.append("```")
+            content.append(result.stdout.strip())
+            content.append("```\n")
+        else:
+            content.append("*No git history available*\n")
+    except Exception:
+        content.append("*Unable to check git history*\n")
+    
+    # Write file
+    output_file = output_dir / "project_overview.md"
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write("\n".join(content))
+    
+    logger.info(f"Project overview saved: {output_file}")
+
+
+def generate_quick_reference(project_root: Path, output_dir: Path) -> None:
+    """Generate quick reference for API endpoints and common commands."""
+    logger.info("Generating quick reference...")
+    
+    content = []
+    
+    # Header
+    content.append("# Quick Reference - AI Content Factory")
+    content.append(f"\n**Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    content.append("\n---\n")
+    
+    # API Endpoints
+    content.append("## 🚀 API Endpoints\n")
+    
+    # Common endpoints
+    endpoints = [
+        ("GET", "/", "Root endpoint"),
+        ("GET", "/healthz", "Health check"),
+        ("POST", "/api/v1/jobs", "Create content generation job"),
+        ("GET", "/api/v1/jobs/{job_id}", "Get job status"),
+        ("GET", "/api/v1/jobs/{job_id}/result", "Get job result"),
+    ]
+    
+    content.append("### Main Endpoints\n")
+    for method, path, description in endpoints:
+        content.append(f"- **{method}** `{path}` - {description}")
+    
+    content.append("\n")
+    
+    # Common commands
+    content.append("## ⚡ Common Commands\n")
+    
+    commands = [
+        ("Start local server", "uvicorn app.main:app --reload --host 0.0.0.0 --port 8080"),
+        ("Test health endpoint", "curl http://localhost:8080/healthz"),
+        ("Run tests", "pytest"),
+        ("Format code", "black . && isort ."),
+        ("Build Docker image", "docker build -t ai-content-factory ."),
+        ("Start with Docker Compose", "docker-compose up -d"),
+        ("Update AI context", "python scripts/smart_ai_context.py"),
+    ]
+    
+    for desc, cmd in commands:
+        content.append(f"### {desc}\n```bash\n{cmd}\n```\n")
+    
+    # Debug commands
+    content.append("## 🔍 Debug Commands\n")
+    
+    debug_commands = [
+        ("Check environment", "printenv | grep -E '(GCP|API|KEY)'"),
+        ("Test Firestore connection", "gcloud firestore databases list"),
+        ("Check Docker status", "docker ps"),
+        ("View logs", "docker-compose logs -f api"),
+        ("Test job creation", "curl -X POST http://localhost:8080/api/v1/jobs -H 'Content-Type: application/json' -d '{\"syllabus_text\":\"Test topic\", \"options\":{}}'"),
+    ]
+    
+    for desc, cmd in debug_commands:
+        content.append(f"### {desc}\n```bash\n{cmd}\n```\n")
+    
+    # Write file
+    output_file = output_dir / "quick_reference.md"
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write("\n".join(content))
+    
+    logger.info(f"Quick reference saved: {output_file}")
+
+
+def generate_focused_context() -> None:
+    """Generate all focused context files."""
+    project_root = Path.cwd()
+    output_dir = project_root / "ai_context"
+    
+    # Ensure output directory exists
+    output_dir.mkdir(exist_ok=True)
+    
+    # Generate focused files
+    generate_project_overview(project_root, output_dir)
+    generate_quick_reference(project_root, output_dir)
+    
+    logger.info("Focused context generation complete")
+
+
+if __name__ == "__main__":
+    generate_focused_context() 
+```
+
 ### `scripts/test_ai_topic.py`
 
 ```python
@@ -58831,6 +59024,159 @@ def main():
 if __name__ == "__main__":
     main()
 
+```
+
+### `scripts/openai_codebase_analyzer.py`
+
+```python
+#!/usr/bin/env python3
+"""
+OpenAI Codebase Analyzer
+
+Uses OpenAI GPT-4 to analyze the complete codebase and provide insights.
+Only runs if OPENAI_API_KEY is available.
+"""
+
+import os
+import sys
+from pathlib import Path
+from datetime import datetime
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+
+def check_openai_availability() -> bool:
+    """Check if OpenAI API is available."""
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        logger.info("No OpenAI API key found - analysis skipped")
+        return False
+    
+    try:
+        import openai
+        return True
+    except ImportError:
+        logger.error("OpenAI package not installed - run: pip install openai")
+        return False
+
+
+def analyze_codebase_with_openai(codebase_file: Path, output_file: Path) -> bool:
+    """Analyze codebase using OpenAI GPT-4."""
+    if not check_openai_availability():
+        return False
+    
+    try:
+        import openai
+        
+        # Read the codebase dump
+        with open(codebase_file, "r", encoding="utf-8") as f:
+            codebase_content = f.read()
+        
+        # Truncate if too large (GPT-4 token limits)
+        max_tokens = 100000  # Conservative limit
+        if len(codebase_content) > max_tokens:
+            logger.info(f"Codebase too large ({len(codebase_content)} chars), truncating...")
+            codebase_content = codebase_content[:max_tokens] + "\n\n[TRUNCATED]"
+        
+        # Analysis prompt
+        analysis_prompt = f"""
+You are a senior software engineer analyzing the AI Content Factory project.
+
+Based on the codebase below, provide a comprehensive analysis covering:
+
+1. **Architecture Assessment**: Overall structure, design patterns, strengths/weaknesses
+2. **Critical Issues**: Bugs, security concerns, performance bottlenecks  
+3. **Code Quality**: Best practices, maintainability, documentation
+4. **Priority Tasks**: Top 5 most important items to work on next
+5. **Risk Assessment**: What could break or cause problems
+6. **Recommendations**: Specific actionable improvements
+
+Format your response in markdown with clear sections and bullet points.
+Focus on actionable insights that would help a developer working on this project.
+
+Codebase:
+{codebase_content}
+"""
+        
+        logger.info("Sending request to OpenAI GPT-4...")
+        
+        # Make API call
+        client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a senior software engineer providing code analysis."},
+                {"role": "user", "content": analysis_prompt}
+            ],
+            max_tokens=2000,
+            temperature=0.3
+        )
+        
+        analysis_result = response.choices[0].message.content
+        
+        # Create analysis report
+        report_content = f"""# AI Codebase Analysis
+**Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+**Analyzer**: OpenAI GPT-4
+**Source**: {codebase_file.name}
+
+---
+
+{analysis_result}
+
+---
+
+**Generation Info**:
+- Model: gpt-4
+- Tokens used: ~{response.usage.total_tokens if response.usage else 'unknown'}
+- Analysis date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+*This analysis is AI-generated and should be reviewed by a human developer.*
+"""
+        
+        # Write analysis
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write(report_content)
+        
+        logger.info(f"AI analysis saved: {output_file}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"OpenAI analysis failed: {e}")
+        return False
+
+
+def main():
+    """Main entry point."""
+    project_root = Path.cwd()
+    ai_context_dir = project_root / "ai_context"
+    
+    # Input and output files
+    codebase_file = ai_context_dir / "complete_codebase.md"
+    output_file = ai_context_dir / "ai_analysis.md"
+    
+    if not codebase_file.exists():
+        logger.error(f"Codebase file not found: {codebase_file}")
+        sys.exit(1)
+    
+    # Run analysis
+    success = analyze_codebase_with_openai(codebase_file, output_file)
+    
+    if success:
+        print(f"✅ AI analysis complete: {output_file}")
+    else:
+        print("⚠️ AI analysis skipped (no OpenAI API key or package)")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main() 
 ```
 
 ### `scripts/create_test_doc.py`
@@ -60109,6 +60455,6 @@ This document provides a simplified analysis of common errors found during testi
 
 ## 📊 Summary
 
-- **Files processed**: 299
-- **Total lines**: 58,324
-- **Generated**: 2025-06-05 09:12:21
+- **Files processed**: 301
+- **Total lines**: 58,658
+- **Generated**: 2025-06-05 09:23:04

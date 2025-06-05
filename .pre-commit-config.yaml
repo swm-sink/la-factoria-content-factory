@@ -60,3 +60,4 @@ repos:
         always_run: true
         stages: [pre-commit]
         verbose: true
+        require_serial: true
