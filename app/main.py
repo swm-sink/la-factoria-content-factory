@@ -60,9 +60,13 @@ app = FastAPI(
     # Authentication is handled at the router/endpoint level
 )
 
-# Import and add CorrelationIdMiddleware
+# Import and add enhanced middleware
 from app.core.middleware import CorrelationIdMiddleware
+from app.core.middleware.request_tracking import RequestTrackingMiddleware, RequestLoggingMiddleware
 
+# Add enhanced request tracking and logging middleware
+app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(RequestTrackingMiddleware)
 app.add_middleware(CorrelationIdMiddleware)
 
 # Add CORS middleware (should be one of the last, or after CorrelationIdMiddleware)
@@ -113,8 +117,17 @@ import uuid
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError as PydanticValidationErrorCore
 
-# Import custom exceptions
+# Import custom exceptions and enhanced handlers
 from app.core.exceptions import AppExceptionBase, JobErrorCode
+from app.core.exceptions.handlers import (
+    app_exception_handler as enhanced_app_exception_handler,
+    http_exception_handler as enhanced_http_exception_handler,
+    general_exception_handler as enhanced_general_exception_handler
+)
+from app.core.logging.structured_logger import get_logger, set_correlation_context
+
+# Initialize structured logger
+structured_logger = get_logger(__name__)
 
 
 def _get_trace_id(request: Request) -> str:
@@ -134,30 +147,8 @@ def _get_trace_id(request: Request) -> str:
 async def app_exception_handler(
     request: Request, exc: AppExceptionBase
 ) -> JSONResponse:
-    """Handles custom application exceptions."""
-    trace_id = _get_trace_id(request)
-    main_logger.error(
-        f"AppException: {exc.internal_log_message or exc.user_message} "
-        f"(Code: {exc.error_code.name}, Trace: {trace_id}, Path: {request.url.path})",
-        exc_info=True,  # Log stack trace for app exceptions
-        extra={
-            "error_code": exc.error_code.name,
-            "status_code": exc.status_code,
-            "details": exc.details,
-            "trace_id": trace_id,
-            "path": request.url.path,
-        },
-    )
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "error": exc.user_message,
-            "code": exc.error_code.name,
-            "details": exc.details,
-            "trace_id": trace_id,
-            # "job_status": {} # This would be populated if the error is job-specific and context is available
-        },
-    )
+    """Handles custom application exceptions with enhanced logging."""
+    return await enhanced_app_exception_handler(request, exc)
 
 
 @app.exception_handler(RequestValidationError)
@@ -232,46 +223,41 @@ async def pydantic_core_validation_exception_handler(
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """
-    Generic exception handler to catch unhandled errors and return a 500 response.
+    Generic exception handler with enhanced error handling and logging.
     This should be the last handler.
     """
-    trace_id = _get_trace_id(request)
-    main_logger.error(
-        f"Unhandled error during request to {request.url.path}: {exc} (Trace: {trace_id})",
-        exc_info=True,
-        extra={
-            "error_code": JobErrorCode.UNKNOWN_ERROR.name,
-            "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-            "trace_id": trace_id,
-            "path": request.url.path,
-        },
-    )
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={
-            "error": "An unexpected internal server error occurred.",
-            "code": JobErrorCode.UNKNOWN_ERROR.name,
-            "details": {"message": str(exc)},  # Keep generic for user
-            "trace_id": trace_id,
-        },
-    )
+    return await enhanced_general_exception_handler(request, exc)
 
 
 @app.on_event("startup")
 async def startup_event() -> None:
     """
-    Actions to perform on application startup.
+    Actions to perform on application startup with enhanced logging.
     """
-    main_logger.info(f"Application startup: {settings.project_name} v{app.version}")
-    main_logger.info(f"Log level set to: {settings.log_level}")
+    structured_logger.log_event(
+        structured_logger.LogLevel.INFO,
+        structured_logger.EventType.PERFORMANCE,
+        f"Application startup: {settings.project_name} v{app.version}",
+        app_name=settings.project_name,
+        app_version=app.version,
+        log_level=settings.log_level,
+        prometheus_port=settings.prometheus_port,
+        environment=os.getenv("ENVIRONMENT", "development")
+    )
 
 
 @app.on_event("shutdown")
 async def shutdown_event() -> None:
     """
-    Actions to perform on application shutdown.
+    Actions to perform on application shutdown with enhanced logging.
     """
-    main_logger.info(f"Application shutdown: {settings.project_name}")
+    structured_logger.log_event(
+        structured_logger.LogLevel.INFO,
+        structured_logger.EventType.PERFORMANCE,
+        f"Application shutdown: {settings.project_name}",
+        app_name=settings.project_name,
+        app_version=app.version
+    )
 
 
 if __name__ == "__main__":
