@@ -52,3 +52,50 @@ This is Tikal, a content generation service built with FastAPI (Python backend) 
 - Implement proper logging and monitoring
 - Follow security best practices for API development
 - Use environment variables for configuration
+
+## Prompt Engineering System
+
+### Overview
+Tikal uses a modular prompt engineering system located in `.claude/` to optimize AI content generation. This system provides:
+- Optimized prompt templates for all 8 content types
+- Context-aware prompt generation
+- Quality validation frameworks
+- Educational standards compliance
+
+### Tikal-Specific Commands
+Located in `.claude/commands/tikal/`:
+- `/tikal-optimize-prompts` - Analyze and optimize existing prompts
+- `/tikal-validate-quality` - Validate content quality against educational standards
+- `/tikal-generate` - Generate content using optimized templates
+- `/tikal-analyze-prompts` - Analyze prompts for optimization opportunities
+
+### Prompt Templates
+Optimized templates in `.claude/templates/tikal/`:
+- `study-guide-optimized.md` - Enhanced study guide generation
+- `flashcards-optimized.md` - Cognitive science-based flashcard creation
+- Additional templates for all content types
+
+### Context System
+- **Project Context**: `.claude/context/tikal-project.md` - Comprehensive project understanding
+- **Educational Standards**: `.claude/components/tikal/educational-standards.md`
+- **Quality Assessment**: `.claude/components/tikal/quality-assessment.md`
+
+### Prompt Optimization Principles
+1. **Token Efficiency**: 20-40% reduction through consolidation and clarity
+2. **Educational Focus**: Explicit learning objectives and audience targeting
+3. **Quality Requirements**: Specific, measurable quality criteria
+4. **Consistency**: Standardized structure across all content types
+5. **Validation**: Built-in quality checks and educational standards
+
+### Using the Prompt System
+1. For prompt analysis: `/tikal-analyze-prompts app/core/prompts/v1/`
+2. For content validation: `/tikal-validate-quality [content-type] [audience]`
+3. For optimized generation: `/tikal-generate [content-type] [topic] [audience]`
+4. For prompt optimization: `/tikal-optimize-prompts [content-type]`
+
+### Best Practices
+- Always specify audience level (elementary, middle-school, high-school, university)
+- Include learning objectives for educational content
+- Use quality thresholds (minimum 0.70 overall score)
+- Validate content against educational standards
+- Apply cognitive science principles for effective learning
