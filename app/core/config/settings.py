@@ -223,6 +223,11 @@ class Settings(BaseSettings):
     )
     max_retries: int = Field(3, description="Maximum retries for API calls")
     retry_delay: int = Field(2, description="Delay between retries in seconds")
+    llm_timeout_seconds: int = Field(
+        120, 
+        description="Timeout for LLM API calls in seconds", 
+        env="LLM_TIMEOUT_SECONDS"
+    )
 
     # Monitoring & Logging
     enable_cost_tracking: bool = Field(

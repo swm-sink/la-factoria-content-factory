@@ -5,6 +5,7 @@ Simplified LLM Client - Clean interface for Vertex AI interactions
 import json
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 from typing import Any, Dict, Optional, Tuple, Type
 
 import vertexai
@@ -60,6 +61,12 @@ class SimpleLLMClient:
         self.logger = logging.getLogger(__name__)
         self.prompt_service = PromptService()
         self.model = None
+        
+        # Set timeout with default of 120 seconds (2 minutes)
+        self.timeout_seconds = getattr(settings, 'llm_timeout_seconds', 120)
+        
+        # Thread pool for timeout handling
+        self.executor = ThreadPoolExecutor(max_workers=1)
 
         # Initialize Vertex AI
         self._initialize_vertex_ai()
@@ -148,7 +155,26 @@ class SimpleLLMClient:
 
                 # Make API call
                 start_time = time.time()
-                response = self.model.generate_content(prompt)
+                
+                # Call LLM with timeout handling
+                try:
+                    future = self.executor.submit(self.model.generate_content, prompt)
+                    response = future.result(timeout=self.timeout_seconds)
+                except FutureTimeoutError:
+                    self.logger.error(
+                        f"LLM call timed out after {self.timeout_seconds}s for {content_type} "
+                        f"(attempt {attempt + 1}/{max_retries + 1})"
+                    )
+                    
+                    if attempt < max_retries:
+                        self.logger.info(f"Retrying after timeout...")
+                        time.sleep(2 ** attempt)  # Exponential backoff
+                        continue
+                    else:
+                        raise ExternalServiceError(
+                            f"LLM call timed out after {self.timeout_seconds}s for {content_type}"
+                        )
+                
                 duration = time.time() - start_time
 
                 # Extract token usage

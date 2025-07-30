@@ -6,6 +6,7 @@ Centralized service for AI model calls, prompt refinement, and cost tracking.
 import json
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 from typing import Dict, Optional, Tuple, Type
 
 import vertexai
@@ -46,6 +47,15 @@ except KeyError:
         ["refinement_type"],
     )
 
+try:
+    LLM_TIMEOUTS = REGISTRY._names_to_collectors["llm_timeouts_total"]
+except KeyError:
+    LLM_TIMEOUTS = Counter(
+        "llm_timeouts_total",
+        "Total number of LLM call timeouts",
+        ["content_type"],
+    )
+
 
 class LLMClientService:
     """Service for handling all LLM interactions with Vertex AI Gemini."""
@@ -58,6 +68,12 @@ class LLMClientService:
         self.logger = logging.getLogger(__name__)
         self.prompt_optimizer = prompt_optimizer or PromptOptimizer()
         self.model = None
+        
+        # Set timeout with default of 120 seconds (2 minutes)
+        self.timeout_seconds = getattr(settings, 'llm_timeout_seconds', 120)
+        
+        # Thread pool for timeout handling
+        self.executor = ThreadPoolExecutor(max_workers=1)
 
         # Initialize Vertex AI with error handling
         self._initialize_vertex_ai()
@@ -326,7 +342,26 @@ class LLMClientService:
                     f"Sending prompt to LLM for {content_type_name} (attempt {attempt + 1}/{max_retries + 1})..."
                 )
 
-                llm_response = self.model.generate_content(current_prompt)
+                # Call LLM with timeout handling
+                try:
+                    future = self.executor.submit(self.model.generate_content, current_prompt)
+                    llm_response = future.result(timeout=self.timeout_seconds)
+                except FutureTimeoutError:
+                    self.logger.error(
+                        f"LLM call timed out after {self.timeout_seconds}s for {content_type_name} "
+                        f"(attempt {attempt + 1}/{max_retries + 1})"
+                    )
+                    LLM_TIMEOUTS.labels(content_type=content_type_name).inc()
+                    
+                    if attempt < max_retries:
+                        self.logger.info(f"Retrying after timeout...")
+                        time.sleep(self.settings.retry_delay)
+                        continue
+                    else:
+                        LLM_CALLS_TOTAL.labels(
+                            content_type=content_type_name, status="timeout"
+                        ).inc()
+                        return None, cumulative_tokens
 
                 # Extract token usage
                 token_usage = {
