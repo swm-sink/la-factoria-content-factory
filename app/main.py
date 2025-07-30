@@ -67,6 +67,7 @@ from app.middleware.usage_tracking import UsageTrackingMiddleware
 from app.middleware.cost_control import CostControlMiddleware
 from app.middleware.rate_limiting import RateLimitingMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
+from app.middleware.request_validation import RequestValidationMiddleware
 
 # Add enhanced request tracking and logging middleware
 app.add_middleware(RequestLoggingMiddleware)
@@ -75,6 +76,7 @@ app.add_middleware(CorrelationIdMiddleware)
 app.add_middleware(UsageTrackingMiddleware)
 app.add_middleware(CostControlMiddleware)
 app.add_middleware(RateLimitingMiddleware)
+app.add_middleware(RequestValidationMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
 # Add CORS middleware (should be one of the last, or after CorrelationIdMiddleware)
