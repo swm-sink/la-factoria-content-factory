@@ -1,35 +1,43 @@
+# Core Framework
 fastapi==0.115.0
 uvicorn==0.27.1
 pydantic[email]==2.8.2
 pydantic-settings==2.2.1
 python-dotenv==1.0.1
-google-cloud-aiplatform==1.71.1
-vertexai==1.71.1
-openai==1.3.7
+
+# Database
+sqlalchemy==2.0.23
+asyncpg==0.29.0
+alembic==1.13.1
+
+# AI Services
+google-generativeai==0.3.2  # Gemini API
 elevenlabs==0.2.27
-google-cloud-firestore==2.16.1
-google-cloud-tasks==2.13.2
-google-cloud-secret-manager==2.16.2
-google-cloud-storage==2.14.0
-google-cloud-resource-manager==1.14.2
+
+# Authentication
 passlib[bcrypt]==1.7.4
 python-jose[cryptography]>=3.4.0
+
+# Rate Limiting
+slowapi==0.1.9
+
+# Async & Networking
 httpx==0.26.0
 redis==6.2.0
-PyYAML==6.0.1
-watchdog==4.0.0
-textstat==0.7.3
-language_tool_python==2.7.1
-python-json-logger==2.0.7
-hiredis==2.3.2
-prometheus_client
-python-multipart
-tenacity
+celery==5.3.4
 
-# Core test dependencies for local/dev use
-pytest
-pytest-mock
-pytest-cov
-pytest-asyncio
-pytest-xdist
-pydantic-settings==2.9.1
+# Storage
+boto3==1.34.34  # S3 compatible storage
+
+# Content Processing
+textstat==0.7.3
+python-json-logger==2.0.7
+
+# Utils
+tenacity==8.2.3
+python-multipart==0.0.9
+
+# Development
+pytest==8.0.0
+pytest-asyncio==0.23.3
+pytest-cov==4.1.0
