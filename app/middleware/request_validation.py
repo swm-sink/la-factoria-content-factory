@@ -13,6 +13,7 @@ from starlette.status import HTTP_400_BAD_REQUEST, HTTP_413_REQUEST_ENTITY_TOO_L
 
 from app.core.config.settings import get_settings
 from app.core.errors import create_error_response
+from app.services.security_event_logger import log_malicious_request, log_suspicious_activity
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +107,14 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             
             # Validate request size
             if not self._validate_request_size(request):
+                log_suspicious_activity(
+                    source_ip=request.client.host if request.client else "unknown",
+                    activity_type="oversized_request",
+                    confidence_score=0.7,
+                    endpoint=request.url.path,
+                    method=request.method,
+                    content_length=request.headers.get("content-length")
+                )
                 return self._create_error_response(
                     "REQUEST_TOO_LARGE",
                     "Request body too large",
@@ -114,6 +123,13 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             
             # Validate user agent
             if not self._validate_user_agent(request):
+                log_malicious_request(
+                    source_ip=request.client.host if request.client else "unknown",
+                    endpoint=request.url.path,
+                    method=request.method,
+                    attack_type="malicious_user_agent",
+                    user_agent=request.headers.get("user-agent", "")[:100]
+                )
                 return self._create_error_response(
                     "MALICIOUS_USER_AGENT",
                     "Suspicious user agent detected",
@@ -124,6 +140,22 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             if request.method in ["POST", "PUT", "PATCH"]:
                 is_valid, error_message = await self._validate_request_body(request)
                 if not is_valid:
+                    # Get a sample of the body for logging (limit to avoid sensitive data)
+                    try:
+                        body = await request.body()
+                        body_sample = body.decode('utf-8', errors='ignore')[:200] if body else ""
+                    except:
+                        body_sample = "Unable to decode body"
+                    
+                    log_malicious_request(
+                        source_ip=request.client.host if request.client else "unknown",
+                        endpoint=request.url.path,
+                        method=request.method,
+                        attack_type="malicious_content",
+                        payload_sample=body_sample,
+                        error_details=error_message
+                    )
+                    
                     return self._create_error_response(
                         "MALICIOUS_CONTENT",
                         error_message,
@@ -132,6 +164,14 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             
             # Validate query parameters
             if not self._validate_query_params(request):
+                query_string = str(request.query_params)[:200]  # Limit query string sample
+                log_malicious_request(
+                    source_ip=request.client.host if request.client else "unknown",
+                    endpoint=request.url.path,
+                    method=request.method,
+                    attack_type="malicious_query_params",
+                    payload_sample=query_string
+                )
                 return self._create_error_response(
                     "MALICIOUS_QUERY",
                     "Malicious content detected in query parameters",
