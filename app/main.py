@@ -68,6 +68,7 @@ from app.middleware.cost_control import CostControlMiddleware
 from app.middleware.rate_limiting import RateLimitingMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.middleware.request_validation import RequestValidationMiddleware
+from app.middleware.cache_headers import CacheHeadersMiddleware, CacheInvalidationMiddleware
 
 # Add enhanced request tracking and logging middleware
 app.add_middleware(RequestLoggingMiddleware)
@@ -78,6 +79,9 @@ app.add_middleware(CostControlMiddleware)
 app.add_middleware(RateLimitingMiddleware)
 app.add_middleware(RequestValidationMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+
+# Add cache middleware - create instance first for invalidation middleware
+app.add_middleware(CacheHeadersMiddleware)
 
 # Add CORS middleware (should be one of the last, or after CorrelationIdMiddleware)
 app.add_middleware(

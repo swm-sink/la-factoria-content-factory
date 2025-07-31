@@ -8,7 +8,11 @@ from app.models.pydantic.content import ContentRequest, GeneratedContent
 # Using the service router for unified/legacy routing
 from app.services.service_router import get_service_router
 
+# Import cache invalidation handler
+from app.middleware.cache_headers import CacheInvalidationHandler
+
 router = APIRouter()
+cache_invalidator = CacheInvalidationHandler()
 
 
 @router.post(
@@ -44,4 +48,7 @@ async def generate_content(
             },
         )
 
+    # Invalidate content cache after successful generation
+    cache_invalidator.invalidate("/api/v1/content*")
+    
     return generated_content
