@@ -18,36 +18,13 @@ from app.middleware.query_monitor import monitor_query
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-# Global client instance, initialized once
-_db_client: Optional[AsyncClient] = None
-
-
-def get_firestore_client() -> AsyncClient:
-    """Initializes and returns the Firestore AsyncClient.
-
-    Ensures that the client is initialized only once.
-    For local development against an emulator, set the FIRESTORE_EMULATOR_HOST environment variable.
-    Example: FIRESTORE_EMULATOR_HOST=localhost:8686
-    """
-    global _db_client
-    if _db_client is None:
-        try:
-            project_id = settings.gcp_project_id
-            if not project_id and "FIRESTORE_EMULATOR_HOST" not in os.environ:
-                logger.warning(
-                    "GCP_PROJECT_ID is not set and FIRESTORE_EMULATOR_HOST is not set. Firestore client might not connect to the correct project."
-                )
-
-            _db_client = AsyncClient(project=project_id if project_id else None)
-            logger.info(
-                f"Firestore AsyncClient initialized for project: {project_id or 'default (emulator?)'}"
-            )
-        except Exception as e:
-            logger.error(
-                f"Failed to initialize Firestore AsyncClient: {e}", exc_info=True
-            )
-            raise  # Re-raise to prevent app startup if DB connection is critical
-    return _db_client
+# Import pooled functions from firestore_pool
+from app.utils.firestore_pool import (
+    get_firestore_pool,
+    get_document_from_firestore as pooled_get_document,
+    create_or_update_document_in_firestore as pooled_create_or_update,
+    update_document_field_in_firestore as pooled_update_field,
+)
 
 
 @monitor_query('firestore')
@@ -55,21 +32,20 @@ async def get_document_from_firestore(
     document_id: str, collection_name: str = "jobs"
 ) -> Optional[Dict[str, Any]]:
     """Fetches a document from Firestore by its ID from the given collection."""
-    client = get_firestore_client()
     logger.debug(
         f"Fetching document '{document_id}' from Firestore collection '{collection_name}'."
     )
-    doc_ref = client.collection(collection_name).document(document_id)
-    doc = await doc_ref.get()
-    if doc.exists:
+    # Use pooled function
+    result = await pooled_get_document(document_id, collection_name)
+    if result:
         logger.info(
             f"Document '{document_id}' found in Firestore collection '{collection_name}'."
         )
-        return doc.to_dict()
-    logger.warning(
-        f"Document '{document_id}' not found in Firestore collection '{collection_name}'."
-    )
-    return None
+    else:
+        logger.warning(
+            f"Document '{document_id}' not found in Firestore collection '{collection_name}'."
+        )
+    return result
 
 
 @monitor_query('firestore')
@@ -77,11 +53,11 @@ async def create_or_update_document_in_firestore(
     document_id: str, data: Dict[str, Any], collection_name: str = "jobs"
 ) -> None:
     """Creates or updates a document in Firestore in the given collection."""
-    client = get_firestore_client()
     logger.info(
         f"Creating/Updating document '{document_id}' in Firestore collection '{collection_name}' with data: {data}"
     )
-    await client.collection(collection_name).document(document_id).set(data, merge=True)
+    # Use pooled function
+    await pooled_create_or_update(document_id, data, collection_name)
     logger.info(
         f"Document '{document_id}' created/updated in Firestore collection '{collection_name}'."
     )
@@ -95,12 +71,11 @@ async def update_document_field_in_firestore(
     Example: field_path = "status", value = "COMPLETED"
              field_path = "results.final_url", value = "http://..."
     """
-    client = get_firestore_client()
     logger.info(
         f"Updating document '{document_id}' field '{field_path}' to '{value}' in Firestore collection '{collection_name}'."
     )
-    doc_ref = client.collection(collection_name).document(document_id)
-    await doc_ref.update({field_path: value})
+    # Use pooled function
+    await pooled_update_field(document_id, field_path, value, collection_name)
     logger.info(
         f"Document '{document_id}' field '{field_path}' updated in Firestore collection '{collection_name}'."
     )
@@ -130,26 +105,19 @@ async def query_jobs_by_status(
     Returns:
         List of job documents
     """
-    client = get_firestore_client()
-    query = client.collection(collection_name)
-
-    if status:
-        query = query.where("status", "==", status)
-
-    # Add ordering for consistent pagination
-    query = query.order_by("created_at", direction="DESCENDING")
-
-    # Apply pagination
-    query = query.offset(offset).limit(limit)
-
-    # Execute query
-    docs = await query.get()
-
-    results = []
-    for doc in docs:
-        data = doc.to_dict()
-        data["id"] = doc.id  # Include document ID
-        results.append(data)
+    pool = await get_firestore_pool()
+    
+    # Build filters
+    filters = [("status", "==", status)] if status else None
+    
+    # Use pooled query function
+    results = await pool.query_documents(
+        collection=collection_name,
+        filters=filters,
+        order_by="created_at",
+        limit=limit,
+        offset=offset
+    )
 
     logger.info(
         f"Found {len(results)} jobs with status={status}, offset={offset}, limit={limit}"
@@ -170,20 +138,18 @@ async def count_jobs_by_status(
     Returns:
         Count of matching documents
     """
-    client = get_firestore_client()
-    query = client.collection(collection_name)
-
-    if status:
-        query = query.where("status", "==", status)
-
-    # For counting, we can use a more efficient approach
-    # by selecting only the document ID
-    query = query.select([])
-
-    count = 0
-    async for _ in query.stream():
-        count += 1
-
+    pool = await get_firestore_pool()
+    
+    # Build filters
+    filters = [("status", "==", status)] if status else None
+    
+    # Use pooled query function without limit to get all
+    results = await pool.query_documents(
+        collection=collection_name,
+        filters=filters
+    )
+    
+    count = len(results)
     logger.info(f"Counted {count} jobs with status={status}")
     return count
 
@@ -200,15 +166,16 @@ async def get_all_job_statuses(collection_name: str = "jobs") -> Dict[str, int]:
     Returns:
         Dictionary mapping status to count
     """
-    client = get_firestore_client()
-
-    # Get all documents but only select status field for efficiency
-    query = client.collection(collection_name).select(["status"])
-
+    pool = await get_firestore_pool()
+    
+    # Get all documents - we'll need to fetch them to count by status
+    all_jobs = await pool.query_documents(
+        collection=collection_name
+    )
+    
     status_counts = {}
-    async for doc in query.stream():
-        data = doc.to_dict()
-        status = data.get("status", "UNKNOWN")
+    for job in all_jobs:
+        status = job.get("status", "UNKNOWN")
         status_counts[status] = status_counts.get(status, 0) + 1
 
     logger.info(f"Job status counts: {status_counts}")
@@ -228,18 +195,17 @@ async def delete_job_from_firestore(
     Returns:
         True if document was deleted, False if not found
     """
-    client = get_firestore_client()
-
+    pool = await get_firestore_pool()
+    
     # Check if document exists first
-    doc_ref = client.collection(collection_name).document(document_id)
-    doc = await doc_ref.get()
-
-    if not doc.exists:
+    doc = await pool.get_document(collection_name, document_id)
+    
+    if not doc:
         logger.warning(f"Document '{document_id}' not found for deletion")
         return False
 
     # Delete the document
-    await doc_ref.delete()
+    await pool.delete_document(collection_name, document_id)
     logger.info(f"Document '{document_id}' deleted from collection '{collection_name}'")
     return True
 
@@ -255,23 +221,21 @@ async def batch_update_documents(
         updates: List of updates, each containing 'document_id' and 'fields' to update
         collection_name: Firestore collection name
     """
-    client = get_firestore_client()
+    pool = await get_firestore_pool()
     
-    # Process in batches of 500 (Firestore limit)
-    batch_size = 500
-    for i in range(0, len(updates), batch_size):
-        batch = client.batch()
-        batch_updates = updates[i:i + batch_size]
-        
-        for update in batch_updates:
-            doc_id = update['document_id']
-            fields = update['fields']
-            doc_ref = client.collection(collection_name).document(doc_id)
-            batch.update(doc_ref, fields)
-            
-        # Commit the batch
-        await batch.commit()
-        logger.info(f"Batch updated {len(batch_updates)} documents in {collection_name}")
+    # Convert to batch write operations format
+    operations = []
+    for update in updates:
+        operations.append({
+            "type": "update",
+            "collection": collection_name,
+            "document_id": update['document_id'],
+            "data": update['fields']
+        })
+    
+    # Use pooled batch write
+    await pool.batch_write(operations)
+    logger.info(f"Batch updated {len(updates)} documents in {collection_name}")
 
 
 @monitor_query('firestore')
@@ -288,25 +252,10 @@ async def batch_get_documents(
     Returns:
         Dictionary mapping document ID to document data (None if not found)
     """
-    client = get_firestore_client()
-    results = {}
+    pool = await get_firestore_pool()
     
-    # Get all documents in parallel
-    tasks = []
-    for doc_id in document_ids:
-        doc_ref = client.collection(collection_name).document(doc_id)
-        tasks.append(doc_ref.get())
-        
-    docs = await asyncio.gather(*tasks, return_exceptions=True)
+    # Use pooled batch get
+    results = await pool.batch_get_documents(collection_name, document_ids)
     
-    for doc_id, doc in zip(document_ids, docs):
-        if isinstance(doc, Exception):
-            logger.error(f"Failed to get document {doc_id}: {doc}")
-            results[doc_id] = None
-        elif doc.exists:
-            results[doc_id] = doc.to_dict()
-        else:
-            results[doc_id] = None
-            
     logger.info(f"Batch fetched {len(document_ids)} documents from {collection_name}")
     return results

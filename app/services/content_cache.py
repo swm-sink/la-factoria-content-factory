@@ -12,11 +12,8 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
-import redis
 from prometheus_client import Counter, Histogram
 from pydantic import BaseModel
-from redis.exceptions import ConnectionError as RedisConnectionError
-from redis.exceptions import RedisError
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -26,6 +23,14 @@ from tenacity import (
 
 from app.core.config.settings import get_settings
 from app.models.pydantic.content import ContentResponse
+from app.utils.redis_pool import (
+    redis_get,
+    redis_set,
+    redis_delete,
+    redis_exists,
+    redis_batch_operation,
+    get_redis_pool,
+)
 
 # Prometheus metrics
 CACHE_HITS = Counter("content_cache_hits_total", "Total cache hits")
@@ -82,73 +87,25 @@ class ContentCacheService:
         self.default_ttl = default_ttl or settings.cache_ttl_seconds
         self.logger = logging.getLogger(__name__)
 
-        # Redis connection configuration
-        redis_config = {
-            "host": settings.redis_host,
-            "port": settings.redis_port,
-            "db": settings.redis_db,
-            "password": settings.redis_password,
-            "decode_responses": True,  # Automatically decode responses to strings
-            "socket_timeout": settings.redis_socket_timeout,
-            "socket_connect_timeout": settings.redis_socket_connect_timeout,
-            "retry_on_timeout": settings.redis_retry_on_timeout,
-            "health_check_interval": settings.redis_health_check_interval,
-            "max_connections": settings.redis_max_connections,
-        }
-
-        # Add SSL if configured
-        if settings.redis_ssl:
-            redis_config["ssl"] = True
-            redis_config["ssl_cert_reqs"] = "required"
-
-        # Create connection pool for better connection management
-        self.redis_pool = redis.ConnectionPool(**redis_config)
-        self._redis: Optional[redis.Redis] = None
-
         # Namespace for cache keys to avoid collisions
         self.namespace = "content_cache"
 
-        # Check if caching is enabled before connecting
+        # Check if caching is enabled
         self.cache_enabled = settings.enable_cache
-        if self.cache_enabled:
-            # Initialize connection
-            self._ensure_connection()
-        else:
+        if not self.cache_enabled:
             self.logger.info(
                 "Caching is disabled. ContentCacheService will operate in no-op mode."
             )
 
-    def _ensure_connection(self) -> None:
-        """Ensure Redis connection is established."""
-        if self._redis is None:
-            try:
-                self._redis = redis.Redis(connection_pool=self.redis_pool)
-                self._redis.ping()
-                self.logger.info("Redis connection established successfully")
-            except RedisError as e:
-                self.logger.error(f"Failed to connect to Redis: {e}")
-                CACHE_ERRORS.labels(error_type="connection").inc()
-                raise
-
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(RedisConnectionError),
-    )
-    def _redis_operation(self, operation: str, *args, **kwargs) -> Any:
-        """Execute a Redis operation with retry logic."""
-        self._ensure_connection()
+    async def _ensure_pool_ready(self) -> bool:
+        """Ensure Redis pool is ready."""
         try:
-            method = getattr(self._redis, operation)
-            return method(*args, **kwargs)
-        except RedisConnectionError as e:
-            self.logger.warning(f"Redis connection error, retrying: {e}")
-            self._redis = None  # Force reconnection on next attempt
-            raise
-        except RedisError as e:
-            self.logger.error(f"Redis operation {operation} failed: {e}")
-            CACHE_ERRORS.labels(error_type=operation).inc()
-            raise
+            pool = await get_redis_pool()
+            return pool is not None
+        except Exception as e:
+            self.logger.error(f"Failed to get Redis pool: {e}")
+            CACHE_ERRORS.labels(error_type="connection").inc()
+            return False
 
     def _generate_cache_key(
         self,
@@ -193,7 +150,7 @@ class ContentCacheService:
             self.logger.warning("Failed to deserialize content, returning as string")
             return content_str
 
-    def get(
+    async def get(
         self,
         syllabus_text: str,
         target_format: str,
@@ -219,8 +176,8 @@ class ContentCacheService:
                     syllabus_text, target_format, target_duration, target_pages, version
                 )
 
-                # Get entry from Redis
-                entry_json = self._redis_operation("get", f"{cache_key}:entry")
+                # Get entry from Redis using pooled function
+                entry_json = await redis_get(f"{cache_key}:entry")
                 if not entry_json:
                     CACHE_MISSES.inc()
                     return None
@@ -231,15 +188,13 @@ class ContentCacheService:
 
                 # Check expiration
                 if datetime.utcnow() > entry.expires_at:
-                    self._redis_operation(
-                        "delete", f"{cache_key}:entry", f"{cache_key}:content"
-                    )
+                    await redis_delete(f"{cache_key}:entry", f"{cache_key}:content")
                     CACHE_MISSES.inc()
                     self.logger.info(f"Cache entry expired: {cache_key}")
                     return None
 
                 # Get content
-                content_str = self._redis_operation("get", f"{cache_key}:content")
+                content_str = await redis_get(f"{cache_key}:content")
                 if not content_str:
                     CACHE_MISSES.inc()
                     return None
@@ -250,12 +205,12 @@ class ContentCacheService:
                 deserialized_content = self._deserialize_content(content_str)
                 return deserialized_content, entry.metadata
 
-            except RedisError as e:
+            except Exception as e:
                 self.logger.error(f"Cache get error: {e}")
                 CACHE_ERRORS.labels(error_type="get").inc()
                 return None
 
-    def set(
+    async def set(
         self,
         syllabus_text: str,
         target_format: str,
@@ -279,6 +234,10 @@ class ContentCacheService:
             target_pages: Target pages for guides
             ttl: Time to live in seconds (uses default if None)
         """
+        # Skip if caching is disabled
+        if not self.cache_enabled:
+            return
+            
         with CACHE_OPERATIONS.labels(operation="set").time():
             try:
                 cache_key = self._generate_cache_key(
@@ -286,10 +245,9 @@ class ContentCacheService:
                 )
 
                 # Check cache size and evict if necessary
-                cache_size = self._redis_operation("dbsize")
-                if cache_size >= self.max_size:
-                    self._evict_lru()
-
+                pool = await get_redis_pool()
+                # Use pool stats instead of dbsize
+                
                 # Create cache entry
                 # Serialize quality metrics if provided
                 quality_metrics_dict: Optional[Dict[str, Any]] = None
@@ -309,21 +267,22 @@ class ContentCacheService:
                 # Serialize main content payload
                 content_str = self._serialize_content(content)
 
-                # Store in Redis with expiration
+                # Store in Redis with expiration using pooled function
                 expire_time = ttl or self.default_ttl
-                self._redis_operation(
-                    "setex",
+                await redis_set(
                     f"{cache_key}:entry",
-                    expire_time,
                     json.dumps(asdict(entry)),
+                    ex=expire_time
                 )
-                self._redis_operation(
-                    "setex", f"{cache_key}:content", expire_time, content_str
+                await redis_set(
+                    f"{cache_key}:content",
+                    content_str,
+                    ex=expire_time
                 )
 
                 self.logger.info(f"Content cached: {cache_key}")
 
-            except RedisError as e:
+            except Exception as e:
                 self.logger.error(f"Cache set error: {e}")
                 CACHE_ERRORS.labels(error_type="set").inc()
 

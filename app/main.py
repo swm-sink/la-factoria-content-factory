@@ -69,6 +69,7 @@ from app.middleware.rate_limiting import RateLimitingMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.middleware.request_validation import RequestValidationMiddleware
 from app.middleware.cache_headers import CacheHeadersMiddleware, CacheInvalidationMiddleware
+from app.middleware.connection_monitor import ConnectionMonitoringMiddleware
 
 # Add enhanced request tracking and logging middleware
 app.add_middleware(RequestLoggingMiddleware)
@@ -82,6 +83,9 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 # Add cache middleware - create instance first for invalidation middleware
 app.add_middleware(CacheHeadersMiddleware)
+
+# Add connection monitoring middleware
+app.add_middleware(ConnectionMonitoringMiddleware)
 
 # Add CORS middleware (should be one of the last, or after CorrelationIdMiddleware)
 app.add_middleware(
@@ -248,6 +252,44 @@ async def startup_event() -> None:
     """
     Actions to perform on application startup with enhanced logging.
     """
+    # Initialize connection pools
+    from app.utils.redis_pool import get_redis_pool
+    from app.utils.firestore_pool import get_firestore_pool
+    
+    try:
+        # Initialize Redis pool
+        redis_pool = await get_redis_pool()
+        structured_logger.log_event(
+            structured_logger.LogLevel.INFO,
+            structured_logger.EventType.PERFORMANCE,
+            "Redis connection pool initialized",
+            pool_stats=redis_pool.get_stats()
+        )
+    except Exception as e:
+        structured_logger.log_event(
+            structured_logger.LogLevel.ERROR,
+            structured_logger.EventType.ERROR,
+            f"Failed to initialize Redis pool: {e}",
+            error=str(e)
+        )
+    
+    try:
+        # Initialize Firestore pool
+        firestore_pool = await get_firestore_pool()
+        structured_logger.log_event(
+            structured_logger.LogLevel.INFO,
+            structured_logger.EventType.PERFORMANCE,
+            "Firestore connection pool initialized",
+            pool_stats=firestore_pool.get_stats()
+        )
+    except Exception as e:
+        structured_logger.log_event(
+            structured_logger.LogLevel.ERROR,
+            structured_logger.EventType.ERROR,
+            f"Failed to initialize Firestore pool: {e}",
+            error=str(e)
+        )
+    
     structured_logger.log_event(
         structured_logger.LogLevel.INFO,
         structured_logger.EventType.PERFORMANCE,
@@ -265,6 +307,40 @@ async def shutdown_event() -> None:
     """
     Actions to perform on application shutdown with enhanced logging.
     """
+    # Close connection pools
+    from app.utils.redis_pool import close_redis_pool
+    from app.utils.firestore_pool import close_firestore_pool
+    
+    try:
+        await close_redis_pool()
+        structured_logger.log_event(
+            structured_logger.LogLevel.INFO,
+            structured_logger.EventType.PERFORMANCE,
+            "Redis connection pool closed"
+        )
+    except Exception as e:
+        structured_logger.log_event(
+            structured_logger.LogLevel.ERROR,
+            structured_logger.EventType.ERROR,
+            f"Error closing Redis pool: {e}",
+            error=str(e)
+        )
+    
+    try:
+        await close_firestore_pool()
+        structured_logger.log_event(
+            structured_logger.LogLevel.INFO,
+            structured_logger.EventType.PERFORMANCE,
+            "Firestore connection pool closed"
+        )
+    except Exception as e:
+        structured_logger.log_event(
+            structured_logger.LogLevel.ERROR,
+            structured_logger.EventType.ERROR,
+            f"Error closing Firestore pool: {e}",
+            error=str(e)
+        )
+    
     structured_logger.log_event(
         structured_logger.LogLevel.INFO,
         structured_logger.EventType.PERFORMANCE,

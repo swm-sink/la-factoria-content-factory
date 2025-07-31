@@ -19,23 +19,17 @@ logger = logging.getLogger(__name__)
 # Get settings
 settings = get_settings()
 
-# Initialize Redis client for distributed rate limiting
-try:
-    import redis
-    redis_client = redis.Redis(
-        host=settings.redis_host,
-        port=settings.redis_port,
-        db=settings.redis_db,
-        password=settings.redis_password,
-        ssl=settings.redis_ssl,
-        decode_responses=True,
-    )
-    # Test connection
-    redis_client.ping()
-    logger.info("Redis connected for rate limiting")
-except Exception as e:
-    logger.warning(f"Redis not available for rate limiting: {e}. Using in-memory storage.")
-    redis_client = None
+# Import pooled Redis functions
+from app.utils.redis_pool import (
+    redis_get,
+    redis_set,
+    redis_incr,
+    redis_expire,
+    get_redis_pool
+)
+
+# Flag to track Redis availability
+redis_available = True
 
 
 def get_rate_limit_key(request: Request) -> str:
@@ -60,7 +54,7 @@ def get_rate_limit_key(request: Request) -> str:
 # Create limiter instance
 limiter = Limiter(
     key_func=get_rate_limit_key,
-    storage_uri=f"redis://{settings.redis_host}:{settings.redis_port}" if redis_client else "memory://",
+    storage_uri=f"redis://{settings.redis_host}:{settings.redis_port}" if redis_available else "memory://",
     default_limits=["200 per day", "50 per hour"],
 )
 
@@ -185,9 +179,9 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
         # Apply cost multiplier for expensive operations
         cost = self._get_request_cost(request)
         
-        if redis_client:
+        if redis_available:
             # Use Redis for distributed rate limiting
-            return self._check_redis_rate_limit(key, count, period_seconds, cost)
+            return await self._check_redis_rate_limit(key, count, period_seconds, cost)
         else:
             # Fall back to in-memory (not recommended for production)
             return self._check_memory_rate_limit(key, count, period_seconds, cost)
@@ -206,7 +200,7 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
                     pass
         return 1
     
-    def _check_redis_rate_limit(
+    async def _check_redis_rate_limit(
         self, key: str, limit: int, period: int, cost: int = 1
     ) -> bool:
         """Check rate limit using Redis."""
@@ -215,17 +209,17 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
             window_start = current_time - period
             redis_key = f"rate_limit:{key}:{window_start // period}"
             
-            # Get current count
-            current = redis_client.get(redis_key)
+            # Get current count using pooled function
+            current = await redis_get(redis_key)
             current_count = int(current) if current else 0
             
             # Check if limit exceeded
             if current_count + cost > limit:
                 return False
             
-            # Increment counter
-            redis_client.incrby(redis_key, cost)
-            redis_client.expire(redis_key, period)
+            # Increment counter using pooled function
+            await redis_incr(redis_key, cost)
+            await redis_expire(redis_key, period)
             
             return True
             
@@ -257,13 +251,14 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
             "day": 86400,
         }.get(period, 3600)
         
-        if redis_client:
+        if redis_available:
             try:
                 current_time = int(time.time())
                 window_start = current_time - period_seconds
                 redis_key = f"rate_limit:{key}:{window_start // period_seconds}"
                 
-                current = redis_client.get(redis_key)
+                # Use pooled function with asyncio.create_task for non-blocking
+                current = await redis_get(redis_key)
                 current_count = int(current) if current else 0
                 
                 response.headers["X-RateLimit-Limit"] = str(count)
