@@ -1,0 +1,86 @@
+{
+  "timestamp": "2025-07-31 01:17:22",
+  "checks": {
+    "config_exists": {
+      "status": "passed",
+      "message": "Pre-commit config file exists",
+      "details": {}
+    },
+    "precommit_installed": {
+      "status": "passed",
+      "message": "Pre-commit installed: pre-commit 4.2.0",
+      "details": {}
+    },
+    "hooks_installed": {
+      "status": "warning",
+      "message": "Pre-commit hooks not installed. Run: pre-commit install",
+      "details": {
+        "fix": "pre-commit install"
+      }
+    },
+    "execution_speed": {
+      "status": "passed",
+      "message": "Pre-commit execution completed in 0.55 seconds",
+      "details": {
+        "time": 0.5518290996551514
+      }
+    },
+    "hook_configuration": {
+      "status": "passed",
+      "message": "All required hooks are configured",
+      "details": {
+        "hooks": [
+          "check-ast",
+          "check-builtin-literals",
+          "check-case-conflict",
+          "check-docstring-first",
+          "check-json",
+          "check-merge-conflict",
+          "check-toml",
+          "check-xml",
+          "check-yaml",
+          "debug-statements",
+          "detect-private-key",
+          "end-of-file-fixer",
+          "fix-byte-order-marker",
+          "mixed-line-ending",
+          "trailing-whitespace",
+          "check-added-large-files",
+          "black",
+          "isort",
+          "ruff",
+          "ruff-format",
+          "mypy",
+          "bandit",
+          "python-safety-dependencies-check",
+          "markdownlint",
+          "shellcheck",
+          "hadolint-docker",
+          "smart-ai-context",
+          "check-secrets",
+          "check-api-tests"
+        ]
+      }
+    },
+    "specific_hooks_test": {
+      "status": "passed",
+      "message": "Hook tests passed",
+      "details": {
+        "results": [
+          "Black: Correctly detected formatting issues",
+          "isort: Correctly detected import order issues"
+        ]
+      }
+    },
+    "ci_integration": {
+      "status": "passed",
+      "message": "Pre-commit integrated with CI",
+      "details": {}
+    }
+  },
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "warnings": 1
+  }
+}
