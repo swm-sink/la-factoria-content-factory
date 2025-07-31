@@ -1,57 +1,75 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'; // Updated import
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import Navbar from './components/Layout/Navbar';
-import ErrorDisplay from './components/common/ErrorDisplay'; // Import ErrorDisplay
-import HomePage from './pages/HomePage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import GeneratePage from './pages/GeneratePage'; // Ensuring this path is correct
-import JobStatusPage from './pages/JobStatusPage';
-// import { ContentGeneratorForm } from './components/ContentGeneratorForm';
-// import ContentGenerator from './pages/ContentGenerator';
-// import History from './pages/History'; // To be added later if needed
+import LoadingSpinner from './components/LoadingSpinner';
+import { lazyLoad } from './utils/lazy';
 
-const queryClient = new QueryClient();
+// Lazy load all route components for code splitting
+const Navbar = lazy(() => import('./components/Layout/Navbar'));
+const ErrorDisplay = lazy(() => import('./components/common/ErrorDisplay'));
+const HomePage = lazy(() => import('./pages/HomePage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const GeneratePage = lazy(() => import('./pages/GeneratePage'));
+const JobStatusPage = lazy(() => import('./pages/JobStatusPage'));
 
-// Placeholder for HomePage
-// const HomePage = () => (
-//   <div className="text-center">
-//     <h2 className="text-2xl font-semibold mt-10">Welcome to the AI Content Factory!</h2>
-//     <p className="mt-4">Please login or register to start generating content.</p>
-//   </div>
-// );
+// Lazy load admin components (larger bundle)
+const UsageDashboard = lazyLoad(
+  () => import('./pages/Admin/UsageDashboard'),
+  <div className="flex justify-center items-center h-64">
+    <LoadingSpinner />
+    <span className="ml-2">Loading admin dashboard...</span>
+  </div>
+);
 
-// Placeholder for GeneratePage
-// const GeneratePage = () => (
-//   <div className="text-center">
-//     <h2 className="text-2xl font-semibold mt-10">Generate Content</h2>
-//     <p className="mt-4">Content generation form will be here.</p>
-//     {/* <ContentGeneratorForm /> */} {/* Or the actual content generation component */}
-//   </div>
-// );
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Optimize refetching
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes (renamed from cacheTime)
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
+// Loading fallback component
+const PageLoader = () => (
+  <div className="flex justify-center items-center min-h-[50vh]">
+    <LoadingSpinner />
+  </div>
+);
 
 export const App = () => {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        {/* BrowserRouter is now in main.tsx */}
         <div className="min-h-screen bg-gray-50 flex flex-col">
-          <Navbar />
-          <ErrorDisplay /> {/* Add ErrorDisplay globally */}
+          <Suspense fallback={<div className="h-16 bg-white border-b" />}>
+            <Navbar />
+          </Suspense>
+          
+          <Suspense fallback={null}>
+            <ErrorDisplay />
+          </Suspense>
+          
           <main className="flex-grow">
             <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
-                <Route path="/generate" element={<GeneratePage />} />
-                <Route path="/jobs/:jobId" element={<JobStatusPage />} /> {/* Add route for JobStatusPage */}
-                {/* <Route path="/history" element={<History />} /> */}
-              </Routes>
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/register" element={<RegisterPage />} />
+                  <Route path="/generate" element={<GeneratePage />} />
+                  <Route path="/jobs/:jobId" element={<JobStatusPage />} />
+                  <Route path="/admin/usage" element={<UsageDashboard />} />
+                </Routes>
+              </Suspense>
             </div>
           </main>
+          
           <footer className="bg-white border-t">
             <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 text-center text-sm text-gray-500">
               &copy; {new Date().getFullYear()} AI Content Factory. All rights reserved.

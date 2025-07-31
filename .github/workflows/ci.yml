@@ -322,6 +322,52 @@ jobs:
             echo "Build size ${size}MB is acceptable"
           fi
           
+      - name: Analyze bundle size
+        working-directory: ./frontend
+        run: |
+          echo "Bundle Size Analysis"
+          echo "==================="
+          
+          # Get JS bundle sizes
+          echo "JavaScript bundles:"
+          find dist -name "*.js" -type f -exec du -h {} + | sort -hr | head -10
+          
+          # Calculate total JS size
+          total_js=$(find dist -name "*.js" -type f -exec stat -f%z {} + 2>/dev/null | awk '{s+=$1} END {print s}' || find dist -name "*.js" -type f -exec stat -c%s {} + | awk '{s+=$1} END {print s}')
+          echo "Total JS size: $((total_js / 1024)) KB"
+          
+          # Check initial bundle (entry point)
+          if [ -f dist/index.html ]; then
+            echo ""
+            echo "Initial bundle analysis:"
+            # Extract non-async/defer scripts from index.html
+            grep -E '<script[^>]+src="[^"]+\.js"' dist/index.html | grep -v 'defer\|async' | sed 's/.*src="\([^"]*\)".*/\1/' | while read script; do
+              if [ -f "dist${script}" ]; then
+                size=$(stat -f%z "dist${script}" 2>/dev/null || stat -c%s "dist${script}")
+                echo "  $(basename $script): $((size / 1024)) KB"
+              fi
+            done
+          fi
+          
+          # Generate bundle report if stats.html exists
+          if [ -f dist/stats.html ]; then
+            echo ""
+            echo "✅ Bundle analyzer report generated at dist/stats.html"
+          fi
+          
+          # Check against thresholds
+          initial_size=$(find dist -name "index*.js" -o -name "main*.js" | head -1 | xargs stat -f%z 2>/dev/null || find dist -name "index*.js" -o -name "main*.js" | head -1 | xargs stat -c%s)
+          if [ -n "$initial_size" ]; then
+            initial_kb=$((initial_size / 1024))
+            echo ""
+            echo "Initial bundle size: ${initial_kb} KB"
+            if [ $initial_kb -lt 200 ]; then
+              echo "✅ Initial bundle is under 200KB target"
+            else
+              echo "⚠️  Initial bundle exceeds 200KB target"
+            fi
+          fi
+          
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
         with:
