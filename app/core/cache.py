@@ -28,12 +28,14 @@ class CacheBackend:
                     del self._cache[key]
             return None
             
-    async def set(self, key: str, value: Any, ttl: int = 300):
+    async def set(self, key: str, value: Any, ttl: int = 300, expire: int = None):
         """Set value in cache with TTL."""
+        # Use expire parameter if provided, otherwise use ttl
+        expiry_time = expire if expire is not None else ttl
         async with self._lock:
             self._cache[key] = {
                 'value': value,
-                'expires_at': time.time() + ttl
+                'expires_at': time.time() + expiry_time
             }
             
     async def delete(self, key: str):
@@ -57,6 +59,15 @@ class CacheBackend:
             ]
             for key in expired_keys:
                 del self._cache[key]
+    
+    async def keys(self, pattern: str = "*") -> list:
+        """Get all keys matching pattern."""
+        async with self._lock:
+            if pattern == "*":
+                return list(self._cache.keys())
+            # Simple pattern matching (supports * wildcard)
+            import fnmatch
+            return [key for key in self._cache.keys() if fnmatch.fnmatch(key, pattern)]
 
 
 # Global cache instance

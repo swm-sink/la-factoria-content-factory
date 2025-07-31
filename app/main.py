@@ -70,6 +70,7 @@ from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.middleware.request_validation import RequestValidationMiddleware
 from app.middleware.cache_headers import CacheHeadersMiddleware, CacheInvalidationMiddleware
 from app.middleware.connection_monitor import ConnectionMonitoringMiddleware
+from app.middleware.sli_tracking import SLITrackingMiddleware, DependencyHealthMiddleware
 
 # Add enhanced request tracking and logging middleware
 app.add_middleware(RequestLoggingMiddleware)
@@ -80,6 +81,10 @@ app.add_middleware(CostControlMiddleware)
 app.add_middleware(RateLimitingMiddleware)
 app.add_middleware(RequestValidationMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+
+# Add SLI tracking middleware for SLA monitoring
+app.add_middleware(SLITrackingMiddleware)
+app.add_middleware(DependencyHealthMiddleware)
 
 # Add cache middleware - create instance first for invalidation middleware
 app.add_middleware(CacheHeadersMiddleware)
@@ -255,6 +260,7 @@ async def startup_event() -> None:
     # Initialize connection pools
     from app.utils.redis_pool import get_redis_pool
     from app.utils.firestore_pool import get_firestore_pool
+    from app.services.sla_monitor import sla_monitor
     
     try:
         # Initialize Redis pool
@@ -290,6 +296,22 @@ async def startup_event() -> None:
             error=str(e)
         )
     
+    try:
+        # Start SLA monitoring
+        await sla_monitor.start_monitoring()
+        structured_logger.log_event(
+            structured_logger.LogLevel.INFO,
+            structured_logger.EventType.PERFORMANCE,
+            "SLA monitoring started"
+        )
+    except Exception as e:
+        structured_logger.log_event(
+            structured_logger.LogLevel.ERROR,
+            structured_logger.EventType.ERROR,
+            f"Failed to start SLA monitoring: {e}",
+            error=str(e)
+        )
+    
     structured_logger.log_event(
         structured_logger.LogLevel.INFO,
         structured_logger.EventType.PERFORMANCE,
@@ -310,6 +332,23 @@ async def shutdown_event() -> None:
     # Close connection pools
     from app.utils.redis_pool import close_redis_pool
     from app.utils.firestore_pool import close_firestore_pool
+    from app.services.sla_monitor import sla_monitor
+    
+    try:
+        # Stop SLA monitoring
+        await sla_monitor.stop_monitoring()
+        structured_logger.log_event(
+            structured_logger.LogLevel.INFO,
+            structured_logger.EventType.PERFORMANCE,
+            "SLA monitoring stopped"
+        )
+    except Exception as e:
+        structured_logger.log_event(
+            structured_logger.LogLevel.ERROR,
+            structured_logger.EventType.ERROR,
+            f"Error stopping SLA monitoring: {e}",
+            error=str(e)
+        )
     
     try:
         await close_redis_pool()

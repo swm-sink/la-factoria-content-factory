@@ -5,6 +5,7 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.content import router as content_router
 from app.api.routes.feedback import router as feedback_router
 from app.api.routes.admin import router as admin_router
+from app.api.routes.sla import router as sla_router
 
 # Use absolute imports from the app's perspective
 from app.api.routes.jobs import router as jobs_router
@@ -36,6 +37,9 @@ api_router.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 
 # Admin router - already has API key dependency in its definition
 api_router.include_router(admin_router)
+
+# SLA router - already has API key dependency in its endpoints
+api_router.include_router(sla_router)
 
 
 # Include the health check endpoint

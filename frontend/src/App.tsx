@@ -23,6 +23,14 @@ const UsageDashboard = lazyLoad(
   </div>
 );
 
+const SLADashboard = lazyLoad(
+  () => import('./pages/Admin/SLADashboard'),
+  <div className="flex justify-center items-center h-64">
+    <LoadingSpinner />
+    <span className="ml-2">Loading SLA dashboard...</span>
+  </div>
+);
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -65,6 +73,7 @@ export const App = () => {
                   <Route path="/generate" element={<GeneratePage />} />
                   <Route path="/jobs/:jobId" element={<JobStatusPage />} />
                   <Route path="/admin/usage" element={<UsageDashboard />} />
+                  <Route path="/admin/sla" element={<SLADashboard />} />
                 </Routes>
               </Suspense>
             </div>

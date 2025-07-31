@@ -1,0 +1,243 @@
+# Service Level Objectives Configuration
+# This file defines SLO targets and monitoring rules for La Factoria
+
+slos:
+  # API Availability SLO
+  api_availability:
+    name: "API Availability"
+    description: "Overall API uptime and availability"
+    target: 99.9
+    window: "30d"
+    indicators:
+      - name: "health_check_success"
+        query: |
+          sum(rate(http_requests_total{endpoint="/health", status=~"2.."}[5m]))
+          /
+          sum(rate(http_requests_total{endpoint="/health"}[5m]))
+        good_threshold: 0.999
+    error_budget:
+      monthly_minutes: 43.2
+      alert_burn_rates:
+        - rate: 2
+          window: "1h"
+          severity: "warning"
+        - rate: 5
+          window: "30m"
+          severity: "error"
+        - rate: 10
+          window: "5m"
+          severity: "critical"
+
+  # API Response Time SLO
+  api_latency:
+    name: "API Response Time"
+    description: "API response time targets"
+    indicators:
+      - name: "p95_latency"
+        target: 500  # milliseconds
+        query: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          ) * 1000
+      - name: "p99_latency"
+        target: 1000  # milliseconds
+        query: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          ) * 1000
+
+  # Error Rate SLO
+  error_rate:
+    name: "Error Rate"
+    description: "Percentage of failed requests"
+    target: 99.0  # Less than 1% errors
+    window: "30d"
+    indicators:
+      - name: "5xx_errors"
+        query: |
+          sum(rate(http_requests_total{status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total[5m]))
+        bad_threshold: 0.01
+
+  # Content Generation SLO
+  content_generation:
+    name: "Content Generation Success"
+    description: "Educational content generation reliability"
+    target: 98.0
+    window: "7d"
+    indicators:
+      - name: "generation_success_rate"
+        query: |
+          sum(rate(content_generation_total{status="success"}[5m]))
+          /
+          sum(rate(content_generation_total[5m]))
+        good_threshold: 0.98
+      - name: "generation_latency_p95"
+        target: 5000  # milliseconds
+        query: |
+          histogram_quantile(0.95,
+            sum(rate(content_generation_duration_seconds_bucket[5m])) by (le)
+          ) * 1000
+
+  # Audio Generation SLO
+  audio_generation:
+    name: "Audio Generation Success"
+    description: "Audio content generation reliability"
+    target: 97.0
+    window: "7d"
+    indicators:
+      - name: "audio_success_rate"
+        query: |
+          sum(rate(audio_generation_total{status="success"}[5m]))
+          /
+          sum(rate(audio_generation_total[5m]))
+        good_threshold: 0.97
+      - name: "audio_processing_time_p95"
+        target: 10000  # milliseconds
+        query: |
+          histogram_quantile(0.95,
+            sum(rate(audio_generation_duration_seconds_bucket[5m])) by (le)
+          ) * 1000
+
+  # Database Performance SLO
+  database_performance:
+    name: "Database Performance"
+    description: "Database query performance and reliability"
+    indicators:
+      - name: "query_latency_p95"
+        target: 50  # milliseconds
+        query: |
+          histogram_quantile(0.95,
+            sum(rate(database_query_duration_seconds_bucket[5m])) by (le)
+          ) * 1000
+      - name: "connection_pool_usage"
+        target: 80  # percentage
+        query: |
+          (sum(database_connections_active) / sum(database_connections_max)) * 100
+      - name: "transaction_success_rate"
+        target: 99.9
+        query: |
+          sum(rate(database_transactions_total{status="success"}[5m]))
+          /
+          sum(rate(database_transactions_total[5m]))
+
+  # Frontend Performance SLO
+  frontend_performance:
+    name: "Frontend Performance"
+    description: "Client-side performance metrics"
+    indicators:
+      - name: "page_load_time_p75"
+        target: 3000  # milliseconds
+        measurement: "client_timing"
+      - name: "first_contentful_paint_p75"
+        target: 1500  # milliseconds
+        measurement: "web_vitals"
+      - name: "time_to_interactive_p75"
+        target: 3500  # milliseconds
+        measurement: "web_vitals"
+
+# Alert Rules based on SLOs
+alerts:
+  - name: "api_availability_budget_burn"
+    slo: "api_availability"
+    condition: "error_budget_burn_rate > 2"
+    duration: "5m"
+    severity: "warning"
+    annotations:
+      summary: "API availability error budget burning too fast"
+      description: "Error budget burn rate is {{ $value }}x normal"
+
+  - name: "api_latency_violation"
+    slo: "api_latency"
+    condition: "p95_latency > 500 or p99_latency > 1000"
+    duration: "5m"
+    severity: "warning"
+    annotations:
+      summary: "API latency SLO violation"
+      description: "API response time exceeding SLO targets"
+
+  - name: "high_error_rate"
+    slo: "error_rate"
+    condition: "5xx_errors > 0.01"
+    duration: "5m"
+    severity: "error"
+    annotations:
+      summary: "High error rate detected"
+      description: "5XX error rate is {{ $value | humanizePercentage }}"
+
+  - name: "content_generation_failure"
+    slo: "content_generation"
+    condition: "generation_success_rate < 0.98"
+    duration: "10m"
+    severity: "error"
+    annotations:
+      summary: "Content generation below SLO"
+      description: "Success rate is {{ $value | humanizePercentage }}"
+
+  - name: "database_performance_degradation"
+    slo: "database_performance"
+    condition: "query_latency_p95 > 50 or connection_pool_usage > 80"
+    duration: "5m"
+    severity: "warning"
+    annotations:
+      summary: "Database performance degraded"
+      description: "Database metrics exceeding thresholds"
+
+# Dashboards configuration
+dashboards:
+  sla_overview:
+    title: "SLA Overview Dashboard"
+    refresh: "10s"
+    panels:
+      - title: "API Availability"
+        type: "gauge"
+        target: "api_availability"
+        thresholds:
+          - value: 99.9
+            color: "green"
+          - value: 99.5
+            color: "yellow"
+          - value: 99.0
+            color: "red"
+      
+      - title: "Error Budget Status"
+        type: "graph"
+        targets:
+          - "error_budget_remaining"
+          - "error_budget_burn_rate"
+      
+      - title: "Response Time Distribution"
+        type: "heatmap"
+        target: "http_request_duration_seconds"
+      
+      - title: "Service Dependencies"
+        type: "status"
+        targets:
+          - "postgresql_health"
+          - "redis_health"
+          - "gemini_api_health"
+          - "elevenlabs_api_health"
+
+# Reporting configuration
+reporting:
+  weekly_sla_report:
+    schedule: "0 9 * * MON"  # Every Monday at 9 AM
+    recipients:
+      - "engineering@lafactoria.ai"
+      - "product@lafactoria.ai"
+    include:
+      - sla_compliance_summary
+      - error_budget_status
+      - incident_summary
+      - performance_trends
+  
+  monthly_review:
+    schedule: "0 10 1 * *"  # First day of month at 10 AM
+    recipients:
+      - "leadership@lafactoria.ai"
+    include:
+      - detailed_sla_analysis
+      - root_cause_analysis
+      - improvement_recommendations
+      - capacity_planning
