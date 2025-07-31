@@ -1,5 +1,9 @@
 # AI Content Factory
 
+[![Coverage](https://codecov.io/gh/username/la-factoria-v2/branch/main/graph/badge.svg)](https://codecov.io/gh/username/la-factoria-v2)
+[![CI/CD](https://github.com/username/la-factoria-v2/workflows/La%20Factoria%20CI%2FCD%20Pipeline/badge.svg)](https://github.com/username/la-factoria-v2/actions)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+
 An AI-powered content and podcast factory that transforms textual input (e.g., a topic, syllabus) into comprehensive educational materials including podcast scripts, study guides, summaries, FAQs, flashcards, and more.
 
 ## Overview

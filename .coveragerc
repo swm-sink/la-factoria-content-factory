@@ -1,0 +1,115 @@
+# Coverage configuration for La Factoria
+# Additional coverage settings to complement pytest.ini
+
+[run]
+# Source code to measure
+source = app
+
+# Include patterns
+include = 
+    app/*
+    app/**/*
+
+# Exclude patterns - files/directories to ignore
+omit = 
+    */tests/*
+    */test_*.py
+    *_test.py
+    */conftest.py
+    */venv/*
+    */.venv/*
+    */env/*
+    */node_modules/*
+    */__pycache__/*
+    */migrations/*
+    */alembic/*
+    */static/*
+    */templates/*
+    */locale/*
+    */media/*
+    app/main.py
+    */manage.py
+    */settings/*local*.py
+    */settings/*dev*.py
+    */wsgi.py
+    */asgi.py
+
+# Branch coverage
+branch = True
+
+# Parallel processing
+parallel = True
+
+# Context for coverage (useful for debugging)
+dynamic_contexts = test_function
+
+[report]
+# Reporting configuration
+precision = 2
+skip_covered = False
+skip_empty = False
+sort = Cover
+
+# Fail if coverage is below threshold
+fail_under = 70
+
+# Show missing lines
+show_missing = True
+
+# Exclude lines from coverage (using regex)
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+    
+    # Don't complain about missing debug-only code:
+    def __repr__
+    if self\.debug
+    
+    # Don't complain if tests don't hit defensive assertion code:
+    raise AssertionError
+    raise NotImplementedError
+    
+    # Don't complain if non-runnable code isn't run:
+    if 0:
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    
+    # Don't complain about abstract methods
+    @(abc\.)?abstractmethod
+    
+    # Don't complain about protocol methods
+    \.\.\.
+    
+    # Don't complain about __init__ files that just import
+    from .* import .*
+    import .*
+
+# Partial branches to exclude (for complex conditionals)
+partial_branches =
+    pragma: no branch
+    if not TYPE_CHECKING:
+    if TYPE_CHECKING:
+
+[html]
+# HTML report configuration
+directory = htmlcov
+title = La Factoria Coverage Report
+show_contexts = True
+
+[xml]
+# XML report configuration (for CI tools like Codecov)
+output = coverage.xml
+
+[json]
+# JSON report configuration
+output = coverage.json
+pretty_print = True
+show_contexts = True
+
+[paths]
+# Path mapping for different environments
+source = 
+    app/
+    */site-packages/app/
+    /home/runner/work/*/app/
+    /app/
