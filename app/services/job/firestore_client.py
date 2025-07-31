@@ -1,5 +1,6 @@
 """Firestore client for interacting with the jobs collection."""
 
+import asyncio
 import logging
 import os
 from typing import Any, Dict, List, Optional
@@ -9,6 +10,7 @@ from google.cloud.firestore import (  # type: ignore # Use the async Firestore c
 )
 
 from app.core.config.settings import get_settings
+from app.middleware.query_monitor import monitor_query
 
 # Import Pydantic models for Job data later if needed for type hinting or validation here
 # from app.models.pydantic.job import Job, JobStatus
@@ -48,6 +50,7 @@ def get_firestore_client() -> AsyncClient:
     return _db_client
 
 
+@monitor_query('firestore')
 async def get_document_from_firestore(
     document_id: str, collection_name: str = "jobs"
 ) -> Optional[Dict[str, Any]]:
@@ -69,6 +72,7 @@ async def get_document_from_firestore(
     return None
 
 
+@monitor_query('firestore')
 async def create_or_update_document_in_firestore(
     document_id: str, data: Dict[str, Any], collection_name: str = "jobs"
 ) -> None:
@@ -83,6 +87,7 @@ async def create_or_update_document_in_firestore(
     )
 
 
+@monitor_query('firestore')
 async def update_document_field_in_firestore(
     document_id: str, field_path: str, value: Any, collection_name: str = "jobs"
 ) -> None:
@@ -107,6 +112,7 @@ create_or_update_job_in_firestore = create_or_update_document_in_firestore
 update_job_field_in_firestore = update_document_field_in_firestore
 
 
+@monitor_query('firestore')
 async def query_jobs_by_status(
     status: Optional[str] = None,
     limit: int = 10,
@@ -151,6 +157,7 @@ async def query_jobs_by_status(
     return results
 
 
+@monitor_query('firestore')
 async def count_jobs_by_status(
     status: Optional[str] = None, collection_name: str = "jobs"
 ) -> int:
@@ -181,6 +188,7 @@ async def count_jobs_by_status(
     return count
 
 
+@monitor_query('firestore')
 async def get_all_job_statuses(collection_name: str = "jobs") -> Dict[str, int]:
     """Get count of jobs grouped by status.
 
@@ -207,6 +215,7 @@ async def get_all_job_statuses(collection_name: str = "jobs") -> Dict[str, int]:
     return status_counts
 
 
+@monitor_query('firestore')
 async def delete_job_from_firestore(
     document_id: str, collection_name: str = "jobs"
 ) -> bool:
@@ -233,3 +242,71 @@ async def delete_job_from_firestore(
     await doc_ref.delete()
     logger.info(f"Document '{document_id}' deleted from collection '{collection_name}'")
     return True
+
+
+@monitor_query('firestore')
+async def batch_update_documents(
+    updates: List[Dict[str, Any]], collection_name: str = "jobs"
+) -> None:
+    """
+    Batch update multiple documents in a single operation.
+    
+    Args:
+        updates: List of updates, each containing 'document_id' and 'fields' to update
+        collection_name: Firestore collection name
+    """
+    client = get_firestore_client()
+    
+    # Process in batches of 500 (Firestore limit)
+    batch_size = 500
+    for i in range(0, len(updates), batch_size):
+        batch = client.batch()
+        batch_updates = updates[i:i + batch_size]
+        
+        for update in batch_updates:
+            doc_id = update['document_id']
+            fields = update['fields']
+            doc_ref = client.collection(collection_name).document(doc_id)
+            batch.update(doc_ref, fields)
+            
+        # Commit the batch
+        await batch.commit()
+        logger.info(f"Batch updated {len(batch_updates)} documents in {collection_name}")
+
+
+@monitor_query('firestore')
+async def batch_get_documents(
+    document_ids: List[str], collection_name: str = "jobs"
+) -> Dict[str, Optional[Dict[str, Any]]]:
+    """
+    Batch get multiple documents in a single operation.
+    
+    Args:
+        document_ids: List of document IDs to fetch
+        collection_name: Firestore collection name
+        
+    Returns:
+        Dictionary mapping document ID to document data (None if not found)
+    """
+    client = get_firestore_client()
+    results = {}
+    
+    # Get all documents in parallel
+    tasks = []
+    for doc_id in document_ids:
+        doc_ref = client.collection(collection_name).document(doc_id)
+        tasks.append(doc_ref.get())
+        
+    docs = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    for doc_id, doc in zip(document_ids, docs):
+        if isinstance(doc, Exception):
+            logger.error(f"Failed to get document {doc_id}: {doc}")
+            results[doc_id] = None
+        elif doc.exists:
+            results[doc_id] = doc.to_dict()
+        else:
+            results[doc_id] = None
+            
+    logger.info(f"Batch fetched {len(document_ids)} documents from {collection_name}")
+    return results
