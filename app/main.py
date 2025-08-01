@@ -299,6 +299,7 @@ async def startup_event() -> None:
     Actions to perform on application startup with enhanced logging.
     """
     # Initialize connection pools
+    from app.core.alerting.integration import setup_alert_endpoints, start_alert_manager
     from app.services.sla_monitor import sla_monitor
     from app.utils.firestore_pool import get_firestore_pool
     from app.utils.redis_pool import get_redis_pool
@@ -351,6 +352,22 @@ async def startup_event() -> None:
             error=str(e),
         )
 
+    try:
+        # Start alert management system
+        await start_alert_manager(app)
+        # Set up alert endpoints
+        setup_alert_endpoints(app)
+        structured_logger.log_event(
+            structured_logger.LogLevel.INFO, structured_logger.EventType.PERFORMANCE, "Alert management system started"
+        )
+    except Exception as e:
+        structured_logger.log_event(
+            structured_logger.LogLevel.ERROR,
+            structured_logger.EventType.ERROR,
+            f"Failed to start alert management: {e}",
+            error=str(e),
+        )
+
     structured_logger.log_event(
         structured_logger.LogLevel.INFO,
         structured_logger.EventType.PERFORMANCE,
@@ -369,9 +386,24 @@ async def shutdown_event() -> None:
     Actions to perform on application shutdown with enhanced logging.
     """
     # Close connection pools
+    from app.core.alerting.integration import stop_alert_manager
     from app.services.sla_monitor import sla_monitor
     from app.utils.firestore_pool import close_firestore_pool
     from app.utils.redis_pool import close_redis_pool
+
+    try:
+        # Stop alert management system
+        await stop_alert_manager(app)
+        structured_logger.log_event(
+            structured_logger.LogLevel.INFO, structured_logger.EventType.PERFORMANCE, "Alert management system stopped"
+        )
+    except Exception as e:
+        structured_logger.log_event(
+            structured_logger.LogLevel.ERROR,
+            structured_logger.EventType.ERROR,
+            f"Error stopping alert management: {e}",
+            error=str(e),
+        )
 
     try:
         # Stop SLA monitoring

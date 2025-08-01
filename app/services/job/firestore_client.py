@@ -259,3 +259,134 @@ async def batch_get_documents(
     
     logger.info(f"Batch fetched {len(document_ids)} documents from {collection_name}")
     return results
+
+
+@monitor_query('firestore')
+async def query_documents(
+    collection: str,
+    filters: Optional[Dict[str, Any]] = None,
+    limit: Optional[int] = None,
+    offset: Optional[int] = None,
+    order_by: Optional[str] = None,
+    order_direction: str = "asc"
+) -> List[Dict[str, Any]]:
+    """
+    Query documents with flexible filtering.
+    
+    Args:
+        collection: Collection name
+        filters: Dictionary of filters with support for:
+            - Simple equality: {"field": value}
+            - Operators: {"field__gte": value, "field__lte": value}
+            - In queries: {"field__in": [value1, value2]}
+        limit: Maximum documents to return
+        offset: Number of documents to skip
+        order_by: Field to order by
+        order_direction: Order direction ("asc" or "desc")
+        
+    Returns:
+        List of matching documents
+    """
+    pool = await get_firestore_pool()
+    
+    # Convert filter dict to list of tuples
+    filter_list = []
+    if filters:
+        for key, value in filters.items():
+            if "__" in key:
+                # Handle operators
+                field, op = key.rsplit("__", 1)
+                if op == "gte":
+                    filter_list.append((field, ">=", value))
+                elif op == "lte":
+                    filter_list.append((field, "<=", value))
+                elif op == "gt":
+                    filter_list.append((field, ">", value))
+                elif op == "lt":
+                    filter_list.append((field, "<", value))
+                elif op == "in":
+                    filter_list.append((field, "in", value))
+                elif op == "not_in":
+                    filter_list.append((field, "not-in", value))
+                else:
+                    # Default to equality
+                    filter_list.append((key, "==", value))
+            else:
+                # Simple equality
+                filter_list.append((key, "==", value))
+    
+    # Handle ordering
+    if order_by and order_direction == "desc":
+        order_by = f"-{order_by}"
+    
+    # Query documents
+    results = await pool.query_documents(
+        collection=collection,
+        filters=filter_list if filter_list else None,
+        order_by=order_by,
+        limit=limit,
+        offset=offset
+    )
+    
+    logger.info(
+        f"Found {len(results)} documents in {collection} with filters={filters}"
+    )
+    return results
+
+
+@monitor_query('firestore')
+async def query_jobs_by_user(
+    collection: str,
+    user_id: str,
+    filters: Optional[Dict[str, Any]] = None,
+    page: int = 1,
+    page_size: int = 20
+) -> Dict[str, Any]:
+    """
+    Query jobs for a specific user with pagination.
+    
+    Args:
+        collection: Collection name
+        user_id: User ID
+        filters: Additional filters
+        page: Page number (1-based)
+        page_size: Items per page
+        
+    Returns:
+        Dictionary with jobs, total count, and pagination info
+    """
+    # Add user_id to filters
+    all_filters = {"user_id": user_id}
+    if filters:
+        all_filters.update(filters)
+    
+    # Calculate offset
+    offset = (page - 1) * page_size
+    
+    # Get paginated results
+    jobs = await query_documents(
+        collection=collection,
+        filters=all_filters,
+        limit=page_size,
+        offset=offset,
+        order_by="created_at",
+        order_direction="desc"
+    )
+    
+    # Get total count (without pagination)
+    all_jobs = await query_documents(
+        collection=collection,
+        filters=all_filters
+    )
+    total = len(all_jobs)
+    
+    # Calculate total pages
+    total_pages = (total + page_size - 1) // page_size
+    
+    return {
+        "jobs": jobs,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages
+    }
