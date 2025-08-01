@@ -128,6 +128,24 @@ ALERT_CONFIGS = {
         duration=300,
         cooldown=1800,
     ),
+    "dependency_unhealthy": AlertConfig(
+        name="Dependency Unhealthy",
+        description="Critical dependency (Redis/Firestore) is unhealthy",
+        severity=AlertSeverity.CRITICAL,
+        runbook_path="runbooks/incident-response/dependency-failure.md",
+        threshold={"unhealthy_duration_seconds": 120},
+        duration=60,
+        cooldown=300,
+    ),
+    "external_api_degraded": AlertConfig(
+        name="External API Degraded",
+        description="External API (Vertex AI) experiencing issues",
+        severity=AlertSeverity.MEDIUM,
+        runbook_path="runbooks/external-services/api-degradation.md",
+        threshold={"error_rate_percent": 25},
+        duration=300,
+        cooldown=600,
+    ),
 }
 
 

@@ -13,6 +13,7 @@ from prometheus_client import start_http_server
 from pythonjsonlogger import jsonlogger
 
 from app.api.routes import api_router as v1_router  # Ensures importing from the __init__.py
+from app.api.routes.health import router as health_router
 from app.api.routes.worker import router as worker_router
 from app.core.config.settings import get_settings
 
@@ -64,6 +65,7 @@ from app.core.middleware.request_tracking import RequestLoggingMiddleware, Reque
 from app.middleware.cache_headers import CacheHeadersMiddleware
 from app.middleware.connection_monitor import ConnectionMonitoringMiddleware
 from app.middleware.cost_control import CostControlMiddleware
+from app.middleware.health_monitoring import HealthMonitoringMiddleware
 from app.middleware.metrics import CacheMetricsMiddleware, DatabaseMetricsMiddleware, MetricsMiddleware
 from app.middleware.rate_limiting import RateLimitingMiddleware
 from app.middleware.request_validation import RequestValidationMiddleware
@@ -89,6 +91,9 @@ app.add_middleware(CacheMetricsMiddleware)
 # Add SLI tracking middleware for SLA monitoring
 app.add_middleware(SLITrackingMiddleware)
 app.add_middleware(DependencyHealthMiddleware)
+
+# Add health monitoring middleware
+app.add_middleware(HealthMonitoringMiddleware)
 
 # Add cache middleware - create instance first for invalidation middleware
 app.add_middleware(CacheHeadersMiddleware)
@@ -116,6 +121,9 @@ app.include_router(
 # These routes are intended for internal service-to-service communication only.
 app.include_router(worker_router, prefix="/internal", tags=["Internal Worker"])
 
+# Health check router - NOT protected by API Key for monitoring access
+app.include_router(health_router, tags=["Health Checks"])
+
 
 # Start Prometheus metrics server if not in testing mode
 if os.getenv("PROMETHEUS_DISABLE") != "true":
@@ -130,16 +138,34 @@ if os.getenv("PROMETHEUS_DISABLE") != "true":
 async def root_health_check():
     """Provides a simple health check for liveness/readiness probes.
     This endpoint is NOT protected by API Key and is suitable for GCP health checks.
+
+    For more detailed health checks, use /health/* endpoints.
     """
-    return {"status": "healthy"}
+    # Use the new health checker for consistency
+    from app.core.health_check import get_health_checker
+
+    health_checker = get_health_checker()
+    result = await health_checker.check_liveness()
+    return {"status": "healthy", "uptime_seconds": result["uptime_seconds"]}
 
 
 @app.get("/health", tags=["Root Health"])
 async def health_check():
     """Provides a simple health check for monitoring.
     This endpoint is NOT protected by API Key and is suitable for monitoring systems.
+
+    For detailed health information, use /health/detailed endpoint.
     """
-    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+    # Quick readiness check
+    from app.core.health_check import get_health_checker
+
+    health_checker = get_health_checker()
+    result = await health_checker.check_readiness()
+    return {
+        "status": "healthy" if result["ready"] else "unhealthy",
+        "ready": result["ready"],
+        "timestamp": datetime.utcnow().isoformat(),
+    }
 
 
 @app.get("/metrics", tags=["Monitoring"])
