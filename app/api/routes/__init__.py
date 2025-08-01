@@ -1,15 +1,16 @@
 from fastapi import APIRouter, Depends
 
 from app.api.deps import get_api_key
+from app.api.routes.admin import router as admin_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.content import router as content_router
-from app.api.routes.feedback import router as feedback_router
-from app.api.routes.admin import router as admin_router
-from app.api.routes.sla import router as sla_router
 from app.api.routes.export import router as export_router
+from app.api.routes.feedback import router as feedback_router
 
 # Use absolute imports from the app's perspective
 from app.api.routes.jobs import router as jobs_router
+from app.api.routes.search import router as search_router
+from app.api.routes.sla import router as sla_router
 
 # Ensure worker_router is not part of the main api_router if it's handled separately
 # from app.api.routes.worker import router as worker_router # Typically not included here
@@ -17,9 +18,7 @@ from app.api.routes.jobs import router as jobs_router
 api_router = APIRouter()
 
 # Apply API key dependency to specific routers that need protection
-api_router.include_router(
-    jobs_router, prefix="/jobs", tags=["Jobs"], dependencies=[Depends(get_api_key)]
-)
+api_router.include_router(jobs_router, prefix="/jobs", tags=["Jobs"], dependencies=[Depends(get_api_key)])
 api_router.include_router(
     content_router,
     prefix="/content",
@@ -45,11 +44,12 @@ api_router.include_router(sla_router)
 # Export router - requires authentication
 api_router.include_router(export_router, tags=["Export"])
 
+# Search router - requires authentication
+api_router.include_router(search_router, tags=["Search"])
+
 
 # Include the health check endpoint
-@api_router.get(
-    "/health", tags=["Health"], dependencies=[Depends(get_api_key)]
-)  # Health check for protected API part
+@api_router.get("/health", tags=["Health"], dependencies=[Depends(get_api_key)])  # Health check for protected API part
 async def health_check() -> dict[str, str]:
     """
     Health check endpoint for the API (protected part).
