@@ -1,0 +1,40 @@
+modules:
+  http_2xx:
+    prober: http
+    timeout: 5s
+    http:
+      valid_status_codes: [200]
+      method: GET
+      fail_if_not_ssl: false
+      preferred_ip_protocol: "ip4"
+      ip_protocol_fallback: false
+
+  http_health:
+    prober: http
+    timeout: 5s
+    http:
+      valid_status_codes: [200]
+      method: GET
+      path: /health
+      fail_if_not_ssl: false
+      preferred_ip_protocol: "ip4"
+
+  http_post_2xx:
+    prober: http
+    timeout: 5s
+    http:
+      valid_status_codes: [200, 201]
+      method: POST
+      headers:
+        Content-Type: application/json
+      fail_if_not_ssl: false
+
+  tcp_connect:
+    prober: tcp
+    timeout: 5s
+
+  icmp_ping:
+    prober: icmp
+    timeout: 5s
+    icmp:
+      preferred_ip_protocol: "ip4"

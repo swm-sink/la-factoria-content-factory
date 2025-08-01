@@ -12,9 +12,7 @@ from fastapi.responses import JSONResponse
 from prometheus_client import start_http_server
 from pythonjsonlogger import jsonlogger
 
-from app.api.routes import (
-    api_router as v1_router,  # Ensures importing from the __init__.py
-)
+from app.api.routes import api_router as v1_router  # Ensures importing from the __init__.py
 from app.api.routes.worker import router as worker_router
 from app.core.config.settings import get_settings
 
@@ -62,15 +60,16 @@ app = FastAPI(
 
 # Import and add enhanced middleware
 from app.core.middleware import CorrelationIdMiddleware
-from app.core.middleware.request_tracking import RequestTrackingMiddleware, RequestLoggingMiddleware
-from app.middleware.usage_tracking import UsageTrackingMiddleware
-from app.middleware.cost_control import CostControlMiddleware
-from app.middleware.rate_limiting import RateLimitingMiddleware
-from app.middleware.security_headers import SecurityHeadersMiddleware
-from app.middleware.request_validation import RequestValidationMiddleware
-from app.middleware.cache_headers import CacheHeadersMiddleware, CacheInvalidationMiddleware
+from app.core.middleware.request_tracking import RequestLoggingMiddleware, RequestTrackingMiddleware
+from app.middleware.cache_headers import CacheHeadersMiddleware
 from app.middleware.connection_monitor import ConnectionMonitoringMiddleware
-from app.middleware.sli_tracking import SLITrackingMiddleware, DependencyHealthMiddleware
+from app.middleware.cost_control import CostControlMiddleware
+from app.middleware.metrics import CacheMetricsMiddleware, DatabaseMetricsMiddleware, MetricsMiddleware
+from app.middleware.rate_limiting import RateLimitingMiddleware
+from app.middleware.request_validation import RequestValidationMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
+from app.middleware.sli_tracking import DependencyHealthMiddleware, SLITrackingMiddleware
+from app.middleware.usage_tracking import UsageTrackingMiddleware
 
 # Add enhanced request tracking and logging middleware
 app.add_middleware(RequestLoggingMiddleware)
@@ -81,6 +80,11 @@ app.add_middleware(CostControlMiddleware)
 app.add_middleware(RateLimitingMiddleware)
 app.add_middleware(RequestValidationMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+
+# Add monitoring middleware
+app.add_middleware(MetricsMiddleware)
+app.add_middleware(DatabaseMetricsMiddleware)
+app.add_middleware(CacheMetricsMiddleware)
 
 # Add SLI tracking middleware for SLA monitoring
 app.add_middleware(SLITrackingMiddleware)
@@ -117,13 +121,9 @@ app.include_router(worker_router, prefix="/internal", tags=["Internal Worker"])
 if os.getenv("PROMETHEUS_DISABLE") != "true":
     try:
         start_http_server(settings.prometheus_port)
-        main_logger.info(
-            f"Prometheus metrics server started on port {settings.prometheus_port}"
-        )
+        main_logger.info(f"Prometheus metrics server started on port {settings.prometheus_port}")
     except OSError as e:
-        main_logger.warning(
-            f"Could not start Prometheus metrics server on port {settings.prometheus_port}: {e}"
-        )
+        main_logger.warning(f"Could not start Prometheus metrics server on port {settings.prometheus_port}: {e}")
 
 
 @app.get("/healthz", tags=["Root Health"])
@@ -134,23 +134,42 @@ async def root_health_check():
     return {"status": "healthy"}
 
 
+@app.get("/health", tags=["Root Health"])
+async def health_check():
+    """Provides a simple health check for monitoring.
+    This endpoint is NOT protected by API Key and is suitable for monitoring systems.
+    """
+    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+
+
+@app.get("/metrics", tags=["Monitoring"])
+async def metrics():
+    """Expose Prometheus metrics.
+    This endpoint is NOT protected by API Key to allow Prometheus scraping.
+    """
+    from fastapi.responses import Response
+
+    from app.core.metrics import metrics as metrics_collector
+
+    metrics_data = metrics_collector.get_metrics()
+    return Response(content=metrics_data, media_type="text/plain; version=0.0.4; charset=utf-8")
+
+
 # Helper to generate trace_id (can be more sophisticated, e.g., using a request ID middleware)
 import uuid
+from datetime import datetime
 
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError as PydanticValidationErrorCore
 
 # Import custom exceptions and enhanced handlers
-from app.core.exceptions import AppExceptionBase, JobErrorCode
-from app.core.exceptions.handlers import (
-    app_exception_handler as enhanced_app_exception_handler,
-    http_exception_handler as enhanced_http_exception_handler,
-    general_exception_handler as enhanced_general_exception_handler
-)
-from app.core.logging.structured_logger import get_logger, set_correlation_context
+from app.core.exceptions import AppExceptionBase
+from app.core.exceptions.handlers import app_exception_handler as enhanced_app_exception_handler
+from app.core.exceptions.handlers import general_exception_handler as enhanced_general_exception_handler
+from app.core.logging.structured_logger import StructuredLogger
 
 # Initialize structured logger
-structured_logger = get_logger(__name__)
+structured_logger = StructuredLogger()
 
 
 def _get_trace_id(request: Request) -> str:
@@ -167,17 +186,13 @@ def _get_trace_id(request: Request) -> str:
 
 
 @app.exception_handler(AppExceptionBase)
-async def app_exception_handler(
-    request: Request, exc: AppExceptionBase
-) -> JSONResponse:
+async def app_exception_handler(request: Request, exc: AppExceptionBase) -> JSONResponse:
     """Handles custom application exceptions with enhanced logging."""
     return await enhanced_app_exception_handler(request, exc)
 
 
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(
-    request: Request, exc: RequestValidationError
-) -> JSONResponse:
+async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """Handles FastAPI request validation errors (e.g., for path/query/body params)."""
     trace_id = _get_trace_id(request)
     error_details = []
@@ -258,10 +273,10 @@ async def startup_event() -> None:
     Actions to perform on application startup with enhanced logging.
     """
     # Initialize connection pools
-    from app.utils.redis_pool import get_redis_pool
-    from app.utils.firestore_pool import get_firestore_pool
     from app.services.sla_monitor import sla_monitor
-    
+    from app.utils.firestore_pool import get_firestore_pool
+    from app.utils.redis_pool import get_redis_pool
+
     try:
         # Initialize Redis pool
         redis_pool = await get_redis_pool()
@@ -269,16 +284,16 @@ async def startup_event() -> None:
             structured_logger.LogLevel.INFO,
             structured_logger.EventType.PERFORMANCE,
             "Redis connection pool initialized",
-            pool_stats=redis_pool.get_stats()
+            pool_stats=redis_pool.get_stats(),
         )
     except Exception as e:
         structured_logger.log_event(
             structured_logger.LogLevel.ERROR,
             structured_logger.EventType.ERROR,
             f"Failed to initialize Redis pool: {e}",
-            error=str(e)
+            error=str(e),
         )
-    
+
     try:
         # Initialize Firestore pool
         firestore_pool = await get_firestore_pool()
@@ -286,32 +301,30 @@ async def startup_event() -> None:
             structured_logger.LogLevel.INFO,
             structured_logger.EventType.PERFORMANCE,
             "Firestore connection pool initialized",
-            pool_stats=firestore_pool.get_stats()
+            pool_stats=firestore_pool.get_stats(),
         )
     except Exception as e:
         structured_logger.log_event(
             structured_logger.LogLevel.ERROR,
             structured_logger.EventType.ERROR,
             f"Failed to initialize Firestore pool: {e}",
-            error=str(e)
+            error=str(e),
         )
-    
+
     try:
         # Start SLA monitoring
         await sla_monitor.start_monitoring()
         structured_logger.log_event(
-            structured_logger.LogLevel.INFO,
-            structured_logger.EventType.PERFORMANCE,
-            "SLA monitoring started"
+            structured_logger.LogLevel.INFO, structured_logger.EventType.PERFORMANCE, "SLA monitoring started"
         )
     except Exception as e:
         structured_logger.log_event(
             structured_logger.LogLevel.ERROR,
             structured_logger.EventType.ERROR,
             f"Failed to start SLA monitoring: {e}",
-            error=str(e)
+            error=str(e),
         )
-    
+
     structured_logger.log_event(
         structured_logger.LogLevel.INFO,
         structured_logger.EventType.PERFORMANCE,
@@ -320,7 +333,7 @@ async def startup_event() -> None:
         app_version=app.version,
         log_level=settings.log_level,
         prometheus_port=settings.prometheus_port,
-        environment=os.getenv("ENVIRONMENT", "development")
+        environment=os.getenv("ENVIRONMENT", "development"),
     )
 
 
@@ -330,62 +343,56 @@ async def shutdown_event() -> None:
     Actions to perform on application shutdown with enhanced logging.
     """
     # Close connection pools
-    from app.utils.redis_pool import close_redis_pool
-    from app.utils.firestore_pool import close_firestore_pool
     from app.services.sla_monitor import sla_monitor
-    
+    from app.utils.firestore_pool import close_firestore_pool
+    from app.utils.redis_pool import close_redis_pool
+
     try:
         # Stop SLA monitoring
         await sla_monitor.stop_monitoring()
         structured_logger.log_event(
-            structured_logger.LogLevel.INFO,
-            structured_logger.EventType.PERFORMANCE,
-            "SLA monitoring stopped"
+            structured_logger.LogLevel.INFO, structured_logger.EventType.PERFORMANCE, "SLA monitoring stopped"
         )
     except Exception as e:
         structured_logger.log_event(
             structured_logger.LogLevel.ERROR,
             structured_logger.EventType.ERROR,
             f"Error stopping SLA monitoring: {e}",
-            error=str(e)
+            error=str(e),
         )
-    
+
     try:
         await close_redis_pool()
         structured_logger.log_event(
-            structured_logger.LogLevel.INFO,
-            structured_logger.EventType.PERFORMANCE,
-            "Redis connection pool closed"
+            structured_logger.LogLevel.INFO, structured_logger.EventType.PERFORMANCE, "Redis connection pool closed"
         )
     except Exception as e:
         structured_logger.log_event(
             structured_logger.LogLevel.ERROR,
             structured_logger.EventType.ERROR,
             f"Error closing Redis pool: {e}",
-            error=str(e)
+            error=str(e),
         )
-    
+
     try:
         await close_firestore_pool()
         structured_logger.log_event(
-            structured_logger.LogLevel.INFO,
-            structured_logger.EventType.PERFORMANCE,
-            "Firestore connection pool closed"
+            structured_logger.LogLevel.INFO, structured_logger.EventType.PERFORMANCE, "Firestore connection pool closed"
         )
     except Exception as e:
         structured_logger.log_event(
             structured_logger.LogLevel.ERROR,
             structured_logger.EventType.ERROR,
             f"Error closing Firestore pool: {e}",
-            error=str(e)
+            error=str(e),
         )
-    
+
     structured_logger.log_event(
         structured_logger.LogLevel.INFO,
         structured_logger.EventType.PERFORMANCE,
         f"Application shutdown: {settings.project_name}",
         app_name=settings.project_name,
-        app_version=app.version
+        app_version=app.version,
     )
 
 

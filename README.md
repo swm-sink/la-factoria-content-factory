@@ -40,12 +40,15 @@ For detailed architecture information, see [docs/architecture-map.md](docs/archi
 ### Health Checks
 
 #### Unprotected Health Check
+
 ```bash
 GET /healthz
 ```
+
 Basic service health check (no authentication required).
 
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -54,13 +57,16 @@ Basic service health check (no authentication required).
 ```
 
 #### Protected Health Check
+
 ```bash
 GET /api/v1/health
 Headers: X-API-Key: your-api-key
 ```
+
 Comprehensive health check including AI service connectivity (requires API key).
 
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -76,6 +82,7 @@ Comprehensive health check including AI service connectivity (requires API key).
 ### Content Generation
 
 #### Generate Content
+
 ```bash
 POST /api/v1/content/generate
 Headers:
@@ -84,6 +91,7 @@ Headers:
 ```
 
 **Request Body:**
+
 ```json
 {
   "syllabus_text": "Introduction to Machine Learning: supervised learning, unsupervised learning, neural networks, and practical applications using Python.",
@@ -93,6 +101,7 @@ Headers:
 ```
 
 **Response:**
+
 ```json
 {
   "content": {
@@ -132,6 +141,7 @@ Headers:
 ```
 
 #### Target Formats
+
 - `guide`: Study guide only
 - `podcast`: Podcast script only
 - `one_pager`: One-page summary only
@@ -140,6 +150,7 @@ Headers:
 ### Job Management
 
 #### Create Async Job
+
 ```bash
 POST /api/v1/jobs
 Headers:
@@ -148,6 +159,7 @@ Headers:
 ```
 
 #### Get Job Status
+
 ```bash
 GET /api/v1/jobs/{job_id}
 Headers: X-API-Key: your-api-key
@@ -165,24 +177,28 @@ Headers: X-API-Key: your-api-key
 ### Installation
 
 1. **Clone the repository:**
+
 ```bash
 git clone <repository-url>
 cd ai-content-factory
 ```
 
 2. **Install dependencies:**
+
 ```bash
 pip install -r requirements.txt
 pip install -r requirements-dev.txt  # For development
 ```
 
 3. **Set up environment variables:**
+
 ```bash
 cp .env.example .env
 # Edit .env with your configuration
 ```
 
 Required environment variables:
+
 ```bash
 # Core API Configuration
 API_KEY=your-secret-api-key
@@ -206,6 +222,7 @@ CORS_ORIGINS=http://localhost:3000,http://localhost:5173
 📖 **For a complete list of all configuration options, see [Configuration Guide](docs/CONFIGURATION.md)**
 
 4. **Initialize Google Cloud authentication:**
+
 ```bash
 gcloud auth application-default login
 ```
@@ -213,16 +230,19 @@ gcloud auth application-default login
 ### Local Development
 
 1. **Start the development server:**
+
 ```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
 ```
 
 2. **Test the API:**
+
 ```bash
 curl -X GET http://localhost:8080/healthz
 ```
 
 3. **Test protected endpoint:**
+
 ```bash
 curl -X GET http://localhost:8080/api/v1/health \
   -H "X-API-Key: your-api-key"
@@ -231,11 +251,13 @@ curl -X GET http://localhost:8080/api/v1/health \
 ### Docker Development
 
 1. **Build the container:**
+
 ```bash
 docker build -t ai-content-factory .
 ```
 
 2. **Run with Docker Compose:**
+
 ```bash
 docker-compose up -d
 ```
@@ -247,21 +269,25 @@ This starts the application with Redis and other dependencies.
 ### Running Tests
 
 **All tests:**
+
 ```bash
 pytest
 ```
 
 **Unit tests only:**
+
 ```bash
 pytest tests/unit/
 ```
 
 **Integration tests:**
+
 ```bash
 pytest tests/integration/
 ```
 
 **With coverage:**
+
 ```bash
 pytest --cov=app --cov-report=html
 ```
@@ -280,21 +306,25 @@ pytest tests/integration/
 ### Linting and Formatting
 
 **Format code:**
+
 ```bash
 black app/ tests/
 ```
 
 **Check formatting:**
+
 ```bash
 black --check app/ tests/
 ```
 
 **Lint code:**
+
 ```bash
 flake8 app/ tests/
 ```
 
 **Type checking:**
+
 ```bash
 mypy app/
 ```
@@ -384,19 +414,69 @@ Terraform configurations are available in the `iac/` directory for provisioning:
 
 ## Monitoring
 
+### Monitoring Stack
+
+The application includes a complete monitoring solution with Prometheus and Grafana:
+
+```bash
+# Start monitoring stack
+cd monitoring
+docker-compose up -d
+
+# Access services
+# Prometheus: http://localhost:9090
+# Grafana: http://localhost:3001 (admin/admin)
+# Alertmanager: http://localhost:9093
+```
+
 ### Health Checks
 
-- `/healthz`: Basic liveness probe
+- `/healthz`: Basic liveness probe (unauthenticated)
+- `/health`: Monitoring health check with timestamp
 - `/api/v1/health`: Comprehensive readiness probe with dependency checks
+- `/metrics`: Prometheus metrics endpoint (unauthenticated)
 
 ### Metrics
 
-The application exposes Prometheus metrics for:
+The application exposes detailed Prometheus metrics:
 
-- Request rates and latencies
-- AI API call metrics
-- Cache hit rates
-- Job processing statistics
+**HTTP Metrics:**
+
+- `http_requests_total` - Request counts by method, endpoint, status
+- `http_request_duration_seconds` - Request latency histograms
+- `http_requests_active` - Currently active requests
+
+**Business Metrics:**
+
+- `content_generation_total` - Content generation by type and status
+- `content_generation_duration_seconds` - Generation time histograms
+- `audio_generation_total` - Audio generation metrics
+- `jobs_created_total` / `jobs_completed_total` - Job processing metrics
+
+**Infrastructure Metrics:**
+
+- `database_connections_active` / `database_connections_max` - Connection pool usage
+- `database_query_duration_seconds` - Query performance
+- `cache_operations_total` - Cache hit/miss rates
+- `external_api_requests_total` - External API call metrics
+
+### Dashboards
+
+Pre-configured Grafana dashboards include:
+
+- **API Overview** - Request rates, errors, latency percentiles
+- **Database Monitoring** - Connection pools, query performance
+- **System Metrics** - CPU, memory, disk, network usage
+
+### Alerting
+
+Configured alerts for:
+
+- API availability and error rates
+- High latency (P95/P99)
+- Database connection pool exhaustion
+- External API failures
+- System resource usage
 
 ### Logging
 
@@ -406,6 +486,9 @@ Structured JSON logging with:
 - Cost tracking for AI API calls
 - Quality metrics for generated content
 - Performance monitoring
+- Security event logging
+
+See [docs/MONITORING_SETUP.md](docs/MONITORING_SETUP.md) for detailed configuration.
 
 ## Contributing
 
@@ -449,6 +532,7 @@ This project includes scripts to generate comprehensive context dumps for AI ana
 - **`scripts/generate_ai_context.py`**: Orchestrates both scripts
 
 ### Usage
+
 ```bash
 python scripts/generate_ai_context.py
 ```
