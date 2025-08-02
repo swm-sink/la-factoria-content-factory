@@ -1,5 +1,5 @@
 """
-Simplified Tikal Backend - Entire API in ~150 lines
+Simplified La Factoria Backend - Entire API in ~150 lines
 For 1-10 users who need content generation without enterprise complexity
 """
 import os
@@ -21,7 +21,7 @@ LANGFUSE_SECRET_KEY = os.getenv("LANGFUSE_SECRET_KEY", "")
 
 # Initialize simple app
 app = FastAPI(
-    title="Tikal Simple",
+    title="La Factoria Simple",
     description="Content generation made simple",
     version="1.0.0"
 )

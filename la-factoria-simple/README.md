@@ -1,4 +1,4 @@
-# Tikal Simple - Content Generation Without Complexity
+# La Factoria Simple - Content Generation Without Complexity
 
 A dramatically simplified version of the AI Content Factory, reduced from 1000+ files to ~10 files.
 
@@ -16,7 +16,7 @@ A dramatically simplified version of the AI Content Factory, reduced from 1000+ 
 
 ```bash
 git clone <repo>
-cd tikal-simple/backend
+cd la-factoria-simple/backend
 pip install -r requirements.txt
 ```
 

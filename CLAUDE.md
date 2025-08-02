@@ -4,7 +4,7 @@ This file contains project-specific instructions and standards for Claude Code t
 
 ## Project Overview
 
-This is Tikal, a content generation service built with FastAPI (Python backend) and React/TypeScript (frontend). The application generates educational content using AI models and supports various output formats.
+This is La Factoria, a content generation service built with FastAPI (Python backend) and React/TypeScript (frontend). The application generates educational content using AI models and supports various output formats.
 
 ## Code Standards
 
@@ -103,25 +103,25 @@ Located in `.claude/memory/`:
 
 ### Overview
 
-Tikal uses a modular prompt engineering system located in `.claude/` to optimize AI content generation. This system provides:
+La Factoria uses a modular prompt engineering system located in `.claude/` to optimize AI content generation. This system provides:
 
 - Optimized prompt templates for all 8 content types
 - Context-aware prompt generation
 - Quality validation frameworks
 - Educational standards compliance
 
-### Tikal-Specific Commands
+### La Factoria-Specific Commands
 
-Located in `.claude/commands/tikal/`:
+Located in `.claude/commands/la-factoria/`:
 
-- `/tikal-optimize-prompts` - Analyze and optimize existing prompts
-- `/tikal-validate-quality` - Validate content quality against educational standards
-- `/tikal-generate` - Generate content using optimized templates
-- `/tikal-analyze-prompts` - Analyze prompts for optimization opportunities
+- `/la-factoria-optimize-prompts` - Analyze and optimize existing prompts
+- `/la-factoria-validate-quality` - Validate content quality against educational standards
+- `/la-factoria-generate` - Generate content using optimized templates
+- `/la-factoria-analyze-prompts` - Analyze prompts for optimization opportunities
 
 ### Prompt Templates
 
-Optimized templates in `.claude/templates/tikal/`:
+Optimized templates in `.claude/templates/la-factoria/`:
 
 - `study-guide-optimized.md` - Enhanced study guide generation
 - `flashcards-optimized.md` - Cognitive science-based flashcard creation
@@ -129,9 +129,9 @@ Optimized templates in `.claude/templates/tikal/`:
 
 ### Context System
 
-- **Project Context**: `.claude/context/tikal-project.md` - Comprehensive project understanding
-- **Educational Standards**: `.claude/components/tikal/educational-standards.md`
-- **Quality Assessment**: `.claude/components/tikal/quality-assessment.md`
+- **Project Context**: `.claude/context/la-factoria-project.md` - Comprehensive project understanding
+- **Educational Standards**: `.claude/components/la-factoria/educational-standards.md`
+- **Quality Assessment**: `.claude/components/la-factoria/quality-assessment.md`
 
 ### Prompt Optimization Principles
 
@@ -143,10 +143,10 @@ Optimized templates in `.claude/templates/tikal/`:
 
 ### Using the Prompt System
 
-1. For prompt analysis: `/tikal-analyze-prompts app/core/prompts/v1/`
-2. For content validation: `/tikal-validate-quality [content-type] [audience]`
-3. For optimized generation: `/tikal-generate [content-type] [topic] [audience]`
-4. For prompt optimization: `/tikal-optimize-prompts [content-type]`
+1. For prompt analysis: `/la-factoria-analyze-prompts app/core/prompts/v1/`
+2. For content validation: `/la-factoria-validate-quality [content-type] [audience]`
+3. For optimized generation: `/la-factoria-generate [content-type] [topic] [audience]`
+4. For prompt optimization: `/la-factoria-optimize-prompts [content-type]`
 
 ### Best Practices
 

@@ -1,5 +1,5 @@
 /**
- * Tikal Simple Frontend - Vanilla JS, No Framework
+ * La Factoria Simple Frontend - Vanilla JS, No Framework
  * Total: ~150 lines (vs 9000+ files in original)
  */
 

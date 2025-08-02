@@ -1,5 +1,5 @@
 """
-TDD Tests for Simplified Tikal - Write Tests First!
+TDD Tests for Simplified La Factoria - Write Tests First!
 Total: ~50 lines (vs 1000+ in original)
 """
 import pytest
