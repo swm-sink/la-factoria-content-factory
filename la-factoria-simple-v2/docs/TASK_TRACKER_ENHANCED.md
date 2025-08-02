@@ -709,13 +709,248 @@ async def create_user(email: str, accepted_terms: bool):
 - **DB-002**: Add deletion_requests table if needed
 - **DOC-001**: Include privacy policy if required
 
+## Week 1: Foundation Phase (5/10 completed)
+
+### **SETUP-002**: Initialize Railway project (1h)
+
+**🎯 Objective**: Set up a new Railway project optimized for FastAPI deployment with minimal configuration. Focus on simplicity and cost-effectiveness for 1-10 users.
+
+**🚂 Railway Context (August 2025)**:
+
+- Railway has become the go-to platform for simple deployments
+- Free tier includes: 500 hours/month, 100GB bandwidth
+- Automatic HTTPS, zero-config deployments
+- Built-in PostgreSQL with 1GB free tier
+
+**📋 Prerequisites Check**:
+
+```bash
+# 1. Install Railway CLI (latest version as of Aug 2025)
+# macOS
+brew install railway
+
+# Linux/WSL
+curl -fsSL https://railway.app/install.sh | sh
+
+# Verify installation
+railway --version
+# Expected: railway version 3.5.1 or higher
+
+# 2. Check Python version
+python --version
+# Expected: Python 3.11 or 3.12 (Railway's current default)
+
+# 3. Ensure you're in the project directory
+cd la-factoria-simple-v2
+```
+
+**🚀 Railway Project Initialization**:
+
+```bash
+# Step 1: Login to Railway
+railway login
+# This opens browser for GitHub/email authentication
+
+# Step 2: Create new project
+railway init
+# When prompted:
+# - Project name: la-factoria-simple
+# - Environment: production (default)
+
+# Step 3: Link to GitHub (RECOMMENDED for auto-deploy)
+railway link
+# Select: "Empty Project" (we'll configure it ourselves)
+
+# Step 4: Set Python buildpack
+echo "python==3.12.*" > runtime.txt
+
+# Step 5: Create Railway configuration
+cat > railway.json << 'EOF'
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "pip install -r requirements.txt"
+  },
+  "deploy": {
+    "startCommand": "uvicorn app.main:app --host 0.0.0.0 --port $PORT",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 30,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  },
+  "environments": {
+    "production": {
+      "variables": {
+        "PYTHON_VERSION": "3.12",
+        "PORT": "8000"
+      }
+    }
+  }
+}
+EOF
+
+# Step 6: Create Procfile (backup for railway.json)
+echo "web: uvicorn app.main:app --host 0.0.0.0 --port $PORT" > Procfile
+```
+
+**🔧 Environment Variables Setup**:
+
+```bash
+# Set essential environment variables
+railway variables set NODE_ENV=production
+railway variables set LOG_LEVEL=info
+
+# View current variables
+railway variables
+```
+
+**💰 Cost Optimization for 1-10 Users**:
+
+```bash
+# Configure auto-sleep for low traffic
+railway variables set RAILWAY_AUTO_SLEEP=true
+railway variables set RAILWAY_SLEEP_AFTER_MINS=10
+
+# This ensures the app sleeps after 10 mins of inactivity
+# First request will have ~5 second cold start
+# Saves ~70% on compute costs
+```
+
+**🐍 FastAPI-Specific Configuration**:
+
+```python
+# app/main.py - Railway-optimized FastAPI setup
+import os
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI(
+    title="La Factoria Simple",
+    version="2.0.0",
+    docs_url="/docs",  # Keep docs in production for small team
+    redoc_url="/redoc"
+)
+
+# Railway provides PORT env variable
+PORT = int(os.environ.get("PORT", 8000))
+
+# Health check for Railway
+@app.get("/health")
+async def health():
+    return {"status": "healthy", "port": PORT}
+
+# Configure CORS for Railway's dynamic URLs
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://*.railway.app"],  # Railway domains
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+```
+
+**⚠️ Common Railway Pitfalls & Solutions**:
+
+1. **Port Binding Error**:
+
+   ```bash
+   # Wrong: Hardcoded port
+   uvicorn app.main:app --port 8000
+
+   # Right: Use PORT env variable
+   uvicorn app.main:app --port $PORT
+   ```
+
+2. **Build Failures**:
+
+   ```bash
+   # Debug build issues
+   railway logs --build
+
+   # Common fix: Specify Python version
+   echo "python==3.12.*" > runtime.txt
+   ```
+
+3. **Secret Management**:
+
+   ```bash
+   # NEVER commit secrets. Use Railway variables:
+   railway variables set OPENAI_API_KEY=sk-...
+   railway variables set DATABASE_URL=postgresql://...
+   ```
+
+4. **GitHub Integration Issues**:
+
+   ```bash
+   # If auto-deploy fails, check:
+   railway status
+   railway link --environment production
+   ```
+
+**📝 Project Structure for Railway**:
+
+```
+la-factoria-simple-v2/
+├── railway.json          # Railway configuration
+├── Procfile             # Backup start command
+├── runtime.txt          # Python version
+├── requirements.txt     # Python dependencies
+├── app/
+│   ├── __init__.py
+│   ├── main.py         # FastAPI app
+│   └── ...
+└── tests/
+```
+
+**🧪 Local Testing with Railway Environment**:
+
+```bash
+# Run locally with Railway environment
+railway run python -m uvicorn app.main:app --reload
+
+# This loads all Railway variables locally
+# Ensures local behavior matches production
+```
+
+**✅ Quality Gates**:
+
+- [ ] Railway CLI installed and authenticated
+- [ ] Project initialized with `railway init`
+- [ ] railway.json created with correct configuration
+- [ ] Python version specified in runtime.txt
+- [ ] Environment variables documented
+- [ ] Local testing works with `railway run`
+- [ ] Auto-sleep configured for cost optimization
+
+**📤 Expected Outputs**:
+
+1. Railway project URL (e.g., `la-factoria-simple.railway.app`)
+2. Project dashboard link
+3. Environment variables list
+4. Successful health check at `/health`
+
+**🔗 Impact on Other Tasks**:
+
+- **DEPLOY-001**: Will use this Railway setup
+- **DB-001**: Will add PostgreSQL to this project
+- **API-004**: Will need Railway variables for API keys
+- **MON-001**: Will use Railway's built-in metrics
+
+**📚 Railway Resources (August 2025)**:
+
+- Docs: <https://docs.railway.app>
+- Status: <https://status.railway.app>
+- Pricing: <https://railway.app/pricing>
+- CLI Reference: <https://docs.railway.app/reference/cli-api>
+
 ## Enhancement Progress Tracking
 
 - [x] DISCOVER-001: Fully enhanced with anti-hallucination context
 - [x] DISCOVER-002: Fully enhanced with anti-hallucination context
 - [x] DISCOVER-003: Fully enhanced with anti-hallucination context
 - [ ] SETUP-001: Pending enhancement
-- [ ] SETUP-002: Pending enhancement (Railway-specific)
+- [x] SETUP-002: Fully enhanced with Railway-specific context
 - [ ] SETUP-003: Pending enhancement
 - [ ] API-001: Pending enhancement
 - [ ] API-002: Pending enhancement
