@@ -422,13 +422,298 @@ print("📊 Visualization saved to user_insights.png")
 
 ### **DISCOVER-003**: Document compliance requirements (2h)
 
-[To be enhanced next...]
+**🎯 Objective**: Determine actual legal/compliance requirements vs perceived requirements. For a 1-10 user system, distinguish between "nice-to-have" enterprise features and legally mandated requirements.
+
+**⚖️ Key Questions to Answer**:
+
+1. Is the business actually subject to GDPR? (EU users or EU-based company)
+2. What data is being collected and stored?
+3. Are there contractual SLA obligations with existing users?
+4. What are the actual penalties for non-compliance at this scale?
+
+**📋 Compliance Checklist Script** (create as `check_compliance.py`):
+
+```python
+#!/usr/bin/env python3
+# File: la-factoria-simple-v2/scripts/check_compliance.py
+
+print("=== La Factoria Compliance Requirements Checker ===\n")
+
+# Initialize findings
+compliance_requirements = {
+    "gdpr": {"required": False, "reason": "", "implementation": ""},
+    "data_deletion": {"required": False, "reason": "", "implementation": ""},
+    "audit_logging": {"required": False, "reason": "", "implementation": ""},
+    "sla_monitoring": {"required": False, "reason": "", "implementation": ""},
+    "data_encryption": {"required": True, "reason": "Basic security", "implementation": "Use Railway's HTTPS"}
+}
+
+# Question 1: GDPR Applicability
+print("1. GDPR Applicability Check:")
+eu_users = input("   Do you have ANY users in the EU? (yes/no): ").lower() == "yes"
+eu_company = input("   Is the company based in the EU? (yes/no): ").lower() == "yes"
+
+if eu_users or eu_company:
+    compliance_requirements["gdpr"]["required"] = True
+    compliance_requirements["gdpr"]["reason"] = "EU users or EU-based company"
+    print("   ✅ GDPR applies")
+else:
+    print("   ❌ GDPR does not apply")
+
+# Question 2: Personal Data Collection
+print("\n2. Personal Data Collection:")
+stores_email = input("   Does the system store user emails? (yes/no): ").lower() == "yes"
+stores_name = input("   Does the system store user names? (yes/no): ").lower() == "yes"
+stores_content = input("   Does generated content contain personal info? (yes/no): ").lower() == "yes"
+
+if stores_email or stores_name:
+    compliance_requirements["data_deletion"]["required"] = True
+    compliance_requirements["data_deletion"]["reason"] = "Stores personal identifiable information"
+    if compliance_requirements["gdpr"]["required"]:
+        compliance_requirements["data_deletion"]["implementation"] = "Implement /delete-account endpoint"
+    else:
+        compliance_requirements["data_deletion"]["implementation"] = "Simple admin script sufficient"
+
+# Question 3: Contractual Obligations
+print("\n3. Contractual/SLA Obligations:")
+has_sla = input("   Do you have written SLA agreements? (yes/no): ").lower() == "yes"
+if has_sla:
+    sla_uptime = input("   What uptime % is promised? (e.g., 99.9): ")
+    compliance_requirements["sla_monitoring"]["required"] = True
+    compliance_requirements["sla_monitoring"]["reason"] = f"Contractual {sla_uptime}% uptime"
+    compliance_requirements["sla_monitoring"]["implementation"] = "Use Railway metrics + uptime monitoring"
+
+# Question 4: Industry Regulations
+print("\n4. Industry-Specific Regulations:")
+education_minors = input("   Do you serve educational content to minors? (yes/no): ").lower() == "yes"
+if education_minors:
+    print("   ⚠️  COPPA/FERPA may apply - consult legal counsel")
+    compliance_requirements["audit_logging"]["reason"] = "Educational services to minors"
+
+# Generate recommendations
+print("\n=== COMPLIANCE RECOMMENDATIONS ===\n")
+
+must_implement = []
+nice_to_have = []
+can_skip = []
+
+for feature, details in compliance_requirements.items():
+    if details["required"]:
+        must_implement.append(f"- {feature}: {details['reason']}")
+        if details.get("implementation"):
+            must_implement.append(f"  Implementation: {details['implementation']}")
+    else:
+        can_skip.append(f"- {feature}: Not required for your use case")
+
+print("MUST IMPLEMENT:")
+for item in must_implement:
+    print(item)
+
+print("\nCAN SKIP (for MVP):")
+for item in can_skip:
+    print(item)
+
+# Save to file
+with open('compliance_requirements.json', 'w') as f:
+    import json
+    json.dump(compliance_requirements, f, indent=2)
+
+print("\n✅ Requirements saved to compliance_requirements.json")
+```
+
+**📚 GDPR for Small Applications (August 2025 Context)**:
+
+```markdown
+# GDPR Simplified for 1-10 User Applications
+
+## When GDPR Applies:
+- ✅ ANY user in the EU (even 1 user)
+- ✅ Company based in the EU
+- ❌ US company with only US users
+
+## Minimum GDPR Requirements (not the "enterprise" version):
+
+1. **Privacy Policy** (can be simple):
+   ```html
+   <!-- Add to your HTML -->
+   <footer>
+     <a href="/privacy">Privacy Policy</a>
+   </footer>
+   ```
+
+2. **Consent** (can be implicit for existing users):
+
+   ```python
+   # In your user registration
+   terms_accepted = True  # Checkbox on signup form
+   ```
+
+3. **Data Deletion** (doesn't need to be instant):
+
+   ```python
+   @app.delete("/api/delete-my-data")
+   async def delete_user_data(user_id: str = Depends(get_current_user)):
+       # Delete from database
+       await db.execute("DELETE FROM users WHERE id = ?", user_id)
+       await db.execute("DELETE FROM content WHERE user_id = ?", user_id)
+       return {"message": "Data deletion scheduled"}
+   ```
+
+4. **Data Export** (can be manual for 1-10 users):
+
+   ```python
+   # Can be a simple admin script, not an API endpoint
+   python export_user_data.py --user-id=123 > user_123_data.json
+   ```
+
+## What You DON'T Need (despite what enterprise blogs say)
+
+- ❌ Instant deletion (30 days is fine)
+- ❌ Automated data portability API
+- ❌ Data Protection Officer (DPO)
+- ❌ Complex consent management platform
+- ❌ Detailed audit logs (basic logs sufficient)
+
+```
+
+**🔍 Research Current System** (commands to run):
+
+```bash
+# Check if current system has EU users
+gcloud sql databases list --instance=la-factoria-prod
+
+# Export users table to check locations (if available)
+gcloud sql export csv la-factoria-prod gs://temp-export/users.csv \
+  --database=main --query="SELECT country FROM users"
+
+# Check existing privacy policy
+find . -name "*privacy*" -o -name "*terms*" -o -name "*gdpr*"
+
+# Check for existing deletion mechanisms  
+grep -r "delete.*user" --include="*.py" --include="*.js"
+```
+
+**📝 Documentation Template** (`compliance_docs.md`):
+
+```markdown
+# La Factoria Compliance Documentation
+
+## Overview
+- **User Count**: 1-10 users
+- **Geography**: [TO BE DETERMINED]
+- **Data Collected**: Email, generated content
+- **Industry**: Education/Content Generation
+
+## Compliance Requirements
+
+### Required by Law:
+1. **Basic Data Security**
+   - Implementation: Railway provides HTTPS by default
+   - Status: ✅ Covered by platform
+
+2. **[GDPR - IF APPLICABLE]**
+   - Privacy Policy: Required
+   - Data Deletion: Required within 30 days
+   - Implementation: Simple delete endpoint
+
+### Business Requirements:
+1. **Uptime SLA**: [FROM USER SURVEY/CONTRACTS]
+   - Current: 99.9% promised
+   - Actual need: [TO BE DETERMINED]
+
+### Not Required:
+1. **Complex audit logging** - Basic Railway logs sufficient
+2. **Instant deletion** - 30-day window acceptable
+3. **Automated GDPR export** - Manual process fine for 1-10 users
+
+## Implementation Priority:
+1. HIGH: HTTPS (✅ Done via Railway)
+2. MEDIUM: Delete endpoint (if GDPR applies)
+3. LOW: Privacy policy page
+4. SKIP: Complex audit systems
+```
+
+**⚠️ Common Over-Engineering Traps**:
+
+1. **"Enterprise GDPR"**:
+   - Wrong: Building complex deletion workflows
+   - Right: Simple DELETE query with 30-day execution
+
+2. **"Bank-Level Security"**:
+   - Wrong: Complex audit trails for every action
+   - Right: Railway's default logging + HTTPS
+
+3. **"100% GDPR Automated"**:
+   - Wrong: Building automated data export APIs
+   - Right: Admin script for rare requests
+
+**🛠️ Simple Implementations**:
+
+```python
+# Minimal GDPR compliance for FastAPI
+
+# 1. Privacy endpoint
+@app.get("/privacy")
+async def privacy_policy():
+    return FileResponse("static/privacy.html")
+
+# 2. Simple deletion
+@app.delete("/api/users/me")
+async def delete_my_account(user = Depends(get_current_user)):
+    # Log the request
+    logger.info(f"Deletion requested for user {user.id}")
+
+    # Schedule deletion (can be manual for 1-10 users)
+    await db.execute(
+        "INSERT INTO deletion_requests (user_id, requested_at) VALUES (?, ?)",
+        user.id, datetime.now()
+    )
+
+    return {"message": "Account deletion requested. Will be processed within 30 days."}
+
+# 3. Basic consent tracking
+@app.post("/api/users")
+async def create_user(email: str, accepted_terms: bool):
+    if not accepted_terms:
+        raise HTTPException(400, "Must accept terms")
+
+    # Store consent timestamp
+    user_id = await db.execute(
+        "INSERT INTO users (email, terms_accepted_at) VALUES (?, ?)",
+        email, datetime.now()
+    )
+    return {"id": user_id}
+```
+
+**✅ Quality Gates**:
+
+- [ ] Determined if GDPR actually applies
+- [ ] Checked for existing contractual SLAs
+- [ ] Identified personal data being stored
+- [ ] Created compliance_requirements.json
+- [ ] Documented "must have" vs "nice to have"
+- [ ] Avoided enterprise-level over-engineering
+
+**📤 Expected Outputs**:
+
+1. `compliance_requirements.json` - Machine-readable requirements
+2. `compliance_docs.md` - Human-readable documentation
+3. Clear list of required vs optional compliance features
+4. Simple implementation examples for required features
+
+**🔗 Impact on Other Tasks**:
+
+- **GDPR-001**: Skip if no EU users, simplify if applies
+- **MON-001**: Minimal if no SLA requirements
+- **AUTH-001**: Add consent tracking if GDPR applies
+- **DB-002**: Add deletion_requests table if needed
+- **DOC-001**: Include privacy policy if required
 
 ## Enhancement Progress Tracking
 
 - [x] DISCOVER-001: Fully enhanced with anti-hallucination context
 - [x] DISCOVER-002: Fully enhanced with anti-hallucination context
-- [ ] DISCOVER-003: Pending enhancement
+- [x] DISCOVER-003: Fully enhanced with anti-hallucination context
 - [ ] SETUP-001: Pending enhancement
 - [ ] SETUP-002: Pending enhancement (Railway-specific)
 - [ ] SETUP-003: Pending enhancement
