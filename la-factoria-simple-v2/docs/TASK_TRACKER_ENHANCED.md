@@ -1885,6 +1885,353 @@ pytest
 - **API-002**: Will test generation endpoint
 - **API-003**: Will test auth endpoints
 
+### **API-001**: Implement health check endpoint (2h)
+
+**🎯 Objective**: Create a simple health check endpoint that confirms the service is running. This is essential for Railway deployments and monitoring. Follow TDD approach.
+
+**🏥 Health Check Best Practices (August 2025)**:
+
+- Keep it simple and fast (<100ms response time)
+- Include basic service information
+- Return consistent structure
+- Use for Railway health checks
+- No authentication required
+
+**📋 TDD Implementation Steps**:
+
+**Step 1: Write the test first** (`tests/integration/test_health.py`):
+
+```python
+"""Test health check endpoint."""
+import pytest
+from httpx import AsyncClient
+from app.main import app
+
+
+class TestHealthEndpoint:
+    """Test health check functionality."""
+
+    @pytest.mark.asyncio
+    async def test_health_endpoint_success(self):
+        """Test /health returns 200 with expected data."""
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            response = await client.get("/health")
+
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["status"] == "healthy"
+        assert "timestamp" in data
+        assert "version" in data
+        assert "service" in data
+        assert data["service"] == "la-factoria-simple"
+
+    @pytest.mark.asyncio
+    async def test_health_endpoint_response_time(self):
+        """Test /health responds quickly."""
+        import time
+
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            start = time.time()
+            response = await client.get("/health")
+            duration = time.time() - start
+
+        assert response.status_code == 200
+        assert duration < 0.1  # Should respond in less than 100ms
+
+    @pytest.mark.asyncio
+    async def test_health_endpoint_no_auth_required(self):
+        """Test /health works without authentication."""
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            # No auth headers
+            response = await client.get("/health")
+
+        assert response.status_code == 200
+```
+
+**Step 2: Run test (should fail)**:
+
+```bash
+pytest tests/integration/test_health.py -v
+# Expected: FAILED - 404 Not Found
+```
+
+**Step 3: Implement the endpoint** (`app/api/health.py`):
+
+```python
+"""Health check endpoint."""
+from datetime import datetime
+from fastapi import APIRouter
+from pydantic import BaseModel
+
+from app import __version__
+
+
+router = APIRouter()
+
+
+class HealthResponse(BaseModel):
+    """Health check response model."""
+    status: str
+    timestamp: str
+    version: str
+    service: str
+    uptime_seconds: float | None = None
+
+
+# Track startup time for uptime calculation
+startup_time = datetime.utcnow()
+
+
+@router.get("/health", response_model=HealthResponse, tags=["health"])
+async def health_check() -> HealthResponse:
+    """
+    Check service health.
+
+    Returns basic information about the service status.
+    No authentication required for monitoring purposes.
+    """
+    current_time = datetime.utcnow()
+    uptime = (current_time - startup_time).total_seconds()
+
+    return HealthResponse(
+        status="healthy",
+        timestamp=current_time.isoformat(),
+        version=__version__,
+        service="la-factoria-simple",
+        uptime_seconds=uptime
+    )
+
+
+@router.get("/", include_in_schema=False)
+async def root():
+    """Root endpoint - redirects to health."""
+    return {"message": "La Factoria Simple API", "docs": "/docs"}
+```
+
+**Step 4: Register the router** (`app/main.py`):
+
+```python
+"""Main FastAPI application."""
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app import __version__
+from app.api import health  # Import health router
+from app.config import settings
+
+app = FastAPI(
+    title="La Factoria Simple",
+    version=__version__,
+    docs_url="/docs" if settings.SHOW_DOCS else None,
+    redoc_url="/redoc" if settings.SHOW_DOCS else None,
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routers
+app.include_router(health.router, tags=["health"])
+```
+
+**Step 5: Run tests again (should pass)**:
+
+```bash
+pytest tests/integration/test_health.py -v
+# Expected: PASSED
+```
+
+**🔧 Configuration** (`app/config.py`):
+
+```python
+"""Application configuration."""
+import os
+from pydantic_settings import BaseSettings
+
+
+class Settings(BaseSettings):
+    """Application settings."""
+
+    # Environment
+    ENVIRONMENT: str = os.getenv("RAILWAY_ENVIRONMENT", "development")
+    PORT: int = int(os.getenv("PORT", "8000"))
+
+    # API Settings
+    API_V1_PREFIX: str = "/api/v1"
+    SHOW_DOCS: bool = True  # Keep docs visible for small team
+
+    # CORS
+    ALLOWED_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "https://*.railway.app",
+    ]
+
+    # Testing
+    TESTING: bool = False
+
+    class Config:
+        case_sensitive = True
+        env_file = ".env"
+
+
+settings = Settings()
+```
+
+**🚀 Running Locally**:
+
+```bash
+# Start the server
+uvicorn app.main:app --reload --port 8000
+
+# Test with curl
+curl http://localhost:8000/health
+
+# Expected response:
+{
+  "status": "healthy",
+  "timestamp": "2025-08-02T10:30:45.123456",
+  "version": "2.0.0",
+  "service": "la-factoria-simple",
+  "uptime_seconds": 123.45
+}
+```
+
+**🐳 Docker Health Check** (optional):
+
+```dockerfile
+# In Dockerfile
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:${PORT}/health || exit 1
+```
+
+**🚂 Railway Configuration**:
+
+```json
+// In railway.json
+{
+  "deploy": {
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 30
+  }
+}
+```
+
+**📊 Monitoring Integration**:
+
+```python
+# Extended health check with dependencies (optional)
+@router.get("/health/detailed", response_model=DetailedHealthResponse)
+async def detailed_health_check(
+    db: AsyncSession = Depends(get_db)
+) -> DetailedHealthResponse:
+    """Detailed health check including dependencies."""
+
+    # Check database
+    db_healthy = True
+    try:
+        await db.execute(text("SELECT 1"))
+    except Exception:
+        db_healthy = False
+
+    # Check external services
+    openai_healthy = True
+    try:
+        # Quick API key validation
+        openai.Model.list()
+    except Exception:
+        openai_healthy = False
+
+    return DetailedHealthResponse(
+        status="healthy" if db_healthy and openai_healthy else "degraded",
+        timestamp=datetime.utcnow().isoformat(),
+        version=__version__,
+        service="la-factoria-simple",
+        dependencies={
+            "database": "healthy" if db_healthy else "unhealthy",
+            "openai": "healthy" if openai_healthy else "unhealthy",
+        }
+    )
+```
+
+**⚠️ Common Pitfalls**:
+
+1. **Slow health checks**:
+
+   ```python
+   # Wrong: Heavy operations in health check
+   @router.get("/health")
+   async def health():
+       users = await db.fetch_all("SELECT COUNT(*) FROM users")
+       return {"status": "ok", "users": users}
+
+   # Right: Keep it simple
+   @router.get("/health")
+   async def health():
+       return {"status": "healthy"}
+   ```
+
+2. **Authentication on health endpoint**:
+
+   ```python
+   # Wrong: Requiring auth
+   @router.get("/health", dependencies=[Depends(get_current_user)])
+
+   # Right: No auth for monitoring
+   @router.get("/health")
+   ```
+
+3. **Missing error handling**:
+
+   ```python
+   # Wrong: Can crash
+   uptime = (datetime.now() - startup_time).total_seconds()
+
+   # Right: Graceful handling
+   try:
+       uptime = (datetime.utcnow() - startup_time).total_seconds()
+   except:
+       uptime = None
+   ```
+
+**✅ Quality Gates**:
+
+- [ ] Tests written first and failing
+- [ ] Endpoint returns 200 status
+- [ ] Response time < 100ms
+- [ ] No authentication required
+- [ ] Includes version and timestamp
+- [ ] Railway health check configured
+- [ ] All tests passing
+
+**📤 Expected Outputs**:
+
+1. `/health` endpoint returning JSON
+2. Passing integration tests
+3. Railway health checks working
+4. Fast response time (<100ms)
+
+**🔗 Impact on Other Tasks**:
+
+- **SETUP-002**: Railway uses this for health checks
+- **DEPLOY-001**: Required for deployment
+- **MON-001**: Monitoring will poll this endpoint
+- **TEST-001**: First endpoint to test
+
+### **API-002**: Create content generation endpoint structure (3h)
+
+[To be enhanced next...]
+
+### **API-003**: Implement simple authentication (3h)
+
+[To be enhanced next...]
+
 ### **API-004**: Add AI provider integration (4h)
 
 **🎯 Objective**: Integrate OpenAI/Anthropic for content generation with Langfuse observability. Focus on reliability, cost tracking, and simple prompt management for 1-10 users.
@@ -2279,7 +2626,7 @@ class CostMonitor:
 - [x] SETUP-001: Fully enhanced with repository structure details
 - [x] SETUP-002: Fully enhanced with Railway-specific context
 - [x] SETUP-003: Fully enhanced with pytest testing framework
-- [ ] API-001: Pending enhancement
+- [x] API-001: Fully enhanced with health check implementation
 - [ ] API-002: Pending enhancement
 - [ ] API-003: Pending enhancement
 - [x] API-004: Fully enhanced with AI provider and Langfuse integration
