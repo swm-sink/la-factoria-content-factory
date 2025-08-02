@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tikal Simple - Content Generation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📚 Tikal Simple</h1>
+            <p>Educational content generation made easy</p>
+        </header>
+
+        <main>
+            <!-- API Key Setup -->
+            <section id="setup" class="card">
+                <h2>Setup</h2>
+                <input type="password" id="apiKey" placeholder="Enter your API key">
+                <button onclick="saveApiKey()">Save API Key</button>
+                <span id="keyStatus"></span>
+            </section>
+
+            <!-- Content Generation -->
+            <section id="generator" class="card">
+                <h2>Generate Content</h2>
+                <form onsubmit="generateContent(event)">
+                    <input type="text" id="topic" placeholder="Enter topic (e.g., Python basics)" required>
+                    
+                    <select id="contentType">
+                        <option value="study_guide">Study Guide</option>
+                        <option value="flashcards">Flashcards</option>
+                        <option value="summary">Summary</option>
+                        <option value="quiz">Quiz</option>
+                    </select>
+                    
+                    <button type="submit" id="generateBtn">Generate</button>
+                </form>
+                
+                <div id="loading" class="hidden">Generating content...</div>
+                <div id="error" class="hidden error"></div>
+            </section>
+
+            <!-- Generated Content -->
+            <section id="output" class="card hidden">
+                <h2>Generated Content</h2>
+                <div id="content"></div>
+                <button onclick="copyContent()">Copy to Clipboard</button>
+                <button onclick="downloadContent()">Download as Text</button>
+            </section>
+
+            <!-- Simple Stats -->
+            <section id="stats" class="card">
+                <h2>Stats</h2>
+                <button onclick="loadStats()">Load Stats</button>
+                <div id="statsDisplay"></div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Tikal Simple v1.0 - Dramatically simplified for maintainability</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

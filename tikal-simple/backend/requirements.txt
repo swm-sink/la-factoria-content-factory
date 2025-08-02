@@ -1,0 +1,11 @@
+# Minimal Dependencies - 15 packages (vs 69 in original)
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.5.0
+httpx==0.25.2
+python-dotenv==1.0.0
+
+# Optional - Add only if needed:
+# langfuse==2.0.0  # For prompt management
+# psycopg2==2.9.9  # For Railway Postgres
+# pytest==7.4.3    # For testing
