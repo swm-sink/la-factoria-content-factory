@@ -8,21 +8,25 @@ from typing import Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 
+from .auth import get_key_store
 from .models import ContentType, GenerateRequest, GenerateResponse
 
 # Create simple app
 app = FastAPI(title="La Factoria Simple", description="AI content generation without complexity", version="1.0.0")
 
 
-# Simple auth dependency
+# Auth dependency using new key store
 async def verify_api_key(x_api_key: Optional[str] = Header(None)) -> str:
-    """Verify API key from header."""
+    """Verify API key from header using key store."""
     if not x_api_key:
         raise HTTPException(status_code=401, detail="API key required")
-    # For testing, accept test-key-* pattern
-    # In production, validate against stored keys
-    if not x_api_key.startswith("test-key-"):
+
+    key_store = get_key_store()
+    if not key_store.is_valid(x_api_key):
         raise HTTPException(status_code=401, detail="Invalid API key")
+
+    # Record usage for tracking
+    key_store.record_usage(x_api_key)
     return x_api_key
 
 
