@@ -1381,6 +1381,510 @@ railway run python -m uvicorn app.main:app --reload
 - Pricing: <https://railway.app/pricing>
 - CLI Reference: <https://docs.railway.app/reference/cli-api>
 
+### **SETUP-003**: Create test framework (2h)
+
+**🎯 Objective**: Set up a robust testing framework using pytest for TDD (Test-Driven Development). Focus on practical testing patterns for FastAPI applications with clear examples.
+
+**🧪 Testing Stack (August 2025 Best Practices)**:
+
+- **pytest**: Core testing framework (v8.2.2)
+- **pytest-asyncio**: Async test support (v0.23.7)
+- **pytest-cov**: Coverage reporting (v5.0.0)
+- **pytest-mock**: Mocking support (v3.14.0)
+- **httpx**: Async HTTP client for API tests (v0.27.0)
+
+**📋 Initial Setup**:
+
+```bash
+# Install testing dependencies
+pip install pytest pytest-asyncio pytest-cov pytest-mock httpx
+
+# Create test structure (if not already done)
+mkdir -p tests/{unit,integration}
+touch tests/__init__.py tests/conftest.py
+```
+
+**🔧 Configuration Files**:
+
+**1. `pytest.ini`** (Pytest configuration):
+
+```ini
+[pytest]
+# Test discovery
+testpaths = tests
+python_files = test_*.py
+python_classes = Test*
+python_functions = test_*
+
+# Async support
+asyncio_mode = auto
+
+# Output options
+addopts =
+    -v
+    --strict-markers
+    --cov=app
+    --cov-report=html
+    --cov-report=term-missing:skip-covered
+    --cov-fail-under=80
+
+# Custom markers
+markers =
+    unit: Unit tests (fast, isolated)
+    integration: Integration tests (may require external services)
+    slow: Slow tests (>1s execution time)
+```
+
+**2. `tests/conftest.py`** (Shared fixtures):
+
+```python
+"""Shared test fixtures and configuration."""
+import os
+import pytest
+from typing import AsyncGenerator, Generator
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
+
+# Import your app
+from app.main import app
+from app.database import Base
+from app.config import settings
+
+# Override settings for testing
+settings.DATABASE_URL = "sqlite+aiosqlite:///./test.db"
+settings.TESTING = True
+
+
+@pytest.fixture(scope="session")
+def anyio_backend():
+    """Use asyncio for all async tests."""
+    return "asyncio"
+
+
+@pytest.fixture
+async def client() -> AsyncGenerator[AsyncClient, None]:
+    """Create test client for API testing."""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        yield ac
+
+
+@pytest.fixture
+async def db_session() -> AsyncGenerator[AsyncSession, None]:
+    """Create test database session."""
+    # Create test database
+    engine = create_async_engine(
+        settings.DATABASE_URL,
+        echo=False,
+        future=True
+    )
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    # Create session
+    async_session = sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False
+    )
+
+    async with async_session() as session:
+        yield session
+
+    # Cleanup
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
+    await engine.dispose()
+
+
+@pytest.fixture
+def mock_openai(mocker):
+    """Mock OpenAI API calls."""
+    mock = mocker.patch("openai.ChatCompletion.create")
+    mock.return_value = {
+        "choices": [{
+            "message": {
+                "content": "Mocked AI response for testing"
+            }
+        }],
+        "usage": {
+            "total_tokens": 100,
+            "completion_tokens": 50
+        }
+    }
+    return mock
+
+
+@pytest.fixture
+def auth_headers():
+    """Create authenticated request headers."""
+    return {"Authorization": "Bearer test-api-key-123"}
+
+
+@pytest.fixture
+def sample_generation_request():
+    """Sample content generation request."""
+    return {
+        "content_type": "study_guide",
+        "topic": "Python Testing",
+        "additional_context": "Focus on pytest framework"
+    }
+```
+
+**📝 Test Examples**:
+
+**1. Unit Test - Service Layer** (`tests/unit/test_services.py`):
+
+```python
+"""Unit tests for service layer."""
+import pytest
+from unittest.mock import Mock, AsyncMock
+
+from app.services.ai_service import AIService
+from app.services.auth_service import AuthService
+
+
+class TestAIService:
+    """Test AI service functionality."""
+
+    @pytest.fixture
+    def ai_service(self, mock_openai):
+        """Create AI service with mocked dependencies."""
+        service = AIService()
+        service.client = mock_openai
+        return service
+
+    @pytest.mark.asyncio
+    async def test_generate_content_success(self, ai_service, sample_generation_request):
+        """Test successful content generation."""
+        # Act
+        result = await ai_service.generate_content(**sample_generation_request)
+
+        # Assert
+        assert result["content_type"] == "study_guide"
+        assert "content" in result
+        assert result["token_usage"]["total"] == 100
+        assert result["estimated_cost"] > 0
+
+    @pytest.mark.asyncio
+    async def test_generate_content_retry_on_error(self, ai_service, mocker):
+        """Test retry logic on API errors."""
+        # Arrange
+        ai_service.client.side_effect = [
+            Exception("API Error"),
+            Exception("API Error"),
+            {"choices": [{"message": {"content": "Success after retry"}}]}
+        ]
+
+        # Act & Assert
+        with pytest.raises(Exception):
+            await ai_service.generate_content("study_guide", "Test Topic")
+
+    def test_calculate_cost(self, ai_service):
+        """Test cost calculation accuracy."""
+        # Test cases: (input_tokens, output_tokens, expected_cost)
+        test_cases = [
+            (1000, 500, 0.025),  # $0.01 + $0.015
+            (100, 100, 0.004),   # $0.001 + $0.003
+            (0, 0, 0.0),
+        ]
+
+        for input_tokens, output_tokens, expected in test_cases:
+            cost = ai_service._calculate_cost(input_tokens, output_tokens)
+            assert cost == expected, f"Failed for {input_tokens}, {output_tokens}"
+
+
+class TestAuthService:
+    """Test authentication service."""
+
+    def test_generate_api_key_format(self):
+        """Test API key generation format."""
+        service = AuthService()
+        api_key = service.generate_api_key()
+
+        assert api_key.startswith("lfs_")  # la-factoria-simple prefix
+        assert len(api_key) == 36  # prefix + 32 chars
+        assert api_key[4:].isalnum()  # alphanumeric after prefix
+
+    def test_hash_api_key(self):
+        """Test API key hashing."""
+        service = AuthService()
+        api_key = "lfs_test123"
+
+        hashed = service.hash_api_key(api_key)
+        assert hashed != api_key
+        assert service.verify_api_key(api_key, hashed)
+        assert not service.verify_api_key("wrong_key", hashed)
+```
+
+**2. Integration Test - API Endpoints** (`tests/integration/test_api.py`):
+
+```python
+"""Integration tests for API endpoints."""
+import pytest
+from httpx import AsyncClient
+
+
+class TestHealthEndpoint:
+    """Test health check endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_health_check(self, client: AsyncClient):
+        """Test /health endpoint returns 200."""
+        response = await client.get("/health")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "healthy"
+        assert "port" in data
+
+
+class TestAuthEndpoints:
+    """Test authentication endpoints."""
+
+    @pytest.mark.asyncio
+    async def test_create_api_key(self, client: AsyncClient):
+        """Test API key creation."""
+        response = await client.post(
+            "/api/v1/auth/api-key",
+            json={"name": "Test Key"}
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert "api_key" in data
+        assert data["api_key"].startswith("lfs_")
+
+    @pytest.mark.asyncio
+    async def test_invalid_api_key(self, client: AsyncClient):
+        """Test request with invalid API key."""
+        response = await client.get(
+            "/api/v1/generate",
+            headers={"Authorization": "Bearer invalid_key"}
+        )
+
+        assert response.status_code == 401
+
+
+class TestGenerationEndpoint:
+    """Test content generation endpoint."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_generate_content(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        sample_generation_request: dict
+    ):
+        """Test content generation with valid request."""
+        response = await client.post(
+            "/api/v1/generate",
+            json=sample_generation_request,
+            headers=auth_headers
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["content_type"] == "study_guide"
+        assert "content" in data
+        assert "token_usage" in data
+        assert "estimated_cost" in data
+
+    @pytest.mark.asyncio
+    async def test_generate_invalid_content_type(
+        self,
+        client: AsyncClient,
+        auth_headers: dict
+    ):
+        """Test generation with invalid content type."""
+        response = await client.post(
+            "/api/v1/generate",
+            json={
+                "content_type": "invalid_type",
+                "topic": "Test"
+            },
+            headers=auth_headers
+        )
+
+        assert response.status_code == 422  # Validation error
+
+    @pytest.mark.asyncio
+    @pytest.mark.slow
+    async def test_generate_timeout_handling(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        mocker
+    ):
+        """Test timeout handling for slow API calls."""
+        # Mock slow API response
+        mocker.patch(
+            "app.services.ai_service.AIService.generate_content",
+            side_effect=TimeoutError("API timeout")
+        )
+
+        response = await client.post(
+            "/api/v1/generate",
+            json=sample_generation_request,
+            headers=auth_headers
+        )
+
+        assert response.status_code == 504  # Gateway timeout
+```
+
+**🚀 Running Tests**:
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage report
+pytest --cov=app --cov-report=html
+
+# Run only unit tests
+pytest -m unit
+
+# Run only integration tests
+pytest -m integration
+
+# Run specific test file
+pytest tests/unit/test_services.py
+
+# Run specific test
+pytest tests/unit/test_services.py::TestAIService::test_generate_content_success
+
+# Run with verbose output
+pytest -vv
+
+# Run and stop on first failure
+pytest -x
+
+# Run tests in parallel (install pytest-xdist first)
+pytest -n auto
+```
+
+**📊 Coverage Reports**:
+
+```bash
+# Generate HTML coverage report
+pytest --cov=app --cov-report=html
+# Open htmlcov/index.html in browser
+
+# Terminal coverage summary
+pytest --cov=app --cov-report=term-missing
+
+# Fail if coverage below threshold
+pytest --cov=app --cov-fail-under=80
+```
+
+**🎯 TDD Workflow**:
+
+```bash
+# 1. Write failing test first
+cat > tests/unit/test_new_feature.py << 'EOF'
+def test_new_feature():
+    result = my_new_function()
+    assert result == "expected"
+EOF
+
+# 2. Run test (should fail)
+pytest tests/unit/test_new_feature.py
+
+# 3. Implement minimal code to pass
+# ... write code ...
+
+# 4. Run test again (should pass)
+pytest tests/unit/test_new_feature.py
+
+# 5. Refactor with confidence
+# ... improve code ...
+
+# 6. Ensure tests still pass
+pytest
+```
+
+**⚠️ Common Testing Pitfalls**:
+
+1. **Not mocking external services**:
+
+   ```python
+   # Wrong: Real API call in tests
+   response = openai.ChatCompletion.create(...)
+
+   # Right: Mock external calls
+   mock_openai.return_value = {"test": "response"}
+   ```
+
+2. **Testing implementation instead of behavior**:
+
+   ```python
+   # Wrong: Testing private methods
+   assert service._internal_method() == "value"
+
+   # Right: Test public interface
+   assert service.generate_content(...) == expected
+   ```
+
+3. **Incomplete async cleanup**:
+
+   ```python
+   # Wrong: Forgetting to close connections
+   async def test_something():
+       client = AsyncClient()
+       # ... test ...
+
+   # Right: Use context managers
+   async with AsyncClient() as client:
+       # ... test ...
+   ```
+
+4. **Not isolating tests**:
+
+   ```python
+   # Wrong: Tests depend on each other
+   def test_create():
+       global user_id
+       user_id = create_user()
+
+   def test_delete():
+       delete_user(user_id)  # Depends on test_create
+
+   # Right: Each test is independent
+   def test_delete():
+       user_id = create_user()  # Setup
+       delete_user(user_id)     # Test
+   ```
+
+**✅ Quality Gates**:
+
+- [ ] pytest.ini configured with appropriate settings
+- [ ] conftest.py with shared fixtures
+- [ ] Unit tests for all services
+- [ ] Integration tests for all endpoints
+- [ ] 80%+ code coverage
+- [ ] All tests pass locally
+- [ ] Tests run in <30 seconds
+- [ ] Mock all external dependencies
+
+**📤 Expected Outputs**:
+
+1. Working test suite with `pytest`
+2. HTML coverage report in `htmlcov/`
+3. Clear test structure (unit/integration)
+4. Fixtures for common test data
+5. Mocked external services
+
+**🔗 Impact on Other Tasks**:
+
+- All API tasks will include tests
+- **CI/CD**: Will run these tests
+- **API-001**: Will test health endpoint
+- **API-002**: Will test generation endpoint
+- **API-003**: Will test auth endpoints
+
 ### **API-004**: Add AI provider integration (4h)
 
 **🎯 Objective**: Integrate OpenAI/Anthropic for content generation with Langfuse observability. Focus on reliability, cost tracking, and simple prompt management for 1-10 users.
@@ -1774,7 +2278,7 @@ class CostMonitor:
 - [x] DISCOVER-003: Fully enhanced with anti-hallucination context
 - [x] SETUP-001: Fully enhanced with repository structure details
 - [x] SETUP-002: Fully enhanced with Railway-specific context
-- [ ] SETUP-003: Pending enhancement
+- [x] SETUP-003: Fully enhanced with pytest testing framework
 - [ ] API-001: Pending enhancement
 - [ ] API-002: Pending enhancement
 - [ ] API-003: Pending enhancement
