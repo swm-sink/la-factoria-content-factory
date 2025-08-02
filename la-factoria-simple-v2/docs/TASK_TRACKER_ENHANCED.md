@@ -2226,7 +2226,575 @@ async def detailed_health_check(
 
 ### **API-002**: Create content generation endpoint structure (3h)
 
-[To be enhanced next...]
+**🎯 Objective**: Build the core content generation endpoint structure with proper validation, error handling, and async patterns. This endpoint will be the heart of the application.
+
+**🏗️ Architecture Overview**:
+
+- Request validation with Pydantic models
+- Service layer for business logic separation
+- Proper error handling and status codes
+- Async/await patterns throughout
+- Ready for AI integration (API-004)
+
+**📋 TDD Implementation Steps**:
+
+**Step 1: Write the test first** (`tests/integration/test_generation.py`):
+
+```python
+"""Test content generation endpoints."""
+import pytest
+from httpx import AsyncClient
+from app.main import app
+
+
+class TestGenerationEndpoint:
+    """Test content generation functionality."""
+
+    @pytest.fixture
+    def valid_request(self):
+        """Valid generation request."""
+        return {
+            "content_type": "study_guide",
+            "topic": "Python Programming Basics",
+            "additional_context": "Focus on beginners"
+        }
+
+    @pytest.fixture
+    def auth_headers(self):
+        """Mock auth headers for testing."""
+        return {"Authorization": "Bearer test-api-key"}
+
+    @pytest.mark.asyncio
+    async def test_generation_endpoint_structure(self, auth_headers, valid_request):
+        """Test endpoint accepts proper structure."""
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            response = await client.post(
+                "/api/v1/generate",
+                json=valid_request,
+                headers=auth_headers
+            )
+
+        # For now, expect 501 (not implemented) since AI not integrated
+        assert response.status_code == 501
+        data = response.json()
+        assert "detail" in data
+
+    @pytest.mark.asyncio
+    async def test_generation_validation_content_type(self, auth_headers):
+        """Test content type validation."""
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            response = await client.post(
+                "/api/v1/generate",
+                json={
+                    "content_type": "invalid_type",
+                    "topic": "Test"
+                },
+                headers=auth_headers
+            )
+
+        assert response.status_code == 422
+        errors = response.json()["detail"]
+        assert any("content_type" in str(error) for error in errors)
+
+    @pytest.mark.asyncio
+    async def test_generation_validation_topic_required(self, auth_headers):
+        """Test topic is required."""
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            response = await client.post(
+                "/api/v1/generate",
+                json={"content_type": "study_guide"},
+                headers=auth_headers
+            )
+
+        assert response.status_code == 422
+        errors = response.json()["detail"]
+        assert any("topic" in str(error) for error in errors)
+
+    @pytest.mark.asyncio
+    async def test_generation_requires_auth(self, valid_request):
+        """Test authentication is required."""
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            response = await client.post(
+                "/api/v1/generate",
+                json=valid_request
+                # No auth headers
+            )
+
+        assert response.status_code == 401
+```
+
+**Step 2: Create request/response models** (`app/models/generation.py`):
+
+```python
+"""Generation request and response models."""
+from datetime import datetime
+from typing import Optional, Literal
+from pydantic import BaseModel, Field, validator
+
+
+# Supported content types
+ContentType = Literal[
+    "study_guide",
+    "flashcards",
+    "podcast_script",
+    "one_pager",
+    "detailed_reading",
+    "faq",
+    "reading_questions",
+    "master_outline"
+]
+
+
+class GenerationRequest(BaseModel):
+    """Content generation request model."""
+
+    content_type: ContentType = Field(
+        ...,
+        description="Type of content to generate"
+    )
+
+    topic: str = Field(
+        ...,
+        min_length=3,
+        max_length=500,
+        description="Topic for content generation"
+    )
+
+    additional_context: Optional[str] = Field(
+        None,
+        max_length=2000,
+        description="Additional context or requirements"
+    )
+
+    language: str = Field(
+        default="en",
+        pattern="^[a-z]{2}$",
+        description="Language code (ISO 639-1)"
+    )
+
+    @validator("topic")
+    def clean_topic(cls, v):
+        """Clean and validate topic."""
+        # Remove excessive whitespace
+        cleaned = " ".join(v.split())
+        if len(cleaned) < 3:
+            raise ValueError("Topic too short after cleaning")
+        return cleaned
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "content_type": "study_guide",
+                "topic": "Introduction to Machine Learning",
+                "additional_context": "For undergraduate students",
+                "language": "en"
+            }
+        }
+
+
+class GenerationResponse(BaseModel):
+    """Content generation response model."""
+
+    id: str = Field(..., description="Unique generation ID")
+    content: str = Field(..., description="Generated content")
+    content_type: ContentType
+    topic: str
+
+    created_at: datetime
+    processing_time_ms: int
+
+    metadata: dict = Field(
+        default_factory=dict,
+        description="Additional metadata (tokens, cost, etc)"
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "id": "gen_abc123",
+                "content": "# Study Guide: Introduction to Machine Learning\n\n...",
+                "content_type": "study_guide",
+                "topic": "Introduction to Machine Learning",
+                "created_at": "2025-08-02T10:30:45.123456",
+                "processing_time_ms": 2500,
+                "metadata": {
+                    "token_count": 1500,
+                    "estimated_cost": 0.045,
+                    "model": "gpt-4-turbo"
+                }
+            }
+        }
+
+
+class GenerationError(BaseModel):
+    """Error response for generation failures."""
+
+    error_code: str
+    message: str
+    details: Optional[dict] = None
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "error_code": "GENERATION_FAILED",
+                "message": "Failed to generate content",
+                "details": {"reason": "API rate limit exceeded"}
+            }
+        }
+```
+
+**Step 3: Create the service layer** (`app/services/generation_service.py`):
+
+```python
+"""Content generation service."""
+import time
+import uuid
+from datetime import datetime
+from typing import Optional
+
+from app.models.generation import (
+    GenerationRequest,
+    GenerationResponse,
+    ContentType
+)
+
+
+class GenerationService:
+    """Handle content generation logic."""
+
+    def __init__(self):
+        """Initialize generation service."""
+        # Will be enhanced in API-004 with AI integration
+        self.ai_service = None
+
+    async def generate_content(
+        self,
+        request: GenerationRequest,
+        user_id: Optional[str] = None
+    ) -> GenerationResponse:
+        """
+        Generate content based on request.
+
+        This is a placeholder that will be enhanced in API-004.
+        """
+        start_time = time.time()
+
+        # Generate unique ID
+        generation_id = f"gen_{uuid.uuid4().hex[:12]}"
+
+        # Placeholder content until AI integration
+        content = self._generate_placeholder_content(
+            request.content_type,
+            request.topic,
+            request.additional_context
+        )
+
+        # Calculate processing time
+        processing_time_ms = int((time.time() - start_time) * 1000)
+
+        return GenerationResponse(
+            id=generation_id,
+            content=content,
+            content_type=request.content_type,
+            topic=request.topic,
+            created_at=datetime.utcnow(),
+            processing_time_ms=processing_time_ms,
+            metadata={
+                "placeholder": True,
+                "user_id": user_id,
+                "language": request.language
+            }
+        )
+
+    def _generate_placeholder_content(
+        self,
+        content_type: ContentType,
+        topic: str,
+        context: Optional[str]
+    ) -> str:
+        """Generate placeholder content for testing."""
+        templates = {
+            "study_guide": f"""# Study Guide: {topic}
+
+## Overview
+This is a placeholder study guide for {topic}.
+{f'Context: {context}' if context else ''}
+
+## Key Concepts
+1. Concept 1
+2. Concept 2
+3. Concept 3
+
+## Summary
+This will be replaced with AI-generated content in API-004.
+""",
+            "flashcards": f"""# Flashcards: {topic}
+
+Card 1:
+Q: What is {topic}?
+A: [Placeholder answer]
+
+Card 2:
+Q: Why is {topic} important?
+A: [Placeholder answer]
+
+Note: This will be replaced with AI-generated content in API-004.
+""",
+            # Add other content types...
+        }
+
+        return templates.get(
+            content_type,
+            f"Placeholder content for {content_type} about {topic}"
+        )
+
+
+# Singleton instance
+generation_service = GenerationService()
+```
+
+**Step 4: Create the API endpoint** (`app/api/generation.py`):
+
+```python
+"""Content generation API endpoints."""
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
+
+from app.models.generation import (
+    GenerationRequest,
+    GenerationResponse,
+    GenerationError
+)
+from app.services.generation_service import generation_service
+from app.api.auth import get_current_user
+
+
+router = APIRouter()
+
+
+@router.post(
+    "/generate",
+    response_model=GenerationResponse,
+    responses={
+        400: {"model": GenerationError},
+        401: {"description": "Unauthorized"},
+        422: {"description": "Validation Error"},
+        500: {"model": GenerationError}
+    },
+    tags=["generation"]
+)
+async def generate_content(
+    request: GenerationRequest,
+    current_user: dict = Depends(get_current_user)
+) -> GenerationResponse:
+    """
+    Generate educational content.
+
+    Supports multiple content types:
+    - study_guide: Comprehensive study guides
+    - flashcards: Q&A format flashcards
+    - podcast_script: Podcast episode scripts
+    - And more...
+
+    Requires authentication via API key.
+    """
+    try:
+        # For now, return 501 until AI is integrated
+        if not hasattr(generation_service, 'ai_service') or generation_service.ai_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail="AI service not yet integrated. See API-004."
+            )
+
+        # Generate content
+        response = await generation_service.generate_content(
+            request,
+            user_id=current_user.get("id")
+        )
+
+        return response
+
+    except HTTPException:
+        raise
+    except ValueError as e:
+        # Handle validation errors
+        return JSONResponse(
+            status_code=400,
+            content=GenerationError(
+                error_code="INVALID_REQUEST",
+                message=str(e)
+            ).dict()
+        )
+    except Exception as e:
+        # Handle unexpected errors
+        return JSONResponse(
+            status_code=500,
+            content=GenerationError(
+                error_code="GENERATION_FAILED",
+                message="An unexpected error occurred",
+                details={"error": str(e)} if current_user.get("is_admin") else None
+            ).dict()
+        )
+
+
+@router.get("/content-types", tags=["generation"])
+async def get_content_types():
+    """Get list of supported content types."""
+    return {
+        "content_types": [
+            {
+                "id": "study_guide",
+                "name": "Study Guide",
+                "description": "Comprehensive study guide with key concepts"
+            },
+            {
+                "id": "flashcards",
+                "name": "Flashcards",
+                "description": "Q&A format for memorization"
+            },
+            {
+                "id": "podcast_script",
+                "name": "Podcast Script",
+                "description": "Conversational script for audio content"
+            },
+            # Add all content types...
+        ]
+    }
+```
+
+**Step 5: Update main.py**:
+
+```python
+# In app/main.py, add:
+from app.api import generation
+
+# After health router
+app.include_router(
+    generation.router,
+    prefix="/api/v1",
+    tags=["generation"]
+)
+```
+
+**Step 6: Create placeholder auth** (`app/api/auth.py`):
+
+```python
+"""Placeholder authentication for testing."""
+from fastapi import Header, HTTPException, status
+
+
+async def get_current_user(
+    authorization: str = Header(None)
+) -> dict:
+    """
+    Placeholder auth check.
+    Will be properly implemented in API-003.
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid authentication"
+        )
+
+    # For now, return a mock user
+    return {
+        "id": "user_123",
+        "api_key": authorization.split(" ")[1],
+        "is_admin": False
+    }
+```
+
+**🧪 Testing the Structure**:
+
+```bash
+# Run the tests
+pytest tests/integration/test_generation.py -v
+
+# Test manually with curl
+# Should return 401 (no auth)
+curl -X POST http://localhost:8000/api/v1/generate \
+  -H "Content-Type: application/json" \
+  -d '{"content_type": "study_guide", "topic": "Python"}'
+
+# Should return 501 (not implemented)
+curl -X POST http://localhost:8000/api/v1/generate \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer test-key" \
+  -d '{"content_type": "study_guide", "topic": "Python"}'
+
+# Test content types endpoint
+curl http://localhost:8000/api/v1/content-types
+```
+
+**📝 OpenAPI Documentation**:
+
+The endpoint will automatically appear in `/docs` with:
+
+- Request/response schemas
+- Validation rules
+- Example payloads
+- Authentication requirements
+
+**⚠️ Common Pitfalls**:
+
+1. **Synchronous code in async endpoint**:
+
+   ```python
+   # Wrong: Blocking call
+   @router.post("/generate")
+   async def generate():
+       time.sleep(1)  # Blocks event loop!
+
+   # Right: Use async
+   @router.post("/generate")
+   async def generate():
+       await asyncio.sleep(1)
+   ```
+
+2. **Poor error messages**:
+
+   ```python
+   # Wrong: Generic error
+   raise HTTPException(400, "Bad request")
+
+   # Right: Specific error
+   raise HTTPException(400, "Topic must be 3-500 characters")
+   ```
+
+3. **Missing validation**:
+
+   ```python
+   # Wrong: Trust input
+   content = generate_for_type(request["content_type"])
+
+   # Right: Use Pydantic
+   content = generate_for_type(request.content_type)  # Validated!
+   ```
+
+**✅ Quality Gates**:
+
+- [ ] Tests written and passing
+- [ ] Pydantic models with validation
+- [ ] Proper error handling
+- [ ] Async patterns used correctly
+- [ ] OpenAPI docs generated
+- [ ] Ready for AI integration
+- [ ] Placeholder responses working
+
+**📤 Expected Outputs**:
+
+1. `/api/v1/generate` endpoint structure
+2. `/api/v1/content-types` listing endpoint
+3. Proper validation and error responses
+4. OpenAPI documentation
+5. Ready for AI service integration
+
+**🔗 Impact on Other Tasks**:
+
+- **API-003**: Provides auth dependency
+- **API-004**: Will integrate AI service here
+- **FRONT-002**: Will call this endpoint
+- **DB-003**: May store generation history
 
 ### **API-003**: Implement simple authentication (3h)
 
@@ -2627,7 +3195,7 @@ class CostMonitor:
 - [x] SETUP-002: Fully enhanced with Railway-specific context
 - [x] SETUP-003: Fully enhanced with pytest testing framework
 - [x] API-001: Fully enhanced with health check implementation
-- [ ] API-002: Pending enhancement
+- [x] API-002: Fully enhanced with content generation endpoint structure
 - [ ] API-003: Pending enhancement
 - [x] API-004: Fully enhanced with AI provider and Langfuse integration
 - [ ] FRONT-001: Pending enhancement
