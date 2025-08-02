@@ -11,6 +11,7 @@ from app.api.routes.feedback import router as feedback_router
 from app.api.routes.jobs import router as jobs_router
 from app.api.routes.search import router as search_router
 from app.api.routes.sla import router as sla_router
+from app.api.routes.user_data_deletion import router as user_data_deletion_router
 
 # Ensure worker_router is not part of the main api_router if it's handled separately
 # from app.api.routes.worker import router as worker_router # Typically not included here
@@ -46,6 +47,9 @@ api_router.include_router(export_router, tags=["Export"])
 
 # Search router - requires authentication
 api_router.include_router(search_router, tags=["Search"])
+
+# User data deletion router - requires authentication
+api_router.include_router(user_data_deletion_router, tags=["Data Privacy"])
 
 
 # Include the health check endpoint
