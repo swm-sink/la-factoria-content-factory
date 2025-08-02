@@ -65,6 +65,7 @@ from app.core.middleware.request_tracking import RequestLoggingMiddleware, Reque
 from app.middleware.cache_headers import CacheHeadersMiddleware
 from app.middleware.connection_monitor import ConnectionMonitoringMiddleware
 from app.middleware.cost_control import CostControlMiddleware
+from app.middleware.error_alerting import ErrorAlertingMiddleware
 from app.middleware.health_monitoring import HealthMonitoringMiddleware
 from app.middleware.metrics import CacheMetricsMiddleware, DatabaseMetricsMiddleware, MetricsMiddleware
 from app.middleware.rate_limiting import RateLimitingMiddleware
@@ -357,6 +358,21 @@ async def startup_event() -> None:
         await start_alert_manager(app)
         # Set up alert endpoints
         setup_alert_endpoints(app)
+
+        # Set up alert manager reference for exception handlers
+        from app.core.exceptions.handlers import set_alert_manager
+
+        set_alert_manager(app.state.alert_manager)
+
+        # Add error alerting middleware (after alert manager is available)
+        error_alerting_config = {
+            "error_rate_threshold": 0.05,  # 5%
+            "error_rate_window": 300,  # 5 minutes
+            "critical_error_codes": [500, 502, 503, 504],
+            "alert_on_first_error": True,
+        }
+        app.add_middleware(ErrorAlertingMiddleware, alert_manager=app.state.alert_manager, config=error_alerting_config)
+
         structured_logger.log_event(
             structured_logger.LogLevel.INFO, structured_logger.EventType.PERFORMANCE, "Alert management system started"
         )
