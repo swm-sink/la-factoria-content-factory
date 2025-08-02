@@ -1,5 +1,60 @@
 # Alert Management Runbook
 
+**Severity**: P2
+**Time Estimate**: 15-30 minutes
+**Last Updated**: 2025-01-02
+**Owner**: Platform Team
+**Related SLO**: Alert Response Time
+
+## Summary
+
+Comprehensive guide for configuring, testing, and managing La Factoria's alert system including notification channels, escalation policies, and troubleshooting.
+
+## Symptoms
+
+- Alerts not firing when issues occur
+- Notifications not reaching intended channels
+- Too many false positive alerts
+- Alert storms overwhelming channels
+- Delayed alert notifications
+
+## Prerequisites
+
+- Admin access to monitoring stack
+- Docker and docker-compose installed
+- Access to notification channels (Slack, PagerDuty)
+- Environment variables properly configured
+
+## Resolution Steps
+
+1. **Initial Setup**
+   - Configure environment variables for notification channels
+   - Validate configuration files
+   - Deploy Alertmanager with enhanced configuration
+
+2. **Test Alert System**
+   - Fire test alerts for critical scenarios
+   - Verify notification delivery
+   - Test escalation flows
+
+3. **Monitor and Maintain**
+   - Review active alerts weekly
+   - Tune thresholds based on metrics
+   - Update routing rules as needed
+
+## Verification
+
+- All test alerts fire successfully: `python scripts/test_alerts.py`
+- Notifications reach all configured channels
+- Escalation policies trigger at correct intervals
+- Alert metrics show healthy system state
+
+## Related Documentation
+
+- [SLA Monitoring Guide](../docs/sla.md)
+- [Prometheus Configuration](../monitoring/prometheus.yml)
+- [Health Check Endpoints](../docs/health-checks.md)
+
 ## Overview
 
 This runbook covers the configuration, testing, and management of La Factoria's alert system.
@@ -166,13 +221,15 @@ route.escalation_policy = payment_escalation
 1. Check Prometheus rules:
 
 ```bash
-curl http://localhost:9090/api/v1/rules | jq
+# Check Prometheus alerting rules configuration
+curl --fail --max-time 10 http://localhost:9090/api/v1/rules | jq
 ```
 
 2. Verify webhook endpoint:
 
 ```bash
-curl -X POST http://localhost:8000/alerts/webhook \
+# Test alert webhook endpoint connectivity
+curl --fail --max-time 10 -X POST http://localhost:8000/alerts/webhook \
   -H "Content-Type: application/json" \
   -d '{"alerts": []}'
 ```
@@ -180,7 +237,8 @@ curl -X POST http://localhost:8000/alerts/webhook \
 3. Check alert thresholds in metrics:
 
 ```bash
-curl http://localhost:8000/metrics | grep -E "(error_rate|latency)"
+# Check current metrics for alert threshold values
+curl --fail --max-time 10 http://localhost:8000/metrics | grep -E "(error_rate|latency)"
 ```
 
 ### Notifications Not Received
@@ -228,7 +286,8 @@ inhibit_rules:
 
 ```bash
 # Alerts should be grouped by service/severity
-curl http://localhost:8000/alerts/active | jq '.alerts | group_by(.group_key)'
+# Check alert grouping to verify storm prevention
+curl --fail --max-time 10 http://localhost:8000/alerts/active | jq '.alerts | group_by(.group_key)'
 ```
 
 2. Enable rate limiting:

@@ -1,5 +1,15 @@
 # La Factoria Runbook Library
 
+**Severity**: P3
+**Time Estimate**: 5-10 minutes
+**Last Updated**: 2025-01-02
+**Owner**: Platform Team
+**Related SLO**: System Availability
+
+## Summary
+
+Centralized runbook library containing standardized operational procedures for maintaining and troubleshooting the La Factoria platform.
+
 ## Overview
 
 This runbook library contains standardized operational procedures for maintaining and troubleshooting the La Factoria platform. All runbooks follow a consistent format for quick access during incidents.
