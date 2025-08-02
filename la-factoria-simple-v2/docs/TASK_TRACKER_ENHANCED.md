@@ -5394,6 +5394,1015 @@ For 1-10 users:
 - Storage used: ~10MB/month
 - **Years before hitting limit: 8+**
 
+---
+
+### DB-002: Create Database Schema
+**⏱️ Estimated Time**: 2 hours  
+**📋 Prerequisites**: DB-001 completed, models created
+
+**🎯 Task Objective**: Create and run migrations to set up the database schema for users, API keys, and generation history.
+
+**💻 Complete Implementation**:
+
+#### Step 1: Create Complete Models
+
+Update `app/models/models.py` with full schema:
+
+```python
+from sqlalchemy import Column, String, DateTime, Integer, Float, Text, Boolean, Index
+from sqlalchemy.sql import func
+from app.core.database import Base
+import uuid
+
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    email = Column(String(255), unique=True, index=True, nullable=False)
+    api_key = Column(String(100), unique=True, index=True, nullable=False)
+    api_key_hash = Column(String(255), nullable=False)
+    
+    # Metadata
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    last_active_at = Column(DateTime(timezone=True))
+    is_active = Column(Boolean, default=True, nullable=False)
+    
+    # GDPR compliance
+    consent_given_at = Column(DateTime(timezone=True), nullable=False)
+    consent_version = Column(String(50), default="1.0")
+    deletion_requested_at = Column(DateTime(timezone=True))
+    
+    # Usage tracking
+    total_generations = Column(Integer, default=0)
+    total_cost = Column(Float, default=0.0)
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_user_active_email', 'is_active', 'email'),
+        Index('idx_user_deletion', 'deletion_requested_at'),
+    )
+
+class Generation(Base):
+    __tablename__ = "generations"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, nullable=False, index=True)
+    
+    # Request data
+    content_type = Column(String(50), nullable=False, index=True)
+    topic = Column(Text, nullable=False)
+    audience = Column(String(50), nullable=False)
+    request_hash = Column(String(64))  # For deduplication
+    
+    # Response data
+    content = Column(Text)
+    model_used = Column(String(50))
+    provider = Column(String(50))  # openai, anthropic
+    cost = Column(Float, default=0.0)
+    tokens_used = Column(Integer)
+    
+    # Timing
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    processing_time_ms = Column(Integer)
+    
+    # Tracking
+    langfuse_trace_id = Column(String(100), index=True)
+    error_message = Column(Text)
+    status = Column(String(20), default="completed")  # completed, failed
+    
+    # Indexes for common queries
+    __table_args__ = (
+        Index('idx_generation_user_date', 'user_id', 'created_at'),
+        Index('idx_generation_type_date', 'content_type', 'created_at'),
+        Index('idx_generation_request_hash', 'request_hash'),
+    )
+
+class APIKeyRotation(Base):
+    """Track API key rotation history for security"""
+    __tablename__ = "api_key_rotations"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, nullable=False, index=True)
+    old_key_prefix = Column(String(20))  # First 8 chars for identification
+    new_key_prefix = Column(String(20))
+    rotated_at = Column(DateTime(timezone=True), server_default=func.now())
+    reason = Column(String(100))  # scheduled, user_requested, compromised
+```
+
+#### Step 2: Create Initial Migration
+
+```bash
+# Generate migration
+alembic revision --autogenerate -m "Create initial schema with users, generations, and api key rotation"
+
+# This creates a file in alembic/versions/
+```
+
+The migration file will look like:
+
+```python
+"""Create initial schema with users, generations, and api key rotation
+
+Revision ID: 001_initial_schema
+Revises: 
+Create Date: 2025-08-02
+
+"""
+from alembic import op
+import sqlalchemy as sa
+
+def upgrade() -> None:
+    # Create users table
+    op.create_table('users',
+        sa.Column('id', sa.String(), nullable=False),
+        sa.Column('email', sa.String(length=255), nullable=False),
+        sa.Column('api_key', sa.String(length=100), nullable=False),
+        sa.Column('api_key_hash', sa.String(length=255), nullable=False),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+        sa.Column('last_active_at', sa.DateTime(timezone=True), nullable=True),
+        sa.Column('is_active', sa.Boolean(), nullable=False),
+        sa.Column('consent_given_at', sa.DateTime(timezone=True), nullable=False),
+        sa.Column('consent_version', sa.String(length=50), nullable=True),
+        sa.Column('deletion_requested_at', sa.DateTime(timezone=True), nullable=True),
+        sa.Column('total_generations', sa.Integer(), nullable=True),
+        sa.Column('total_cost', sa.Float(), nullable=True),
+        sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_user_active_email', 'users', ['is_active', 'email'])
+    op.create_index('idx_user_deletion', 'users', ['deletion_requested_at'])
+    op.create_index(op.f('ix_users_api_key'), 'users', ['api_key'], unique=True)
+    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
+    
+    # Create generations table
+    op.create_table('generations',
+        sa.Column('id', sa.String(), nullable=False),
+        sa.Column('user_id', sa.String(), nullable=False),
+        sa.Column('content_type', sa.String(length=50), nullable=False),
+        sa.Column('topic', sa.Text(), nullable=False),
+        sa.Column('audience', sa.String(length=50), nullable=False),
+        sa.Column('request_hash', sa.String(length=64), nullable=True),
+        sa.Column('content', sa.Text(), nullable=True),
+        sa.Column('model_used', sa.String(length=50), nullable=True),
+        sa.Column('provider', sa.String(length=50), nullable=True),
+        sa.Column('cost', sa.Float(), nullable=True),
+        sa.Column('tokens_used', sa.Integer(), nullable=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+        sa.Column('processing_time_ms', sa.Integer(), nullable=True),
+        sa.Column('langfuse_trace_id', sa.String(length=100), nullable=True),
+        sa.Column('error_message', sa.Text(), nullable=True),
+        sa.Column('status', sa.String(length=20), nullable=True),
+        sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_generation_request_hash', 'generations', ['request_hash'])
+    op.create_index('idx_generation_type_date', 'generations', ['content_type', 'created_at'])
+    op.create_index('idx_generation_user_date', 'generations', ['user_id', 'created_at'])
+    op.create_index(op.f('ix_generations_content_type'), 'generations', ['content_type'])
+    op.create_index(op.f('ix_generations_created_at'), 'generations', ['created_at'])
+    op.create_index(op.f('ix_generations_langfuse_trace_id'), 'generations', ['langfuse_trace_id'])
+    op.create_index(op.f('ix_generations_user_id'), 'generations', ['user_id'])
+    
+    # Create api_key_rotations table
+    op.create_table('api_key_rotations',
+        sa.Column('id', sa.String(), nullable=False),
+        sa.Column('user_id', sa.String(), nullable=False),
+        sa.Column('old_key_prefix', sa.String(length=20), nullable=True),
+        sa.Column('new_key_prefix', sa.String(length=20), nullable=True),
+        sa.Column('rotated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+        sa.Column('reason', sa.String(length=100), nullable=True),
+        sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_api_key_rotations_user_id'), 'api_key_rotations', ['user_id'])
+
+def downgrade() -> None:
+    op.drop_index(op.f('ix_api_key_rotations_user_id'), table_name='api_key_rotations')
+    op.drop_table('api_key_rotations')
+    op.drop_index(op.f('ix_generations_user_id'), table_name='generations')
+    op.drop_index(op.f('ix_generations_langfuse_trace_id'), table_name='generations')
+    op.drop_index(op.f('ix_generations_created_at'), table_name='generations')
+    op.drop_index(op.f('ix_generations_content_type'), table_name='generations')
+    op.drop_index('idx_generation_user_date', table_name='generations')
+    op.drop_index('idx_generation_type_date', table_name='generations')
+    op.drop_index('idx_generation_request_hash', table_name='generations')
+    op.drop_table('generations')
+    op.drop_index(op.f('ix_users_email'), table_name='users')
+    op.drop_index(op.f('ix_users_api_key'), table_name='users')
+    op.drop_index('idx_user_deletion', table_name='users')
+    op.drop_index('idx_user_active_email', table_name='users')
+    op.drop_table('users')
+```
+
+#### Step 3: Run Migrations
+
+```bash
+# Test locally first
+docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=test postgres:16
+export DATABASE_URL=postgresql://postgres:test@localhost:5432/postgres
+
+# Run migration
+alembic upgrade head
+
+# Verify tables
+psql $DATABASE_URL -c "\dt"
+
+# Deploy to Railway
+railway run alembic upgrade head
+```
+
+#### Step 4: Create Migration Helpers
+
+Create `scripts/db_utils.py`:
+
+```python
+#!/usr/bin/env python3
+"""Database utility commands"""
+import asyncio
+import click
+from app.core.database import engine, Base
+from app.models.models import User, Generation, APIKeyRotation
+
+@click.group()
+def cli():
+    """Database management commands"""
+    pass
+
+@cli.command()
+def create_tables():
+    """Create all tables (for development)"""
+    async def _create():
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        print("✅ Tables created successfully")
+    
+    asyncio.run(_create())
+
+@cli.command()
+def drop_tables():
+    """Drop all tables (DANGER!)"""
+    if click.confirm("⚠️  This will DELETE ALL DATA. Continue?"):
+        async def _drop():
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.drop_all)
+            print("✅ Tables dropped")
+        
+        asyncio.run(_drop())
+
+@cli.command()
+def check_schema():
+    """Verify schema is up to date"""
+    async def _check():
+        async with engine.connect() as conn:
+            # Check each table
+            tables = ['users', 'generations', 'api_key_rotations']
+            for table in tables:
+                result = await conn.execute(
+                    f"SELECT COUNT(*) FROM information_schema.tables WHERE table_name = '{table}'"
+                )
+                exists = result.scalar() > 0
+                print(f"{'✅' if exists else '❌'} Table '{table}' exists")
+    
+    asyncio.run(_check())
+
+if __name__ == '__main__':
+    cli()
+```
+
+#### Step 5: Add Schema Validation
+
+Create `tests/test_schema.py`:
+
+```python
+import pytest
+from sqlalchemy import inspect
+from app.core.database import engine
+from app.models.models import User, Generation, APIKeyRotation
+
+@pytest.mark.asyncio
+async def test_all_tables_exist():
+    """Verify all required tables exist"""
+    async with engine.connect() as conn:
+        inspector = inspect(conn)
+        tables = await conn.run_sync(lambda sync_conn: inspector.get_table_names())
+        
+        required_tables = ['users', 'generations', 'api_key_rotations']
+        for table in required_tables:
+            assert table in tables, f"Table {table} missing"
+
+@pytest.mark.asyncio
+async def test_indexes_exist():
+    """Verify performance indexes are created"""
+    async with engine.connect() as conn:
+        # Check user indexes
+        result = await conn.execute("""
+            SELECT indexname FROM pg_indexes 
+            WHERE tablename = 'users' AND indexname LIKE 'idx_%'
+        """)
+        indexes = [row[0] for row in result]
+        assert 'idx_user_active_email' in indexes
+        assert 'idx_user_deletion' in indexes
+        
+        # Check generation indexes
+        result = await conn.execute("""
+            SELECT indexname FROM pg_indexes 
+            WHERE tablename = 'generations' AND indexname LIKE 'idx_%'
+        """)
+        indexes = [row[0] for row in result]
+        assert 'idx_generation_user_date' in indexes
+```
+
+**📋 Common Pitfalls & Solutions**:
+
+1. **Migration Order Issues**:
+   ```bash
+   # Always check current state
+   alembic current
+   # If stuck, stamp the head
+   alembic stamp head
+   ```
+
+2. **Index Name Conflicts**:
+   ```python
+   # Use explicit index names
+   Index('idx_unique_name', 'column1', 'column2')
+   ```
+
+3. **Schema Drift**:
+   ```bash
+   # Compare models to database
+   alembic check
+   ```
+
+**🧪 Testing the Implementation**:
+
+```bash
+# 1. Run migration
+railway run alembic upgrade head
+
+# 2. Verify schema
+railway run python scripts/db_utils.py check-schema
+
+# 3. Test with sample data
+railway run python -c "
+from app.core.database import AsyncSessionLocal
+from app.models.models import User
+import asyncio
+
+async def test():
+    async with AsyncSessionLocal() as db:
+        user = User(
+            email='test@example.com',
+            api_key='lfs_test123',
+            api_key_hash='hashed',
+            consent_given_at=datetime.utcnow()
+        )
+        db.add(user)
+        await db.commit()
+        print('✅ User created')
+
+asyncio.run(test())
+"
+```
+
+**✅ Quality Gates**:
+
+- [ ] All migrations run without errors
+- [ ] Tables created with correct columns
+- [ ] All indexes created for performance
+- [ ] Schema validation tests pass
+- [ ] Can insert/query test data
+- [ ] Rollback works if needed
+
+**📤 Expected Outputs**:
+
+1. Three tables created: users, generations, api_key_rotations
+2. All indexes created for query performance
+3. Migration history tracked in alembic_version
+4. Schema validation passing
+
+**🔗 Impact on Other Tasks**:
+
+- **DB-003**: Will use this schema for CRUD operations
+- **AUTH-001**: Will store API keys using this schema
+- **GDPR-001**: Uses deletion_requested_at field
+- **PERF-001**: Relies on indexes for performance
+
+---
+
+### DB-003: Implement User CRUD
+**⏱️ Estimated Time**: 3 hours  
+**📋 Prerequisites**: DB-002 completed, schema created
+
+**🎯 Task Objective**: Implement Create, Read, Update, Delete operations for users with proper async patterns and error handling.
+
+**💻 Complete Implementation**:
+
+#### Step 1: Create User Repository
+
+Create `app/repositories/user_repository.py`:
+
+```python
+from typing import Optional, List
+from datetime import datetime
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update, delete, and_
+from sqlalchemy.exc import IntegrityError
+from app.models.models import User
+from app.core.exceptions import (
+    UserNotFoundError, 
+    UserAlreadyExistsError,
+    DatabaseError
+)
+import logging
+
+logger = logging.getLogger(__name__)
+
+class UserRepository:
+    """Repository for user database operations"""
+    
+    def __init__(self, db: AsyncSession):
+        self.db = db
+    
+    async def create(self, 
+                    email: str, 
+                    api_key: str, 
+                    api_key_hash: str,
+                    consent_version: str = "1.0") -> User:
+        """Create a new user"""
+        try:
+            user = User(
+                email=email.lower(),  # Normalize email
+                api_key=api_key,
+                api_key_hash=api_key_hash,
+                consent_given_at=datetime.utcnow(),
+                consent_version=consent_version,
+                is_active=True,
+                total_generations=0,
+                total_cost=0.0
+            )
+            
+            self.db.add(user)
+            await self.db.commit()
+            await self.db.refresh(user)
+            
+            logger.info(f"Created user: {user.id}")
+            return user
+            
+        except IntegrityError as e:
+            await self.db.rollback()
+            if "email" in str(e.orig):
+                raise UserAlreadyExistsError(f"User with email {email} already exists")
+            elif "api_key" in str(e.orig):
+                raise UserAlreadyExistsError(f"API key already in use")
+            raise DatabaseError(f"Database error: {str(e)}")
+        except Exception as e:
+            await self.db.rollback()
+            logger.error(f"Error creating user: {str(e)}")
+            raise DatabaseError(f"Failed to create user: {str(e)}")
+    
+    async def get_by_id(self, user_id: str) -> Optional[User]:
+        """Get user by ID"""
+        query = select(User).where(
+            and_(User.id == user_id, User.is_active == True)
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+    
+    async def get_by_email(self, email: str) -> Optional[User]:
+        """Get user by email"""
+        query = select(User).where(
+            and_(
+                User.email == email.lower(),
+                User.is_active == True,
+                User.deletion_requested_at.is_(None)
+            )
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+    
+    async def get_by_api_key(self, api_key: str) -> Optional[User]:
+        """Get user by API key (for authentication)"""
+        query = select(User).where(
+            and_(
+                User.api_key == api_key,
+                User.is_active == True,
+                User.deletion_requested_at.is_(None)
+            )
+        )
+        result = await self.db.execute(query)
+        user = result.scalar_one_or_none()
+        
+        # Update last active timestamp
+        if user:
+            await self.update_last_active(user.id)
+        
+        return user
+    
+    async def update_last_active(self, user_id: str) -> None:
+        """Update user's last active timestamp"""
+        query = update(User).where(User.id == user_id).values(
+            last_active_at=datetime.utcnow()
+        )
+        await self.db.execute(query)
+        await self.db.commit()
+    
+    async def update_usage(self, user_id: str, cost: float) -> None:
+        """Update user's usage statistics"""
+        query = update(User).where(User.id == user_id).values(
+            total_generations=User.total_generations + 1,
+            total_cost=User.total_cost + cost,
+            last_active_at=datetime.utcnow()
+        )
+        await self.db.execute(query)
+        await self.db.commit()
+    
+    async def request_deletion(self, user_id: str) -> User:
+        """Mark user for deletion (GDPR)"""
+        user = await self.get_by_id(user_id)
+        if not user:
+            raise UserNotFoundError(f"User {user_id} not found")
+        
+        query = update(User).where(User.id == user_id).values(
+            deletion_requested_at=datetime.utcnow(),
+            is_active=False
+        )
+        await self.db.execute(query)
+        await self.db.commit()
+        
+        logger.info(f"User {user_id} marked for deletion")
+        return user
+    
+    async def list_pending_deletions(self) -> List[User]:
+        """Get users pending deletion (for GDPR processing)"""
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        
+        query = select(User).where(
+            and_(
+                User.deletion_requested_at.isnot(None),
+                User.deletion_requested_at <= thirty_days_ago
+            )
+        )
+        result = await self.db.execute(query)
+        return result.scalars().all()
+    
+    async def permanently_delete(self, user_id: str) -> None:
+        """Permanently delete user and their data"""
+        # Delete generations first (cascade)
+        await self.db.execute(
+            delete(Generation).where(Generation.user_id == user_id)
+        )
+        
+        # Delete API key rotations
+        await self.db.execute(
+            delete(APIKeyRotation).where(APIKeyRotation.user_id == user_id)
+        )
+        
+        # Delete user
+        await self.db.execute(
+            delete(User).where(User.id == user_id)
+        )
+        
+        await self.db.commit()
+        logger.info(f"Permanently deleted user {user_id}")
+    
+    async def get_statistics(self, user_id: str) -> dict:
+        """Get user statistics"""
+        user = await self.get_by_id(user_id)
+        if not user:
+            raise UserNotFoundError(f"User {user_id} not found")
+        
+        # Get generation count by type
+        query = select(
+            Generation.content_type,
+            func.count(Generation.id).label('count')
+        ).where(
+            Generation.user_id == user_id
+        ).group_by(Generation.content_type)
+        
+        result = await self.db.execute(query)
+        content_types = {row.content_type: row.count for row in result}
+        
+        return {
+            "user_id": user.id,
+            "email": user.email,
+            "total_generations": user.total_generations,
+            "total_cost": user.total_cost,
+            "created_at": user.created_at.isoformat(),
+            "last_active_at": user.last_active_at.isoformat() if user.last_active_at else None,
+            "content_types": content_types
+        }
+```
+
+#### Step 2: Create User Service
+
+Create `app/services/user_service.py`:
+
+```python
+from typing import Optional
+from datetime import datetime
+from passlib.context import CryptContext
+import secrets
+from app.repositories.user_repository import UserRepository
+from app.schemas.user_schemas import UserCreate, UserResponse, UserStats
+from app.core.exceptions import UserNotFoundError, UserAlreadyExistsError
+
+class UserService:
+    """Business logic for user operations"""
+    
+    def __init__(self):
+        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    
+    def generate_api_key(self) -> str:
+        """Generate a secure API key"""
+        return f"lfs_{secrets.token_urlsafe(32)}"
+    
+    def hash_api_key(self, api_key: str) -> str:
+        """Hash API key for storage"""
+        # Only hash the secret part, not the prefix
+        secret_part = api_key.split("_", 1)[1]
+        return self.pwd_context.hash(secret_part)
+    
+    def verify_api_key(self, api_key: str, hashed: str) -> bool:
+        """Verify an API key against its hash"""
+        secret_part = api_key.split("_", 1)[1]
+        return self.pwd_context.verify(secret_part, hashed)
+    
+    async def create_user(self, 
+                         repo: UserRepository, 
+                         user_data: UserCreate) -> UserResponse:
+        """Create a new user with API key"""
+        # Check if user exists
+        existing = await repo.get_by_email(user_data.email)
+        if existing:
+            raise UserAlreadyExistsError(f"User with email {user_data.email} already exists")
+        
+        # Generate API key
+        api_key = self.generate_api_key()
+        api_key_hash = self.hash_api_key(api_key)
+        
+        # Create user
+        user = await repo.create(
+            email=user_data.email,
+            api_key=api_key,
+            api_key_hash=api_key_hash,
+            consent_version=user_data.consent_version or "1.0"
+        )
+        
+        return UserResponse(
+            id=user.id,
+            email=user.email,
+            api_key=api_key,  # Return the plain API key only on creation
+            created_at=user.created_at,
+            is_active=user.is_active
+        )
+    
+    async def get_user_stats(self,
+                           repo: UserRepository,
+                           user_id: str) -> UserStats:
+        """Get user statistics"""
+        stats = await repo.get_statistics(user_id)
+        return UserStats(**stats)
+    
+    async def rotate_api_key(self,
+                           repo: UserRepository,
+                           user_id: str,
+                           reason: str = "user_requested") -> str:
+        """Rotate user's API key"""
+        user = await repo.get_by_id(user_id)
+        if not user:
+            raise UserNotFoundError(f"User {user_id} not found")
+        
+        # Generate new API key
+        old_key_prefix = user.api_key[:8] + "..."
+        new_api_key = self.generate_api_key()
+        new_api_key_hash = self.hash_api_key(new_api_key)
+        
+        # Update user
+        user.api_key = new_api_key
+        user.api_key_hash = new_api_key_hash
+        
+        # Record rotation
+        rotation = APIKeyRotation(
+            user_id=user_id,
+            old_key_prefix=old_key_prefix,
+            new_key_prefix=new_api_key[:8] + "...",
+            reason=reason
+        )
+        
+        repo.db.add(rotation)
+        await repo.db.commit()
+        
+        return new_api_key
+```
+
+#### Step 3: Create Pydantic Schemas
+
+Create `app/schemas/user_schemas.py`:
+
+```python
+from pydantic import BaseModel, EmailStr, Field
+from datetime import datetime
+from typing import Optional, Dict
+
+class UserCreate(BaseModel):
+    """Schema for creating a user"""
+    email: EmailStr
+    consent_version: Optional[str] = "1.0"
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "email": "user@example.com",
+                "consent_version": "1.0"
+            }
+        }
+
+class UserResponse(BaseModel):
+    """Schema for user response"""
+    id: str
+    email: str
+    api_key: Optional[str] = None  # Only returned on creation
+    created_at: datetime
+    is_active: bool
+    
+    class Config:
+        from_attributes = True
+
+class UserStats(BaseModel):
+    """Schema for user statistics"""
+    user_id: str
+    email: str
+    total_generations: int
+    total_cost: float
+    created_at: str
+    last_active_at: Optional[str]
+    content_types: Dict[str, int]
+
+class UserDeletionRequest(BaseModel):
+    """Schema for deletion request"""
+    confirmation: str = Field(..., pattern="^DELETE$")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "confirmation": "DELETE"
+            }
+        }
+```
+
+#### Step 4: Create API Endpoints
+
+Create `app/api/users.py`:
+
+```python
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.database import get_db
+from app.core.auth import get_current_user
+from app.repositories.user_repository import UserRepository
+from app.services.user_service import UserService
+from app.schemas.user_schemas import (
+    UserCreate, UserResponse, UserStats, UserDeletionRequest
+)
+from app.core.exceptions import UserNotFoundError, UserAlreadyExistsError
+
+router = APIRouter(prefix="/api/users", tags=["users"])
+user_service = UserService()
+
+@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def create_user(
+    user_data: UserCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a new user and return API key"""
+    try:
+        repo = UserRepository(db)
+        user = await user_service.create_user(repo, user_data)
+        return user
+    except UserAlreadyExistsError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create user: {str(e)}"
+        )
+
+@router.get("/me", response_model=UserResponse)
+async def get_current_user_info(
+    current_user: User = Depends(get_current_user)
+):
+    """Get current user information"""
+    return UserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        created_at=current_user.created_at,
+        is_active=current_user.is_active
+    )
+
+@router.get("/me/stats", response_model=UserStats)
+async def get_current_user_stats(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get current user statistics"""
+    try:
+        repo = UserRepository(db)
+        stats = await user_service.get_user_stats(repo, current_user.id)
+        return stats
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get statistics: {str(e)}"
+        )
+
+@router.post("/me/rotate-key", response_model=dict)
+async def rotate_api_key(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Rotate current user's API key"""
+    try:
+        repo = UserRepository(db)
+        new_api_key = await user_service.rotate_api_key(
+            repo, current_user.id, "user_requested"
+        )
+        return {
+            "message": "API key rotated successfully",
+            "api_key": new_api_key
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to rotate API key: {str(e)}"
+        )
+
+@router.delete("/me", status_code=status.HTTP_202_ACCEPTED)
+async def request_account_deletion(
+    deletion_request: UserDeletionRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Request account deletion (GDPR)"""
+    if deletion_request.confirmation != "DELETE":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid confirmation. Must be 'DELETE'"
+        )
+    
+    try:
+        repo = UserRepository(db)
+        await repo.request_deletion(current_user.id)
+        return {
+            "message": "Account deletion requested. Will be processed within 30 days.",
+            "deletion_date": (datetime.utcnow() + timedelta(days=30)).isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to request deletion: {str(e)}"
+        )
+```
+
+#### Step 5: Create Tests
+
+Create `tests/test_user_crud.py`:
+
+```python
+import pytest
+from app.repositories.user_repository import UserRepository
+from app.services.user_service import UserService
+from app.schemas.user_schemas import UserCreate
+
+@pytest.mark.asyncio
+async def test_create_user(db_session):
+    """Test user creation"""
+    repo = UserRepository(db_session)
+    service = UserService()
+    
+    user_data = UserCreate(email="test@example.com")
+    user = await service.create_user(repo, user_data)
+    
+    assert user.email == "test@example.com"
+    assert user.api_key.startswith("lfs_")
+    assert len(user.api_key) > 40
+
+@pytest.mark.asyncio
+async def test_duplicate_email_error(db_session):
+    """Test duplicate email handling"""
+    repo = UserRepository(db_session)
+    service = UserService()
+    
+    # Create first user
+    user_data = UserCreate(email="test@example.com")
+    await service.create_user(repo, user_data)
+    
+    # Try to create duplicate
+    with pytest.raises(UserAlreadyExistsError):
+        await service.create_user(repo, user_data)
+
+@pytest.mark.asyncio
+async def test_api_key_authentication(db_session):
+    """Test API key lookup"""
+    repo = UserRepository(db_session)
+    service = UserService()
+    
+    # Create user
+    user_data = UserCreate(email="test@example.com")
+    created = await service.create_user(repo, user_data)
+    
+    # Find by API key
+    found = await repo.get_by_api_key(created.api_key)
+    assert found is not None
+    assert found.email == "test@example.com"
+
+@pytest.mark.asyncio
+async def test_user_deletion_request(db_session):
+    """Test GDPR deletion request"""
+    repo = UserRepository(db_session)
+    service = UserService()
+    
+    # Create user
+    user_data = UserCreate(email="test@example.com")
+    created = await service.create_user(repo, user_data)
+    
+    # Request deletion
+    await repo.request_deletion(created.id)
+    
+    # User should be inactive
+    user = await repo.get_by_id(created.id)
+    assert user is None  # get_by_id filters inactive users
+    
+    # Should appear in pending deletions
+    pending = await repo.list_pending_deletions()
+    assert len(pending) == 0  # Not 30 days old yet
+
+@pytest.mark.asyncio
+async def test_usage_tracking(db_session):
+    """Test usage statistics update"""
+    repo = UserRepository(db_session)
+    service = UserService()
+    
+    # Create user
+    user_data = UserCreate(email="test@example.com")
+    created = await service.create_user(repo, user_data)
+    
+    # Update usage
+    await repo.update_usage(created.id, 0.0015)
+    
+    # Check stats
+    stats = await service.get_user_stats(repo, created.id)
+    assert stats.total_generations == 1
+    assert stats.total_cost == 0.0015
+```
+
+**📋 Common Pitfalls & Solutions**:
+
+1. **N+1 Query Problem**:
+   ```python
+   # Use eager loading for related data
+   query = select(User).options(selectinload(User.generations))
+   ```
+
+2. **Race Conditions**:
+   ```python
+   # Use SELECT FOR UPDATE to lock rows
+   query = select(User).where(User.id == user_id).with_for_update()
+   ```
+
+3. **Connection Pool Exhaustion**:
+   ```python
+   # Always use async context manager
+   async with get_db() as session:
+       # operations
+   ```
+
+**✅ Quality Gates**:
+
+- [ ] All CRUD operations working
+- [ ] API key authentication functional
+- [ ] GDPR deletion request working
+- [ ] Usage tracking accurate
+- [ ] All tests passing
+- [ ] No SQL injection vulnerabilities
+
+**📤 Expected Outputs**:
+
+1. Complete user management system
+2. API key generation and rotation
+3. GDPR-compliant deletion process
+4. Usage statistics tracking
+5. Full test coverage
+
+**🔗 Impact on Other Tasks**:
+
+- **AUTH-001**: Uses these CRUD operations
+- **GDPR-001**: Implements the deletion workflow
+- **API-002**: Uses update_usage for tracking
+- **TEST-001**: Includes these tests
+
 ## Enhancement Progress Tracking
 
 - [x] DISCOVER-001: Fully enhanced with anti-hallucination context
@@ -5409,7 +6418,9 @@ For 1-10 users:
 - [x] FRONT-001: Fully enhanced with basic HTML structure
 - [x] FRONT-002: Fully enhanced with form and interaction
 - [x] DEPLOY-001: Fully enhanced with Railway deployment
-- [ ] DB-001: Pending enhancement (Railway Postgres)
+- [x] DB-001: Fully enhanced with Railway Postgres setup
+- [x] DB-002: Fully enhanced with database schema creation
+- [x] DB-003: Fully enhanced with user CRUD operations
 - [ ] ... [remaining tasks]
 
 ## Notes on Enhancement Approach
