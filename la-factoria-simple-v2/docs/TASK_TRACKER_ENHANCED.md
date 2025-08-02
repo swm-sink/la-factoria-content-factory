@@ -944,6 +944,392 @@ railway run python -m uvicorn app.main:app --reload
 - Pricing: <https://railway.app/pricing>
 - CLI Reference: <https://docs.railway.app/reference/cli-api>
 
+### **API-004**: Add AI provider integration (4h)
+
+**🎯 Objective**: Integrate OpenAI/Anthropic for content generation with Langfuse observability. Focus on reliability, cost tracking, and simple prompt management for 1-10 users.
+
+**🤖 AI Provider Selection (August 2025 Context)**:
+
+```python
+# Provider comparison for educational content generation
+"""
+1. OpenAI GPT-4-turbo (Recommended for start)
+   - Cost: ~$0.01/1K input, $0.03/1K output tokens
+   - Best for: General content, study guides
+   - Latency: 2-5 seconds
+
+2. Anthropic Claude-3-Sonnet
+   - Cost: ~$0.003/1K input, $0.015/1K output tokens
+   - Best for: Long-form content, detailed explanations
+   - Latency: 3-7 seconds
+
+3. Start with ONE provider, add others later
+"""
+```
+
+**🔍 Langfuse Integration (Observability)**:
+
+```bash
+# Install Langfuse Python SDK (Aug 2025 version)
+pip install langfuse==2.38.2
+
+# Set environment variables in Railway
+railway variables set LANGFUSE_PUBLIC_KEY=pk-lf-...
+railway variables set LANGFUSE_SECRET_KEY=sk-lf-...
+railway variables set LANGFUSE_HOST=https://cloud.langfuse.com  # or self-hosted
+```
+
+**📦 Dependencies Setup**:
+
+```txt
+# requirements.txt additions
+openai==1.35.10          # OpenAI Python SDK
+anthropic==0.28.1        # Anthropic SDK (if needed)
+langfuse==2.38.2         # Observability
+pydantic==2.7.4          # For response models
+tenacity==8.4.2          # For retries
+tiktoken==0.7.0          # Token counting
+```
+
+**🏗️ AI Service Implementation**:
+
+```python
+# app/services/ai_service.py
+import os
+from typing import Dict, List, Optional
+from datetime import datetime
+from openai import OpenAI
+from langfuse import Langfuse
+from langfuse.openai import openai as langfuse_openai
+from tenacity import retry, stop_after_attempt, wait_exponential
+import tiktoken
+
+class AIService:
+    def __init__(self):
+        # Initialize OpenAI with Langfuse wrapper
+        self.client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+
+        # Initialize Langfuse
+        self.langfuse = Langfuse(
+            public_key=os.environ["LANGFUSE_PUBLIC_KEY"],
+            secret_key=os.environ["LANGFUSE_SECRET_KEY"],
+            host=os.environ.get("LANGFUSE_HOST", "https://cloud.langfuse.com")
+        )
+
+        # Patch OpenAI for automatic tracing
+        langfuse_openai.register(self.langfuse)
+
+        # Token counter for cost estimation
+        self.encoder = tiktoken.encoding_for_model("gpt-4-turbo-preview")
+
+        # Model configuration
+        self.model = "gpt-4-turbo-preview"  # Latest as of Aug 2025
+        self.max_tokens = 4000
+        self.temperature = 0.7
+
+    def count_tokens(self, text: str) -> int:
+        """Count tokens for cost estimation"""
+        return len(self.encoder.encode(text))
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10)
+    )
+    async def generate_content(
+        self,
+        content_type: str,
+        topic: str,
+        additional_context: Optional[str] = None,
+        user_id: Optional[str] = None
+    ) -> Dict:
+        """Generate content with retry logic and observability"""
+
+        # Create Langfuse trace
+        trace = self.langfuse.trace(
+            name=f"generate_{content_type}",
+            user_id=user_id,
+            metadata={
+                "content_type": content_type,
+                "topic": topic,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        )
+
+        try:
+            # Get prompt from templates
+            prompt = self._get_prompt(content_type, topic, additional_context)
+
+            # Count input tokens for cost tracking
+            input_tokens = self.count_tokens(prompt)
+
+            # Create generation span
+            generation = trace.span(
+                name="openai_generation",
+                input={"prompt": prompt, "model": self.model}
+            )
+
+            # Call OpenAI
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are an expert educator."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=self.max_tokens,
+                temperature=self.temperature
+            )
+
+            # Extract content
+            content = response.choices[0].message.content
+            output_tokens = response.usage.completion_tokens
+
+            # Update generation span
+            generation.update(
+                output={"content": content},
+                usage={
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "total_tokens": input_tokens + output_tokens,
+                    "estimated_cost": self._calculate_cost(input_tokens, output_tokens)
+                }
+            )
+
+            # Log success
+            trace.update(status="SUCCESS")
+
+            return {
+                "content": content,
+                "content_type": content_type,
+                "model_used": self.model,
+                "token_usage": {
+                    "input": input_tokens,
+                    "output": output_tokens,
+                    "total": input_tokens + output_tokens
+                },
+                "estimated_cost": self._calculate_cost(input_tokens, output_tokens),
+                "trace_id": trace.id
+            }
+
+        except Exception as e:
+            # Log error to Langfuse
+            trace.update(status="ERROR", status_message=str(e))
+            raise
+
+    def _get_prompt(self, content_type: str, topic: str, context: Optional[str]) -> str:
+        """Get prompt template for content type"""
+        # Load from extracted prompts (from previous migration)
+        prompts = {
+            "study_guide": f"""Create a comprehensive study guide about {topic}.
+Include:
+1. Overview (2-3 paragraphs)
+2. Key concepts (5-7 main points)
+3. Important details for each concept
+4. Summary of main takeaways
+{f'Additional context: {context}' if context else ''}""",
+
+            "flashcards": f"""Create 10 educational flashcards about {topic}.
+Format each as:
+Q: [Question]
+A: [Answer]
+
+Make questions specific and answers concise but complete.
+{f'Additional context: {context}' if context else ''}""",
+
+            # Add other content types from extracted prompts
+        }
+
+        return prompts.get(content_type, prompts["study_guide"])
+
+    def _calculate_cost(self, input_tokens: int, output_tokens: int) -> float:
+        """Calculate estimated cost in USD"""
+        # GPT-4-turbo pricing as of Aug 2025
+        input_cost = (input_tokens / 1000) * 0.01
+        output_cost = (output_tokens / 1000) * 0.03
+        return round(input_cost + output_cost, 4)
+
+# Singleton instance
+ai_service = AIService()
+```
+
+**🔌 FastAPI Endpoint Integration**:
+
+```python
+# app/api/generate.py
+from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel, Field
+from typing import Optional
+from app.services.ai_service import ai_service
+from app.auth import get_current_user
+
+router = APIRouter(prefix="/api/v1")
+
+class GenerateRequest(BaseModel):
+    content_type: str = Field(..., pattern="^(study_guide|flashcards|podcast_script)$")
+    topic: str = Field(..., min_length=3, max_length=200)
+    additional_context: Optional[str] = Field(None, max_length=1000)
+
+class GenerateResponse(BaseModel):
+    content: str
+    content_type: str
+    token_usage: dict
+    estimated_cost: float
+    trace_url: Optional[str] = None
+
+@router.post("/generate", response_model=GenerateResponse)
+async def generate_content(
+    request: GenerateRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Generate educational content with AI"""
+    try:
+        result = await ai_service.generate_content(
+            content_type=request.content_type,
+            topic=request.topic,
+            additional_context=request.additional_context,
+            user_id=current_user.get("id")
+        )
+
+        # Add Langfuse trace URL if available
+        result["trace_url"] = f"https://cloud.langfuse.com/trace/{result['trace_id']}"
+
+        return GenerateResponse(**result)
+
+    except Exception as e:
+        # Log to Langfuse dashboard
+        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
+```
+
+**🧪 Testing AI Integration**:
+
+```python
+# tests/test_ai_service.py
+import pytest
+from unittest.mock import patch, MagicMock
+from app.services.ai_service import AIService
+
+@pytest.fixture
+def ai_service():
+    with patch.dict('os.environ', {
+        'OPENAI_API_KEY': 'test-key',
+        'LANGFUSE_PUBLIC_KEY': 'test-pk',
+        'LANGFUSE_SECRET_KEY': 'test-sk'
+    }):
+        return AIService()
+
+@pytest.mark.asyncio
+async def test_generate_content_success(ai_service):
+    # Mock OpenAI response
+    mock_response = MagicMock()
+    mock_response.choices[0].message.content = "Test study guide content"
+    mock_response.usage.completion_tokens = 500
+
+    with patch.object(ai_service.client.chat.completions, 'create', return_value=mock_response):
+        result = await ai_service.generate_content(
+            content_type="study_guide",
+            topic="Python basics"
+        )
+
+        assert result["content"] == "Test study guide content"
+        assert result["content_type"] == "study_guide"
+        assert "estimated_cost" in result
+        assert result["estimated_cost"] > 0
+
+# Add more tests for error cases, retries, etc.
+```
+
+**💰 Cost Management & Monitoring**:
+
+```python
+# Add to your Railway variables
+railway variables set DAILY_TOKEN_LIMIT=100000  # ~$3/day
+railway variables set ALERT_EMAIL=admin@example.com
+
+# app/services/cost_monitor.py
+class CostMonitor:
+    async def check_daily_usage(self):
+        """Check daily token usage via Langfuse API"""
+        # Query Langfuse for today's usage
+        today = datetime.utcnow().date()
+        usage = self.langfuse.get_usage(
+            start_date=today,
+            end_date=today + timedelta(days=1)
+        )
+
+        if usage.total_tokens > int(os.environ.get("DAILY_TOKEN_LIMIT", 100000)):
+            # Send alert or disable service
+            await self.send_alert(f"Daily limit exceeded: {usage.total_tokens} tokens")
+```
+
+**🚨 Common Pitfalls & Solutions**:
+
+1. **API Key Exposure**:
+
+   ```python
+   # WRONG: Hardcoded key
+   client = OpenAI(api_key="sk-proj-...")
+
+   # RIGHT: Environment variable
+   client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+   ```
+
+2. **No Retry Logic**:
+
+   ```python
+   # Add tenacity for automatic retries
+   @retry(stop=stop_after_attempt(3))
+   async def generate_with_retry():
+       # API calls here
+   ```
+
+3. **Missing Cost Tracking**:
+
+   ```python
+   # Always log token usage
+   langfuse.trace(usage={"tokens": count, "cost": estimate})
+   ```
+
+4. **Blocking Calls**:
+
+   ```python
+   # Use async for better performance
+   async def generate_content():  # Not def generate_content()
+   ```
+
+**📊 Langfuse Dashboard Setup**:
+
+1. Sign up at <https://cloud.langfuse.com>
+2. Create new project: "la-factoria-simple"
+3. Get API keys from settings
+4. Set up alerts:
+   - Daily spend > $5
+   - Error rate > 5%
+   - P95 latency > 10s
+
+**✅ Quality Gates**:
+
+- [ ] OpenAI API key set in Railway variables
+- [ ] Langfuse keys configured
+- [ ] Token counting implemented
+- [ ] Cost calculation accurate
+- [ ] Retry logic in place
+- [ ] Error handling comprehensive
+- [ ] Tests pass with mocked API calls
+- [ ] Langfuse dashboard shows traces
+
+**📤 Expected Outputs**:
+
+1. Working `/generate` endpoint
+2. Langfuse traces for all API calls
+3. Cost tracking in responses
+4. Clear error messages on failures
+
+**🔗 Impact on Other Tasks**:
+
+- **FRONT-002**: Will call this endpoint
+- **DB-003**: May store generation history
+- **MON-001**: Monitor via Langfuse dashboard
+- **TEST-001**: Include AI service tests
+
 ## Enhancement Progress Tracking
 
 - [x] DISCOVER-001: Fully enhanced with anti-hallucination context
@@ -955,7 +1341,7 @@ railway run python -m uvicorn app.main:app --reload
 - [ ] API-001: Pending enhancement
 - [ ] API-002: Pending enhancement
 - [ ] API-003: Pending enhancement
-- [ ] API-004: Pending enhancement (AI provider integration)
+- [x] API-004: Fully enhanced with AI provider and Langfuse integration
 - [ ] FRONT-001: Pending enhancement
 - [ ] FRONT-002: Pending enhancement
 - [ ] DEPLOY-001: Pending enhancement (Railway deployment)
