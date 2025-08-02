@@ -2798,7 +2798,640 @@ The endpoint will automatically appear in `/docs` with:
 
 ### **API-003**: Implement simple authentication (3h)
 
-[To be enhanced next...]
+**🎯 Objective**: Create a simple, secure API key authentication system suitable for 1-10 users. Focus on simplicity while maintaining security best practices.
+
+**🔐 Authentication Strategy**:
+
+- API key based (no OAuth complexity needed for 1-10 users)
+- Keys stored hashed in database (or in-memory for MVP)
+- Bearer token format for consistency
+- Rate limiting per key
+- Key generation and management endpoints
+
+**📋 TDD Implementation Steps**:
+
+**Step 1: Write authentication tests** (`tests/unit/test_auth_service.py`):
+
+```python
+"""Test authentication service."""
+import pytest
+from app.services.auth_service import AuthService
+
+
+class TestAuthService:
+    """Test authentication functionality."""
+
+    @pytest.fixture
+    def auth_service(self):
+        """Create auth service instance."""
+        return AuthService()
+
+    def test_generate_api_key_format(self, auth_service):
+        """Test API key generation has correct format."""
+        key = auth_service.generate_api_key()
+
+        # Should start with prefix
+        assert key.startswith("lfs_")
+        # Should be 36 chars total (4 prefix + 32 random)
+        assert len(key) == 36
+        # Should be alphanumeric after prefix
+        assert key[4:].replace("-", "").isalnum()
+
+    def test_generate_unique_keys(self, auth_service):
+        """Test that generated keys are unique."""
+        keys = [auth_service.generate_api_key() for _ in range(100)]
+        assert len(set(keys)) == 100  # All unique
+
+    def test_hash_and_verify_api_key(self, auth_service):
+        """Test API key hashing and verification."""
+        key = "lfs_test123"
+        hashed = auth_service.hash_api_key(key)
+
+        # Hash should be different from original
+        assert hashed != key
+        # Should verify correctly
+        assert auth_service.verify_api_key(key, hashed) is True
+        # Wrong key should not verify
+        assert auth_service.verify_api_key("wrong_key", hashed) is False
+
+    def test_extract_api_key_from_header(self, auth_service):
+        """Test extracting API key from auth header."""
+        # Valid header
+        header = "Bearer lfs_abc123"
+        key = auth_service.extract_api_key(header)
+        assert key == "lfs_abc123"
+
+        # Invalid headers
+        assert auth_service.extract_api_key("") is None
+        assert auth_service.extract_api_key("Bearer") is None
+        assert auth_service.extract_api_key("Basic abc123") is None
+```
+
+**Step 2: Create auth models** (`app/models/auth.py`):
+
+```python
+"""Authentication models."""
+from datetime import datetime
+from typing import Optional
+from pydantic import BaseModel, Field
+
+
+class APIKey(BaseModel):
+    """API Key model."""
+    id: str
+    name: str
+    key_hash: str
+    created_at: datetime
+    last_used: Optional[datetime] = None
+    is_active: bool = True
+
+    # Rate limiting
+    requests_per_minute: int = 60
+    requests_per_day: int = 1000
+
+    class Config:
+        # Don't expose the hash
+        fields = {"key_hash": {"exclude": True}}
+
+
+class CreateAPIKeyRequest(BaseModel):
+    """Request to create new API key."""
+    name: str = Field(
+        ...,
+        min_length=3,
+        max_length=100,
+        description="Descriptive name for the API key"
+    )
+
+
+class CreateAPIKeyResponse(BaseModel):
+    """Response with new API key."""
+    api_key: str = Field(
+        ...,
+        description="The API key (only shown once)"
+    )
+    key_id: str
+    name: str
+    created_at: datetime
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "api_key": "lfs_abc123def456...",
+                "key_id": "key_123",
+                "name": "My App Key",
+                "created_at": "2025-08-02T10:30:45.123456"
+            }
+        }
+
+
+class APIKeyInfo(BaseModel):
+    """Public API key information."""
+    id: str
+    name: str
+    created_at: datetime
+    last_used: Optional[datetime]
+    is_active: bool
+```
+
+**Step 3: Implement auth service** (`app/services/auth_service.py`):
+
+```python
+"""Authentication service."""
+import secrets
+import hashlib
+from datetime import datetime
+from typing import Optional, Dict, List
+from passlib.context import CryptContext
+
+
+class AuthService:
+    """Handle authentication logic."""
+
+    def __init__(self):
+        """Initialize auth service."""
+        # Password hashing context
+        self.pwd_context = CryptContext(
+            schemes=["bcrypt"],
+            deprecated="auto"
+        )
+
+        # In-memory storage for MVP (replace with DB in production)
+        self.api_keys: Dict[str, dict] = {}
+
+        # Create default admin key for initial setup
+        self._create_default_admin_key()
+
+    def _create_default_admin_key(self):
+        """Create default admin API key for initial access."""
+        admin_key = "lfs_admin_default_key_change_this"
+        self.api_keys["admin"] = {
+            "id": "admin",
+            "name": "Default Admin Key",
+            "key_hash": self.hash_api_key(admin_key),
+            "created_at": datetime.utcnow(),
+            "is_active": True,
+            "is_admin": True
+        }
+        print(f"⚠️  Default admin API key: {admin_key}")
+        print("⚠️  Change this immediately in production!")
+
+    def generate_api_key(self) -> str:
+        """Generate a new API key."""
+        # Generate 32 random bytes (256 bits)
+        random_bytes = secrets.token_urlsafe(24)  # 24 bytes = 32 chars base64
+        # Add prefix for easy identification
+        return f"lfs_{random_bytes}"
+
+    def hash_api_key(self, api_key: str) -> str:
+        """Hash an API key for storage."""
+        return self.pwd_context.hash(api_key)
+
+    def verify_api_key(self, api_key: str, hashed: str) -> bool:
+        """Verify an API key against its hash."""
+        try:
+            return self.pwd_context.verify(api_key, hashed)
+        except Exception:
+            return False
+
+    def extract_api_key(self, auth_header: Optional[str]) -> Optional[str]:
+        """Extract API key from Authorization header."""
+        if not auth_header:
+            return None
+
+        parts = auth_header.split(" ")
+        if len(parts) != 2 or parts[0].lower() != "bearer":
+            return None
+
+        return parts[1]
+
+    def create_api_key(self, name: str) -> tuple[str, str]:
+        """
+        Create a new API key.
+
+        Returns: (key_id, api_key)
+        """
+        # Generate key
+        api_key = self.generate_api_key()
+        key_id = f"key_{secrets.token_hex(6)}"
+
+        # Store hashed
+        self.api_keys[key_id] = {
+            "id": key_id,
+            "name": name,
+            "key_hash": self.hash_api_key(api_key),
+            "created_at": datetime.utcnow(),
+            "last_used": None,
+            "is_active": True,
+            "is_admin": False,
+            "requests_per_minute": 60,
+            "requests_per_day": 1000
+        }
+
+        return key_id, api_key
+
+    def validate_api_key(self, api_key: str) -> Optional[dict]:
+        """
+        Validate an API key and return user info.
+
+        Returns user dict if valid, None otherwise.
+        """
+        # Check all stored keys
+        for key_id, key_data in self.api_keys.items():
+            if not key_data["is_active"]:
+                continue
+
+            if self.verify_api_key(api_key, key_data["key_hash"]):
+                # Update last used
+                key_data["last_used"] = datetime.utcnow()
+
+                # Return user info (don't include hash)
+                return {
+                    "id": key_id,
+                    "name": key_data["name"],
+                    "is_admin": key_data.get("is_admin", False),
+                    "api_key_id": key_id
+                }
+
+        return None
+
+    def list_api_keys(self) -> List[dict]:
+        """List all API keys (without hashes)."""
+        keys = []
+        for key_data in self.api_keys.values():
+            keys.append({
+                "id": key_data["id"],
+                "name": key_data["name"],
+                "created_at": key_data["created_at"],
+                "last_used": key_data["last_used"],
+                "is_active": key_data["is_active"]
+            })
+        return keys
+
+    def revoke_api_key(self, key_id: str) -> bool:
+        """Revoke an API key."""
+        if key_id in self.api_keys:
+            self.api_keys[key_id]["is_active"] = False
+            return True
+        return False
+
+
+# Singleton instance
+auth_service = AuthService()
+```
+
+**Step 4: Create auth dependency** (`app/api/auth.py`):
+
+```python
+"""Authentication dependencies and endpoints."""
+from fastapi import APIRouter, Depends, HTTPException, Header, status
+from typing import Optional
+
+from app.models.auth import (
+    CreateAPIKeyRequest,
+    CreateAPIKeyResponse,
+    APIKeyInfo
+)
+from app.services.auth_service import auth_service
+
+
+router = APIRouter()
+
+
+async def get_api_key(
+    authorization: Optional[str] = Header(None)
+) -> Optional[str]:
+    """Extract API key from Authorization header."""
+    if not authorization:
+        return None
+    return auth_service.extract_api_key(authorization)
+
+
+async def get_current_user(
+    api_key: Optional[str] = Depends(get_api_key)
+) -> dict:
+    """
+    Validate API key and return current user.
+
+    Raises 401 if invalid.
+    """
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing API key",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user = auth_service.validate_api_key(api_key)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API key",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return user
+
+
+async def require_admin(
+    current_user: dict = Depends(get_current_user)
+) -> dict:
+    """Require admin privileges."""
+    if not current_user.get("is_admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    return current_user
+
+
+# API Key Management Endpoints
+
+@router.post(
+    "/keys",
+    response_model=CreateAPIKeyResponse,
+    status_code=status.HTTP_201_CREATED
+)
+async def create_api_key(
+    request: CreateAPIKeyRequest,
+    current_user: dict = Depends(require_admin)
+) -> CreateAPIKeyResponse:
+    """
+    Create a new API key.
+
+    Requires admin privileges.
+    The API key is only shown once in the response.
+    """
+    key_id, api_key = auth_service.create_api_key(request.name)
+
+    return CreateAPIKeyResponse(
+        api_key=api_key,
+        key_id=key_id,
+        name=request.name,
+        created_at=datetime.utcnow()
+    )
+
+
+@router.get("/keys", response_model=List[APIKeyInfo])
+async def list_api_keys(
+    current_user: dict = Depends(require_admin)
+) -> List[APIKeyInfo]:
+    """
+    List all API keys.
+
+    Requires admin privileges.
+    """
+    keys = auth_service.list_api_keys()
+    return [APIKeyInfo(**key) for key in keys]
+
+
+@router.delete("/keys/{key_id}")
+async def revoke_api_key(
+    key_id: str,
+    current_user: dict = Depends(require_admin)
+):
+    """
+    Revoke an API key.
+
+    Requires admin privileges.
+    """
+    if key_id == current_user["api_key_id"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot revoke your own key"
+        )
+
+    if not auth_service.revoke_api_key(key_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="API key not found"
+        )
+
+    return {"message": "API key revoked"}
+
+
+@router.get("/me")
+async def get_current_user_info(
+    current_user: dict = Depends(get_current_user)
+):
+    """Get current authenticated user info."""
+    return {
+        "id": current_user["id"],
+        "name": current_user["name"],
+        "is_admin": current_user.get("is_admin", False)
+    }
+```
+
+**Step 5: Update main.py**:
+
+```python
+# In app/main.py, add auth router:
+from app.api import auth
+
+app.include_router(
+    auth.router,
+    prefix="/api/v1/auth",
+    tags=["authentication"]
+)
+```
+
+**🔒 Security Best Practices**:
+
+```python
+# Rate limiting example (app/middleware/rate_limit.py)
+from collections import defaultdict
+from datetime import datetime, timedelta
+from fastapi import Request, HTTPException
+import asyncio
+
+class RateLimiter:
+    """Simple in-memory rate limiter."""
+
+    def __init__(self):
+        self.requests = defaultdict(list)
+        self.lock = asyncio.Lock()
+
+    async def check_rate_limit(
+        self,
+        key: str,
+        max_requests: int,
+        window_seconds: int
+    ) -> bool:
+        """Check if request is within rate limit."""
+        async with self.lock:
+            now = datetime.utcnow()
+            window_start = now - timedelta(seconds=window_seconds)
+
+            # Clean old requests
+            self.requests[key] = [
+                req_time for req_time in self.requests[key]
+                if req_time > window_start
+            ]
+
+            # Check limit
+            if len(self.requests[key]) >= max_requests:
+                return False
+
+            # Add current request
+            self.requests[key].append(now)
+            return True
+
+rate_limiter = RateLimiter()
+
+# Use in dependency
+async def rate_limit_check(
+    current_user: dict = Depends(get_current_user)
+):
+    """Check rate limits for current user."""
+    key_id = current_user["api_key_id"]
+
+    # Check per-minute limit
+    if not await rate_limiter.check_rate_limit(key_id, 60, 60):
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit exceeded (60 requests per minute)"
+        )
+```
+
+**🧪 Testing Authentication**:
+
+```bash
+# Test with default admin key
+export ADMIN_KEY="lfs_admin_default_key_change_this"
+
+# Create new API key
+curl -X POST http://localhost:8000/api/v1/auth/keys \
+  -H "Authorization: Bearer $ADMIN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Test App"}'
+
+# Response:
+# {
+#   "api_key": "lfs_abc123...",
+#   "key_id": "key_xyz",
+#   "name": "Test App",
+#   "created_at": "2025-08-02T..."
+# }
+
+# Use the new key
+export API_KEY="lfs_abc123..."
+
+# Test authentication
+curl http://localhost:8000/api/v1/auth/me \
+  -H "Authorization: Bearer $API_KEY"
+
+# Test protected endpoint
+curl -X POST http://localhost:8000/api/v1/generate \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"content_type": "study_guide", "topic": "Python"}'
+```
+
+**💾 Persistent Storage** (for production):
+
+```python
+# Migration to database storage (app/services/auth_service_db.py)
+from sqlalchemy import select
+from app.database import get_db
+from app.models.database import APIKey as DBAPIKey
+
+class AuthServiceDB(AuthService):
+    """Database-backed auth service."""
+
+    async def create_api_key(self, name: str, db_session) -> tuple[str, str]:
+        """Create API key in database."""
+        api_key = self.generate_api_key()
+
+        db_key = DBAPIKey(
+            name=name,
+            key_hash=self.hash_api_key(api_key),
+            created_at=datetime.utcnow(),
+            is_active=True
+        )
+
+        db_session.add(db_key)
+        await db_session.commit()
+
+        return str(db_key.id), api_key
+
+    async def validate_api_key(self, api_key: str, db_session) -> Optional[dict]:
+        """Validate against database."""
+        stmt = select(DBAPIKey).where(DBAPIKey.is_active == True)
+        result = await db_session.execute(stmt)
+
+        for db_key in result.scalars():
+            if self.verify_api_key(api_key, db_key.key_hash):
+                # Update last used
+                db_key.last_used = datetime.utcnow()
+                await db_session.commit()
+
+                return {
+                    "id": str(db_key.id),
+                    "name": db_key.name,
+                    "is_admin": db_key.is_admin
+                }
+
+        return None
+```
+
+**⚠️ Common Pitfalls**:
+
+1. **Storing plain text keys**:
+
+   ```python
+   # Wrong: Store plain key
+   self.api_keys[id] = {"key": api_key}
+
+   # Right: Store hash only
+   self.api_keys[id] = {"key_hash": self.hash_api_key(api_key)}
+   ```
+
+2. **Weak key generation**:
+
+   ```python
+   # Wrong: Predictable
+   key = f"key_{user_id}_{timestamp}"
+
+   # Right: Cryptographically secure
+   key = secrets.token_urlsafe(32)
+   ```
+
+3. **No rate limiting**:
+
+   ```python
+   # Wrong: Unlimited requests
+   @app.post("/api/endpoint")
+   async def endpoint():
+       return data
+
+   # Right: Rate limited
+   @app.post("/api/endpoint", dependencies=[Depends(rate_limit_check)])
+   ```
+
+**✅ Quality Gates**:
+
+- [ ] API keys are hashed before storage
+- [ ] Bearer token format used
+- [ ] Admin endpoints protected
+- [ ] Rate limiting implemented
+- [ ] Keys can be created/revoked
+- [ ] Default admin key documented
+- [ ] Tests cover all auth paths
+
+**📤 Expected Outputs**:
+
+1. Working authentication system
+2. API key management endpoints
+3. Secure key storage (hashed)
+4. Rate limiting per key
+5. Admin vs regular user roles
+
+**🔗 Impact on Other Tasks**:
+
+- **API-002**: Uses auth dependency
+- **DB-002**: Will store keys in database
+- **FRONT-002**: Needs to handle API keys
+- **DOC-001**: Document key management
 
 ### **API-004**: Add AI provider integration (4h)
 
@@ -3186,6 +3819,1581 @@ class CostMonitor:
 - **MON-001**: Monitor via Langfuse dashboard
 - **TEST-001**: Include AI service tests
 
+---
+
+### FRONT-001: Create Basic HTML Structure
+
+**⏱️ Estimated Time**: 2 hours  
+**📋 Prerequisites**: API-001, API-002, API-003 completed
+
+**🎯 Task Objective**: Create a minimal, functional HTML interface that works without JavaScript frameworks, optimized for simplicity and Railway deployment.
+
+**🔧 Tool Selection (August 2025)**:
+
+1. **Pure HTML + Tailwind CSS** (RECOMMENDED)
+   - Version: Tailwind CSS v3.4.0 via CDN
+   - Why: Zero build step, instant deployment
+   - CDN: <https://cdn.tailwindcss.com>
+
+2. **Alpine.js for Interactivity** (For FRONT-002)
+   - Version: Alpine.js v3.13.5 via CDN
+   - Why: No build step, works with HTML
+   - CDN: <https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js>
+
+**📁 File Structure**:
+
+```
+frontend/
+├── index.html          # Main application page
+├── static/
+│   ├── style.css      # Custom styles (if needed)
+│   └── favicon.ico    # Browser icon
+└── templates/         # For server-side rendering (optional)
+    └── base.html
+```
+
+**💻 Complete Implementation**:
+
+**Step 1: Create Basic HTML Structure**
+
+Create `frontend/index.html`:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Factoria - Educational Content Generator</title>
+
+    <!-- Tailwind CSS via CDN (August 2025 version) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Meta tags for SEO -->
+    <meta name="description" content="Generate educational content with AI">
+    <meta name="keywords" content="education, AI, content generation">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+
+    <!-- Custom configuration for Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',    // Blue-500
+                        secondary: '#10B981',  // Green-500
+                        danger: '#EF4444'      // Red-500
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <h1 class="text-2xl font-bold text-gray-900">La Factoria</h1>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-500">API Status: <span id="api-status" class="font-medium">Checking...</span></span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Content Type Selection -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Select Content Type</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <button class="content-type-btn p-4 bg-gray-50 rounded-lg hover:bg-primary hover:text-white transition-colors" data-type="study_guide">
+                    <svg class="w-8 h-8 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 1 1 0 000 2H6a2 2 0 00-2 2v6a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-1a1 1 0 100-2h1a4 4 0 014 4v6a4 4 0 01-4 4H6a4 4 0 01-4-4V7a4 4 0 014-4z" clip-rule="evenodd"/>
+                    </svg>
+                    Study Guide
+                </button>
+
+                <button class="content-type-btn p-4 bg-gray-50 rounded-lg hover:bg-primary hover:text-white transition-colors" data-type="flashcards">
+                    <svg class="w-8 h-8 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1z"/>
+                        <path d="M2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/>
+                    </svg>
+                    Flashcards
+                </button>
+
+                <button class="content-type-btn p-4 bg-gray-50 rounded-lg hover:bg-primary hover:text-white transition-colors" data-type="quiz">
+                    <svg class="w-8 h-8 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm9 0a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0V6h-1a1 1 0 110-2h1V3a1 1 0 011-1zM5 11a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zm9 0a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-1a1 1 0 011-1z" clip-rule="evenodd"/>
+                    </svg>
+                    Quiz
+                </button>
+
+                <button class="content-type-btn p-4 bg-gray-50 rounded-lg hover:bg-primary hover:text-white transition-colors" data-type="summary">
+                    <svg class="w-8 h-8 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 0h8v12H6V4z" clip-rule="evenodd"/>
+                    </svg>
+                    Summary
+                </button>
+            </div>
+        </div>
+
+        <!-- Input Form (Hidden by default) -->
+        <div id="input-form" class="bg-white rounded-lg shadow-md p-6 mb-6 hidden">
+            <h2 class="text-xl font-semibold mb-4">Generate <span id="content-type-display"></span></h2>
+
+            <form id="generation-form" class="space-y-4">
+                <!-- Topic Input -->
+                <div>
+                    <label for="topic" class="block text-sm font-medium text-gray-700 mb-1">
+                        Topic or Content
+                    </label>
+                    <textarea
+                        id="topic"
+                        name="topic"
+                        rows="4"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Enter the topic or paste content you want to generate educational materials from..."
+                        required
+                    ></textarea>
+                </div>
+
+                <!-- Audience Level -->
+                <div>
+                    <label for="audience" class="block text-sm font-medium text-gray-700 mb-1">
+                        Audience Level
+                    </label>
+                    <select
+                        id="audience"
+                        name="audience"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        required
+                    >
+                        <option value="">Select audience level...</option>
+                        <option value="elementary">Elementary School</option>
+                        <option value="middle-school">Middle School</option>
+                        <option value="high-school">High School</option>
+                        <option value="university">University</option>
+                    </select>
+                </div>
+
+                <!-- API Key -->
+                <div>
+                    <label for="api-key" class="block text-sm font-medium text-gray-700 mb-1">
+                        API Key
+                    </label>
+                    <input
+                        type="password"
+                        id="api-key"
+                        name="api_key"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Enter your API key..."
+                        required
+                    >
+                    <p class="mt-1 text-xs text-gray-500">Your API key is never stored and is only used for this request.</p>
+                </div>
+
+                <!-- Submit Buttons -->
+                <div class="flex gap-4">
+                    <button
+                        type="submit"
+                        class="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Generate Content
+                    </button>
+                    <button
+                        type="button"
+                        id="cancel-btn"
+                        class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-state" class="hidden">
+            <div class="bg-white rounded-lg shadow-md p-8 text-center">
+                <div class="inline-flex items-center">
+                    <svg class="animate-spin h-8 w-8 text-primary mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span class="text-lg">Generating content...</span>
+                </div>
+                <p class="mt-4 text-sm text-gray-500">This usually takes 10-30 seconds</p>
+            </div>
+        </div>
+
+        <!-- Results Display -->
+        <div id="results" class="hidden">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h2 class="text-xl font-semibold">Generated Content</h2>
+                    <button
+                        id="new-generation-btn"
+                        class="text-sm bg-secondary text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
+                    >
+                        New Generation
+                    </button>
+                </div>
+
+                <!-- Content Display Area -->
+                <div id="content-display" class="prose max-w-none">
+                    <!-- Generated content will be inserted here -->
+                </div>
+
+                <!-- Metadata Footer -->
+                <div class="mt-6 pt-4 border-t border-gray-200 text-sm text-gray-500">
+                    <div class="flex justify-between">
+                        <span>Generated with <span id="model-used"></span></span>
+                        <span>Cost: $<span id="generation-cost"></span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Display -->
+        <div id="error-display" class="hidden">
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div class="flex">
+                    <svg class="h-5 w-5 text-red-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    </svg>
+                    <div>
+                        <h3 class="text-sm font-medium text-red-800">Error</h3>
+                        <p id="error-message" class="mt-1 text-sm text-red-700"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Basic JavaScript for API Status Check -->
+    <script>
+        // Check API health status
+        async function checkAPIStatus() {
+            const statusElement = document.getElementById('api-status');
+            try {
+                const response = await fetch('/health');
+                if (response.ok) {
+                    statusElement.textContent = 'Online';
+                    statusElement.className = 'font-medium text-green-600';
+                } else {
+                    statusElement.textContent = 'Offline';
+                    statusElement.className = 'font-medium text-red-600';
+                }
+            } catch (error) {
+                statusElement.textContent = 'Offline';
+                statusElement.className = 'font-medium text-red-600';
+            }
+        }
+
+        // Check status on page load
+        checkAPIStatus();
+
+        // Check status every 30 seconds
+        setInterval(checkAPIStatus, 30000);
+
+        // Store selected content type
+        let selectedContentType = null;
+
+        // Content type button handlers
+        document.querySelectorAll('.content-type-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                selectedContentType = this.dataset.type;
+                document.getElementById('content-type-display').textContent =
+                    this.textContent.trim();
+                document.getElementById('input-form').classList.remove('hidden');
+
+                // Highlight selected button
+                document.querySelectorAll('.content-type-btn').forEach(b =>
+                    b.classList.remove('ring-2', 'ring-primary'));
+                this.classList.add('ring-2', 'ring-primary');
+            });
+        });
+
+        // Cancel button handler
+        document.getElementById('cancel-btn').addEventListener('click', function() {
+            document.getElementById('input-form').classList.add('hidden');
+            document.querySelectorAll('.content-type-btn').forEach(b =>
+                b.classList.remove('ring-2', 'ring-primary'));
+            selectedContentType = null;
+        });
+    </script>
+</body>
+</html>
+```
+
+**Step 2: Create Minimal FastAPI Static File Serving**
+
+Update `app/main.py` to serve the HTML:
+
+```python
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+app = FastAPI(title="La Factoria Simple")
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
+
+# Serve index.html at root
+@app.get("/")
+async def read_index():
+    return FileResponse("frontend/index.html")
+
+# Existing endpoints...
+```
+
+**Step 3: Create Simple Favicon**
+
+Create `frontend/static/favicon.ico`:
+
+```bash
+# Create a simple text favicon (for development)
+echo "LF" > frontend/static/favicon.ico
+
+# Or download a free education icon:
+curl -L "https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f4da.png" \
+     -o frontend/static/favicon.png
+
+# Convert to .ico (optional, requires imagemagick)
+# convert frontend/static/favicon.png -resize 16x16 frontend/static/favicon.ico
+```
+
+**📋 Common Pitfalls & Solutions**:
+
+1. **CDN Blocked by Corporate Firewall**:
+
+   ```html
+   <!-- Fallback to local Tailwind -->
+   <script>
+       if (!window.tailwind) {
+           document.write('<link href="/static/tailwind.min.css" rel="stylesheet">');
+       }
+   </script>
+   ```
+
+2. **CORS Issues During Development**:
+
+   ```python
+   # Add to FastAPI for development
+   from fastapi.middleware.cors import CORSMiddleware
+
+   app.add_middleware(
+       CORSMiddleware,
+       allow_origins=["http://localhost:3000"],  # Vite default
+       allow_methods=["*"],
+       allow_headers=["*"],
+   )
+   ```
+
+3. **Mobile Responsiveness**:
+   - Already handled with Tailwind's responsive classes
+   - Test with Chrome DevTools mobile view
+
+**🧪 Testing the Implementation**:
+
+```bash
+# 1. Start the FastAPI server
+cd la-factoria-simple-v2
+uvicorn app.main:app --reload
+
+# 2. Open browser
+open http://localhost:8000
+
+# 3. Test mobile view
+# Chrome: F12 → Toggle device toolbar
+
+# 4. Test API health check
+curl http://localhost:8000/health
+```
+
+**✅ Quality Gates**:
+
+- [ ] HTML validates at <https://validator.w3.org/>
+- [ ] Page loads in under 1 second
+- [ ] All buttons are clickable (no JS errors)
+- [ ] Mobile responsive (320px to 1920px)
+- [ ] API status shows "Online" when server running
+- [ ] No console errors in browser
+- [ ] Tailwind CSS loads from CDN
+- [ ] Form inputs have proper labels for accessibility
+
+**📤 Expected Outputs**:
+
+1. Working HTML page at <http://localhost:8000>
+2. Content type selection grid
+3. Hidden form ready for FRONT-002
+4. API health status indicator
+5. Mobile-responsive design
+
+**🔗 Impact on Other Tasks**:
+
+- **FRONT-002**: Add JavaScript interactivity to this structure
+- **DEPLOY-001**: This HTML will be served by Railway
+- **API-002**: Form will submit to /generate endpoint
+- **AUTH-001**: API key field ready for authentication
+
+---
+
+### FRONT-002: Add Form and Interaction
+
+**⏱️ Estimated Time**: 3 hours  
+**📋 Prerequisites**: FRONT-001, API-002, API-003 completed
+
+**🎯 Task Objective**: Add JavaScript interactivity to make the form functional, connect to the backend API, and provide a smooth user experience.
+
+**🔧 Tool Selection (August 2025)**:
+
+1. **Vanilla JavaScript** (RECOMMENDED)
+   - Why: No build step, works everywhere
+   - ES2022 features supported in all modern browsers
+
+2. **Alpine.js** (ALTERNATIVE for complex interactions)
+   - Version: v3.13.5 via CDN
+   - When to use: If you need reactive data binding
+
+**💻 Complete Implementation**:
+
+**Step 1: Enhance the HTML with Full JavaScript**
+
+Update the `<script>` section in `frontend/index.html`:
+
+```javascript
+<script>
+// API configuration
+const API_BASE_URL = window.location.origin;
+
+// Global state
+let selectedContentType = null;
+
+// Check API health status
+async function checkAPIStatus() {
+    const statusElement = document.getElementById('api-status');
+    try {
+        const response = await fetch(`${API_BASE_URL}/health`);
+        if (response.ok) {
+            statusElement.textContent = 'Online';
+            statusElement.className = 'font-medium text-green-600';
+        } else {
+            statusElement.textContent = 'Offline';
+            statusElement.className = 'font-medium text-red-600';
+        }
+    } catch (error) {
+        statusElement.textContent = 'Offline';
+        statusElement.className = 'font-medium text-red-600';
+    }
+}
+
+// Helper function to show/hide elements
+function toggleElement(elementId, show) {
+    const element = document.getElementById(elementId);
+    if (show) {
+        element.classList.remove('hidden');
+    } else {
+        element.classList.add('hidden');
+    }
+}
+
+// Helper function to display errors
+function showError(message) {
+    document.getElementById('error-message').textContent = message;
+    toggleElement('error-display', true);
+    // Auto-hide after 10 seconds
+    setTimeout(() => toggleElement('error-display', false), 10000);
+}
+
+// Content type button handlers
+document.querySelectorAll('.content-type-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        selectedContentType = this.dataset.type;
+        document.getElementById('content-type-display').textContent =
+            this.textContent.trim();
+        toggleElement('input-form', true);
+        toggleElement('results', false);
+        toggleElement('error-display', false);
+
+        // Highlight selected button
+        document.querySelectorAll('.content-type-btn').forEach(b =>
+            b.classList.remove('ring-2', 'ring-primary'));
+        this.classList.add('ring-2', 'ring-primary');
+
+        // Focus on topic input
+        document.getElementById('topic').focus();
+    });
+});
+
+// Cancel button handler
+document.getElementById('cancel-btn').addEventListener('click', function() {
+    toggleElement('input-form', false);
+    document.querySelectorAll('.content-type-btn').forEach(b =>
+        b.classList.remove('ring-2', 'ring-primary'));
+    selectedContentType = null;
+    document.getElementById('generation-form').reset();
+});
+
+// New generation button handler
+document.getElementById('new-generation-btn').addEventListener('click', function() {
+    toggleElement('results', false);
+    toggleElement('input-form', false);
+    document.getElementById('generation-form').reset();
+    selectedContentType = null;
+    document.querySelectorAll('.content-type-btn').forEach(b =>
+        b.classList.remove('ring-2', 'ring-primary'));
+});
+
+// Form submission handler
+document.getElementById('generation-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    // Get form data
+    const formData = new FormData(this);
+    const topic = formData.get('topic');
+    const audience = formData.get('audience');
+    const apiKey = formData.get('api_key');
+
+    // Disable submit button
+    const submitButton = this.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    submitButton.textContent = 'Generating...';
+
+    // Show loading state
+    toggleElement('input-form', false);
+    toggleElement('loading-state', true);
+    toggleElement('error-display', false);
+
+    try {
+        // Make API request
+        const response = await fetch(`${API_BASE_URL}/api/generate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                content_type: selectedContentType,
+                topic: topic,
+                audience: audience
+            })
+        });
+
+        // Parse response
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || `Error: ${response.status}`);
+        }
+
+        // Display results
+        displayResults(data);
+
+    } catch (error) {
+        console.error('Generation error:', error);
+        showError(error.message || 'Failed to generate content. Please try again.');
+        toggleElement('loading-state', false);
+        toggleElement('input-form', true);
+    } finally {
+        // Re-enable submit button
+        submitButton.disabled = false;
+        submitButton.textContent = 'Generate Content';
+    }
+});
+
+// Function to display results
+function displayResults(data) {
+    toggleElement('loading-state', false);
+    toggleElement('results', true);
+
+    // Display content based on type
+    const contentDisplay = document.getElementById('content-display');
+    contentDisplay.innerHTML = formatContent(data.content, selectedContentType);
+
+    // Display metadata
+    document.getElementById('model-used').textContent = data.model || 'Unknown';
+    document.getElementById('generation-cost').textContent =
+        (data.cost || 0).toFixed(4);
+}
+
+// Function to format content based on type
+function formatContent(content, contentType) {
+    // Parse JSON content if it's a string
+    if (typeof content === 'string') {
+        try {
+            content = JSON.parse(content);
+        } catch (e) {
+            // If not JSON, display as is
+            return `<div class="whitespace-pre-wrap">${escapeHtml(content)}</div>`;
+        }
+    }
+
+    switch (contentType) {
+        case 'flashcards':
+            return formatFlashcards(content);
+        case 'quiz':
+            return formatQuiz(content);
+        case 'study_guide':
+            return formatStudyGuide(content);
+        case 'summary':
+            return formatSummary(content);
+        default:
+            return `<pre class="whitespace-pre-wrap">${JSON.stringify(content, null, 2)}</pre>`;
+    }
+}
+
+// Format flashcards
+function formatFlashcards(flashcards) {
+    if (!Array.isArray(flashcards)) {
+        flashcards = flashcards.flashcards || [];
+    }
+
+    let html = '<div class="space-y-4">';
+    flashcards.forEach((card, index) => {
+        html += `
+            <div class="border rounded-lg p-4 bg-gray-50">
+                <div class="font-medium text-gray-900 mb-2">
+                    Card ${index + 1}: ${escapeHtml(card.question || card.front)}
+                </div>
+                <div class="text-gray-700 pl-4 border-l-4 border-primary">
+                    ${escapeHtml(card.answer || card.back)}
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    return html;
+}
+
+// Format quiz
+function formatQuiz(quiz) {
+    if (!Array.isArray(quiz)) {
+        quiz = quiz.questions || [];
+    }
+
+    let html = '<div class="space-y-6">';
+    quiz.forEach((q, index) => {
+        html += `
+            <div class="border rounded-lg p-4 bg-gray-50">
+                <div class="font-medium text-gray-900 mb-3">
+                    ${index + 1}. ${escapeHtml(q.question)}
+                </div>
+                <div class="space-y-2 pl-4">
+        `;
+
+        if (q.options) {
+            q.options.forEach((option, i) => {
+                const letter = String.fromCharCode(65 + i); // A, B, C, D
+                const isCorrect = option === q.correct_answer ||
+                                 (q.correct === i) ||
+                                 (q.correct === letter);
+                html += `
+                    <div class="flex items-center space-x-2">
+                        <span class="font-medium">${letter}.</span>
+                        <span class="${isCorrect ? 'text-green-600 font-medium' : ''}">
+                            ${escapeHtml(option)}
+                        </span>
+                    </div>
+                `;
+            });
+        }
+
+        html += '</div></div>';
+    });
+    html += '</div>';
+    return html;
+}
+
+// Format study guide
+function formatStudyGuide(guide) {
+    if (typeof guide === 'string') {
+        return `<div class="prose max-w-none">${marked.parse(guide)}</div>`;
+    }
+
+    let html = '<div class="prose max-w-none">';
+    if (guide.title) {
+        html += `<h2>${escapeHtml(guide.title)}</h2>`;
+    }
+    if (guide.objectives) {
+        html += '<h3>Learning Objectives</h3><ul>';
+        guide.objectives.forEach(obj => {
+            html += `<li>${escapeHtml(obj)}</li>`;
+        });
+        html += '</ul>';
+    }
+    if (guide.content) {
+        html += marked.parse(guide.content);
+    }
+    html += '</div>';
+    return html;
+}
+
+// Format summary
+function formatSummary(summary) {
+    if (typeof summary === 'string') {
+        return `<div class="prose max-w-none">${marked.parse(summary)}</div>`;
+    }
+    return `<div class="prose max-w-none">${marked.parse(summary.content || JSON.stringify(summary))}</div>`;
+}
+
+// Helper to escape HTML
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// Save API key to localStorage (optional)
+document.getElementById('api-key').addEventListener('change', function() {
+    if (this.value && confirm('Save API key for future use?')) {
+        localStorage.setItem('la-factoria-api-key', this.value);
+    }
+});
+
+// Load saved API key on page load
+window.addEventListener('DOMContentLoaded', function() {
+    const savedKey = localStorage.getItem('la-factoria-api-key');
+    if (savedKey) {
+        document.getElementById('api-key').value = savedKey;
+    }
+});
+
+// Initialize
+checkAPIStatus();
+setInterval(checkAPIStatus, 30000);
+</script>
+
+<!-- Add Marked.js for Markdown parsing -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+```
+
+**Step 2: Add Loading States and Animations**
+
+Add this CSS to the `<head>` section:
+
+```html
+<style>
+    /* Smooth transitions */
+    .content-type-btn {
+        transition: all 0.2s ease;
+    }
+
+    .content-type-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Pulse animation for loading */
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    .animate-pulse {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    /* Flashcard hover effect */
+    .flashcard:hover {
+        transform: rotateY(180deg);
+    }
+
+    .flashcard {
+        transition: transform 0.6s;
+        transform-style: preserve-3d;
+    }
+</style>
+```
+
+**Step 3: Add Error Handling and Retry Logic**
+
+Add enhanced error handling:
+
+```javascript
+// Retry configuration
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
+
+// Enhanced fetch with retry
+async function fetchWithRetry(url, options, retries = MAX_RETRIES) {
+    try {
+        const response = await fetch(url, options);
+        if (response.status === 429) { // Rate limited
+            const retryAfter = response.headers.get('Retry-After') || 5;
+            throw new Error(`Rate limited. Please wait ${retryAfter} seconds.`);
+        }
+        return response;
+    } catch (error) {
+        if (retries > 0 && !error.message.includes('Rate limited')) {
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+            return fetchWithRetry(url, options, retries - 1);
+        }
+        throw error;
+    }
+}
+```
+
+**📋 Common Pitfalls & Solutions**:
+
+1. **CORS Errors in Development**:
+
+   ```javascript
+   // Add to development API calls
+   const isDev = window.location.hostname === 'localhost';
+   const API_BASE_URL = isDev ? 'http://localhost:8000' : window.location.origin;
+   ```
+
+2. **Large Content Display Issues**:
+
+   ```javascript
+   // Truncate very long content
+   function truncateContent(content, maxLength = 10000) {
+       if (content.length > maxLength) {
+           return content.substring(0, maxLength) + '... (truncated)';
+       }
+       return content;
+   }
+   ```
+
+3. **API Key Security**:
+
+   ```javascript
+   // Clear API key from memory after use
+   formData.set('api_key', '[REDACTED]');
+   ```
+
+**🧪 Testing the Implementation**:
+
+```bash
+# 1. Test with mock API response
+# Add to main.py temporarily:
+@app.post("/api/generate")
+async def mock_generate():
+    return {
+        "content": {"flashcards": [
+            {"front": "What is 2+2?", "back": "4"},
+            {"front": "Capital of France?", "back": "Paris"}
+        ]},
+        "model": "gpt-3.5-turbo",
+        "cost": 0.0015
+    }
+
+# 2. Test all content types
+# Click each button and submit form
+
+# 3. Test error handling
+# Use invalid API key
+
+# 4. Test mobile responsiveness
+# Use browser dev tools
+```
+
+**✅ Quality Gates**:
+
+- [ ] All content types display correctly
+- [ ] Form validation works (required fields)
+- [ ] API errors show user-friendly messages
+- [ ] Loading states display properly
+- [ ] Results render correctly for each content type
+- [ ] Mobile interaction works smoothly
+- [ ] API key can be saved/loaded (optional)
+- [ ] No console errors during normal use
+
+**📤 Expected Outputs**:
+
+1. Fully functional content generation
+2. Smooth loading states
+3. Clear error messages
+4. Properly formatted results
+5. Responsive interactions
+
+**🔗 Impact on Other Tasks**:
+
+- **API-002**: Calls the /generate endpoint
+- **API-003**: Uses Bearer token authentication
+- **DEPLOY-001**: No changes needed for Railway
+- **MON-001**: User actions trackable via Langfuse
+
+---
+
+### DEPLOY-001: Deploy to Railway
+
+**⏱️ Estimated Time**: 2 hours  
+**📋 Prerequisites**: API-001, API-002, API-003, FRONT-001 completed
+
+**🎯 Task Objective**: Deploy the application to Railway's free tier with automatic sleep functionality to minimize costs.
+
+**🔧 Railway Platform (August 2025)**:
+
+- **URL**: <https://railway.app>
+- **Free Tier**: $5 credit/month
+- **Auto-sleep**: After 30 min inactivity
+- **Wake time**: ~5-10 seconds
+- **Perfect for**: 1-10 user applications
+
+**💻 Complete Implementation**:
+
+**Step 1: Create Railway Account**
+
+```bash
+# 1. Go to https://railway.app
+# 2. Sign up with GitHub (RECOMMENDED)
+# 3. Verify email
+# 4. You get $5 free credits monthly
+```
+
+**Step 2: Install Railway CLI**
+
+```bash
+# macOS/Linux (via npm - August 2025)
+npm install -g @railway/cli@latest
+# Current version: 3.5.2
+
+# Or via Homebrew (macOS)
+brew install railway
+
+# Verify installation
+railway --version
+# Expected: railway version 3.5.2
+
+# Login to Railway
+railway login
+# Opens browser for authentication
+```
+
+**Step 3: Create railway.json Configuration**
+
+Create `railway.json` in project root:
+
+```json
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "numReplicas": 1,
+    "startCommand": "uvicorn app.main:app --host 0.0.0.0 --port $PORT",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  }
+}
+```
+
+**Step 4: Create Procfile for Deployment**
+
+Create `Procfile` in project root:
+
+```
+web: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+**Step 5: Update requirements.txt**
+
+Ensure all dependencies are listed:
+
+```txt
+fastapi==0.110.0
+uvicorn[standard]==0.27.1
+python-dotenv==1.0.1
+pydantic==2.6.1
+httpx==0.26.0
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.9
+openai==1.12.0
+anthropic==0.18.1
+langfuse==2.20.1
+```
+
+**Step 6: Environment Variables Setup**
+
+Create `.env.example`:
+
+```bash
+# API Keys (get from providers)
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Langfuse (get from https://cloud.langfuse.com)
+LANGFUSE_PUBLIC_KEY=pk-lf-...
+LANGFUSE_SECRET_KEY=sk-lf-...
+LANGFUSE_HOST=https://cloud.langfuse.com
+
+# App Config
+APP_ENV=production
+LOG_LEVEL=INFO
+```
+
+**Step 7: Deploy to Railway**
+
+```bash
+# 1. Initialize Railway project
+railway link
+# Select "Create new project"
+# Name it: la-factoria-simple
+
+# 2. Set environment variables
+railway variables set OPENAI_API_KEY=sk-...
+railway variables set ANTHROPIC_API_KEY=sk-ant-...
+railway variables set LANGFUSE_PUBLIC_KEY=pk-lf-...
+railway variables set LANGFUSE_SECRET_KEY=sk-lf-...
+railway variables set LANGFUSE_HOST=https://cloud.langfuse.com
+railway variables set APP_ENV=production
+
+# 3. Deploy
+railway up
+# This will:
+# - Detect Python app automatically
+# - Install dependencies
+# - Start the server
+# - Provide a URL like: la-factoria-simple.up.railway.app
+```
+
+**Step 8: Configure Custom Domain (Optional)**
+
+```bash
+# In Railway dashboard:
+# 1. Go to Settings → Domains
+# 2. Add custom domain
+# 3. Update DNS records as instructed
+
+# Or use Railway subdomain:
+# yourapp.up.railway.app (free)
+```
+
+**Step 9: Monitor Deployment**
+
+```bash
+# View logs
+railway logs
+
+# Check deployment status
+railway status
+
+# Open app in browser
+railway open
+```
+
+**📋 Common Pitfalls & Solutions**:
+
+1. **Port Binding Error**:
+
+   ```python
+   # Always use $PORT env variable
+   port = int(os.environ.get("PORT", 8000))
+   ```
+
+2. **Static Files Not Serving**:
+
+   ```python
+   # Add to main.py
+   app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
+   ```
+
+3. **CORS Issues**:
+
+   ```python
+   # Add your Railway URL
+   origins = [
+       "https://la-factoria-simple.up.railway.app",
+       "http://localhost:3000"  # for local dev
+   ]
+   ```
+
+4. **Environment Variables Missing**:
+
+   ```bash
+   # Always check
+   railway variables
+   ```
+
+**🧪 Testing the Deployment**:
+
+```bash
+# 1. Test health endpoint
+curl https://your-app.up.railway.app/health
+
+# 2. Test with browser
+open https://your-app.up.railway.app
+
+# 3. Monitor logs for errors
+railway logs --tail
+
+# 4. Check sleep/wake behavior
+# Wait 30 minutes, then access
+# Should wake in 5-10 seconds
+```
+
+**💰 Cost Optimization**:
+
+1. **Auto-sleep Configuration**:
+   - Happens automatically after 30 min
+   - No configuration needed
+   - Saves ~90% of costs
+
+2. **Resource Limits**:
+
+   ```json
+   {
+     "deploy": {
+       "maxMemoryMB": 512,
+       "maxCPU": 0.5
+     }
+   }
+   ```
+
+3. **Monthly Cost Estimate** (1-10 users):
+   - Active time: ~2 hours/day
+   - Memory: 512MB
+   - **Cost: ~$0.50-$1.00/month**
+   - Well within free $5 credit
+
+**✅ Quality Gates**:
+
+- [ ] Railway CLI installed and logged in
+- [ ] Environment variables set correctly
+- [ ] Application deploys without errors
+- [ ] Health check endpoint responds
+- [ ] Frontend loads properly
+- [ ] API endpoints work with auth
+- [ ] Auto-sleep activates after 30 min
+- [ ] Wake-up time under 10 seconds
+- [ ] Logs show no critical errors
+
+**📤 Expected Outputs**:
+
+1. Live URL: `https://[your-app].up.railway.app`
+2. Deployment logs showing success
+3. Working health check
+4. Functional web interface
+5. Auto-sleep after inactivity
+
+**🔗 Impact on Other Tasks**:
+
+- **DB-001**: Will add Railway Postgres to this project
+- **MON-001**: Railway provides basic monitoring
+- **BACKUP-001**: Can use Railway's backup features
+- **SCALE-001**: Easy to scale up when needed
+
+**🚀 Advanced Railway Features**:
+
+1. **GitHub Integration**:
+
+   ```bash
+   # Auto-deploy on push
+   # In Railway dashboard:
+   # Settings → GitHub → Connect repo
+   ```
+
+2. **Preview Environments**:
+
+   ```bash
+   # Automatic PR deployments
+   # Each PR gets unique URL
+   ```
+
+3. **Cron Jobs** (if needed):
+
+   ```json
+   {
+     "cron": {
+       "schedule": "0 0 * * *",
+       "command": "python scripts/cleanup.py"
+     }
+   }
+   ```
+
+---
+
+### DB-001: Set up Railway Postgres
+
+**⏱️ Estimated Time**: 2 hours  
+**📋 Prerequisites**: DEPLOY-001 completed, Railway project created
+
+**🎯 Task Objective**: Add Railway's managed Postgres database to store user data, API keys, and generation history.
+
+**🔧 Railway Postgres (August 2025)**:
+
+- **Free Tier**: 1GB storage, 100MB RAM
+- **Connection Pooling**: Built-in
+- **Automatic Backups**: Daily
+- **Zero Config**: Works instantly
+- **Perfect for**: 1-10 users, ~10k generations
+
+**💻 Complete Implementation**:
+
+**Step 1: Add Postgres to Railway Project**
+
+```bash
+# Option 1: Via CLI
+railway add postgres
+
+# Option 2: Via Dashboard
+# 1. Go to your Railway project
+# 2. Click "New Service"
+# 3. Select "Database" → "PostgreSQL"
+# 4. Click "Deploy"
+```
+
+**Step 2: Get Database URL**
+
+```bash
+# View all variables
+railway variables
+
+# You'll see:
+# DATABASE_URL=postgresql://user:pass@host:5432/railway
+
+# Copy this URL - Railway auto-injects it
+```
+
+**Step 3: Install Database Dependencies**
+
+Update `requirements.txt`:
+
+```txt
+# Existing dependencies...
+
+# Database
+sqlalchemy==2.0.27
+asyncpg==0.29.0
+alembic==1.13.1
+psycopg2-binary==2.9.9
+```
+
+**Step 4: Create Database Configuration**
+
+Create `app/core/database.py`:
+
+```python
+import os
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.pool import NullPool
+
+# Get DATABASE_URL from environment
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+
+# Fix for Railway's postgres:// URL (convert to postgresql://)
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# Convert to async URL for asyncpg
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+# Create async engine
+engine = create_async_engine(
+    DATABASE_URL,
+    poolclass=NullPool,  # Better for serverless
+    echo=False,  # Set True for SQL logging
+)
+
+# Create session factory
+AsyncSessionLocal = sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False
+)
+
+# Create base class for models
+Base = declarative_base()
+
+# Dependency to get DB session
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
+```
+
+**Step 5: Create Database Models**
+
+Create `app/models/models.py`:
+
+```python
+from sqlalchemy import Column, String, DateTime, Integer, Float, Text, Boolean
+from sqlalchemy.sql import func
+from app.core.database import Base
+import uuid
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    email = Column(String, unique=True, index=True, nullable=False)
+    api_key_hash = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    is_active = Column(Boolean, default=True)
+
+    # GDPR fields
+    consent_given_at = Column(DateTime(timezone=True))
+    deletion_requested_at = Column(DateTime(timezone=True), nullable=True)
+
+class Generation(Base):
+    __tablename__ = "generations"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, index=True, nullable=False)
+    content_type = Column(String, nullable=False)
+    topic = Column(Text, nullable=False)
+    audience = Column(String, nullable=False)
+
+    # Results
+    content = Column(Text)
+    model_used = Column(String)
+    cost = Column(Float, default=0.0)
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    processing_time_ms = Column(Integer)
+
+    # Tracking
+    langfuse_trace_id = Column(String, index=True)
+```
+
+**Step 6: Create Alembic Configuration**
+
+```bash
+# Initialize Alembic
+alembic init alembic
+
+# Update alembic.ini
+# Set the database URL line to:
+# sqlalchemy.url = will_be_set_in_env_py
+```
+
+Update `alembic/env.py`:
+
+```python
+from logging.config import fileConfig
+from sqlalchemy import engine_from_config, pool
+from alembic import context
+import os
+import sys
+from pathlib import Path
+
+# Add app to path
+sys.path.append(str(Path(__file__).parent.parent))
+
+# Import your models
+from app.core.database import Base, DATABASE_URL
+from app.models.models import User, Generation
+
+# Alembic Config object
+config = context.config
+
+# Set database URL from environment
+config.set_main_option("sqlalchemy.url", DATABASE_URL.replace("+asyncpg", ""))
+
+# Setup logging
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
+
+# Model metadata
+target_metadata = Base.metadata
+
+def run_migrations_offline() -> None:
+    """Run migrations in 'offline' mode."""
+    url = config.get_main_option("sqlalchemy.url")
+    context.configure(
+        url=url,
+        target_metadata=target_metadata,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
+    )
+
+    with context.begin_transaction():
+        context.run_migrations()
+
+def run_migrations_online() -> None:
+    """Run migrations in 'online' mode."""
+    connectable = engine_from_config(
+        config.get_section(config.config_ini_section),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
+
+    with connectable.connect() as connection:
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata
+        )
+
+        with context.begin_transaction():
+            context.run_migrations()
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()
+```
+
+**Step 7: Create Initial Migration**
+
+```bash
+# Create migration
+alembic revision --autogenerate -m "Initial tables"
+
+# Apply migration locally (for testing)
+export DATABASE_URL=postgresql://user:pass@localhost/test
+alembic upgrade head
+
+# Apply to Railway
+railway run alembic upgrade head
+```
+
+**Step 8: Add Database Health Check**
+
+Update `app/api/health.py`:
+
+```python
+from app.core.database import engine
+
+@router.get("/health")
+async def health_check():
+    health_status = {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "checks": {}
+    }
+
+    # Check database
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        health_status["checks"]["database"] = "ok"
+    except Exception as e:
+        health_status["status"] = "unhealthy"
+        health_status["checks"]["database"] = f"error: {str(e)}"
+
+    return health_status
+```
+
+**📋 Common Pitfalls & Solutions**:
+
+1. **Connection String Format**:
+
+   ```python
+   # Railway uses postgres:// but asyncpg needs postgresql+asyncpg://
+   if DATABASE_URL.startswith("postgres://"):
+       DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+   ```
+
+2. **Connection Pool Issues**:
+
+   ```python
+   # Use NullPool for serverless environments
+   engine = create_async_engine(DATABASE_URL, poolclass=NullPool)
+   ```
+
+3. **Migration Failures**:
+
+   ```bash
+   # Always test migrations locally first
+   docker run -p 5432:5432 -e POSTGRES_PASSWORD=test postgres:16
+   ```
+
+4. **SSL Required**:
+
+   ```python
+   # Railway Postgres requires SSL
+   engine = create_async_engine(
+       DATABASE_URL + "?sslmode=require"
+   )
+   ```
+
+**🧪 Testing the Implementation**:
+
+```bash
+# 1. Test database connection
+railway run python -c "
+from app.core.database import engine
+import asyncio
+
+async def test():
+    async with engine.connect() as conn:
+        result = await conn.execute('SELECT version()')
+        print(await result.scalar())
+
+asyncio.run(test())
+"
+
+# 2. Run migrations
+railway run alembic upgrade head
+
+# 3. Verify tables created
+railway run python -c "
+from app.core.database import engine
+import asyncio
+
+async def test():
+    async with engine.connect() as conn:
+        result = await conn.execute('''
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema='public'
+        ''')
+        print([row[0] for row in await result.fetchall()])
+
+asyncio.run(test())
+"
+```
+
+**✅ Quality Gates**:
+
+- [ ] Postgres service added to Railway
+- [ ] DATABASE_URL available in environment
+- [ ] Database connection successful
+- [ ] Migrations run without errors
+- [ ] Tables created correctly
+- [ ] Health check includes database status
+- [ ] No connection pool exhaustion
+- [ ] SSL connection working
+
+**📤 Expected Outputs**:
+
+1. Working Postgres database
+2. Users and generations tables created
+3. Database health check endpoint
+4. Migration system ready
+5. Connection pooling configured
+
+**🔗 Impact on Other Tasks**:
+
+- **DB-002**: Will create the schema using these models
+- **DB-003**: Will implement CRUD operations
+- **AUTH-001**: Will store API keys in database
+- **GDPR-001**: Will use deletion fields
+
+**💰 Cost Analysis**:
+
+Railway Postgres Free Tier (August 2025):
+
+- Storage: 1GB (enough for ~1M generations)
+- RAM: 100MB
+- Connections: 20 concurrent
+- **Monthly Cost: $0** (included in free tier)
+
+For 1-10 users:
+
+- ~100 generations/day = 3000/month
+- Storage used: ~10MB/month
+- **Years before hitting limit: 8+**
+
 ## Enhancement Progress Tracking
 
 - [x] DISCOVER-001: Fully enhanced with anti-hallucination context
@@ -3196,11 +5404,11 @@ class CostMonitor:
 - [x] SETUP-003: Fully enhanced with pytest testing framework
 - [x] API-001: Fully enhanced with health check implementation
 - [x] API-002: Fully enhanced with content generation endpoint structure
-- [ ] API-003: Pending enhancement
+- [x] API-003: Fully enhanced with simple authentication system
 - [x] API-004: Fully enhanced with AI provider and Langfuse integration
-- [ ] FRONT-001: Pending enhancement
-- [ ] FRONT-002: Pending enhancement
-- [ ] DEPLOY-001: Pending enhancement (Railway deployment)
+- [x] FRONT-001: Fully enhanced with basic HTML structure
+- [x] FRONT-002: Fully enhanced with form and interaction
+- [x] DEPLOY-001: Fully enhanced with Railway deployment
 - [ ] DB-001: Pending enhancement (Railway Postgres)
 - [ ] ... [remaining tasks]
 
