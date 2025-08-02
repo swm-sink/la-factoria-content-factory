@@ -711,6 +711,443 @@ async def create_user(email: str, accepted_terms: bool):
 
 ## Week 1: Foundation Phase (5/10 completed)
 
+### **SETUP-001**: Create repository structure (1h)
+
+**🎯 Objective**: Set up a clean, organized repository structure optimized for FastAPI + simple frontend deployment. Focus on clarity and maintainability for a "vibe coder" who prefers simplicity.
+
+**📁 Repository Structure (August 2025 Best Practices)**:
+
+```bash
+# Create the complete directory structure
+mkdir -p la-factoria-simple-v2/{app,tests,frontend,scripts,docs}
+cd la-factoria-simple-v2
+
+# Create subdirectories
+mkdir -p app/{api,services,models,core}
+mkdir -p tests/{unit,integration}
+mkdir -p frontend/{static,templates}
+mkdir -p scripts/{migration,analysis}
+```
+
+**🏗️ Complete File Structure**:
+
+```
+la-factoria-simple-v2/
+├── .gitignore              # Git ignore file
+├── .env.example            # Example environment variables
+├── README.md               # Project documentation
+├── requirements.txt        # Python dependencies
+├── requirements-dev.txt    # Development dependencies
+├── runtime.txt            # Python version for Railway
+├── railway.json           # Railway configuration
+├── Procfile              # Process file for deployment
+├── pytest.ini            # Pytest configuration
+├── pyproject.toml        # Python project metadata
+│
+├── app/                  # Backend application
+│   ├── __init__.py
+│   ├── main.py          # FastAPI app entry point
+│   ├── config.py        # Configuration management
+│   │
+│   ├── api/             # API endpoints
+│   │   ├── __init__.py
+│   │   ├── health.py    # Health check endpoint
+│   │   ├── generate.py  # Content generation
+│   │   └── auth.py      # Authentication endpoints
+│   │
+│   ├── services/        # Business logic
+│   │   ├── __init__.py
+│   │   ├── ai_service.py      # AI/LLM integration
+│   │   ├── auth_service.py    # Authentication logic
+│   │   └── content_service.py # Content processing
+│   │
+│   ├── models/          # Pydantic models
+│   │   ├── __init__.py
+│   │   ├── requests.py  # Request models
+│   │   ├── responses.py # Response models
+│   │   └── database.py  # Database models
+│   │
+│   └── core/            # Core utilities
+│       ├── __init__.py
+│       ├── security.py  # Security utilities
+│       ├── prompts.py   # Prompt templates
+│       └── exceptions.py # Custom exceptions
+│
+├── frontend/            # Simple frontend
+│   ├── index.html      # Main HTML file
+│   ├── static/
+│   │   ├── style.css   # Minimal CSS
+│   │   └── script.js   # Vanilla JavaScript
+│   └── templates/      # HTML templates (if needed)
+│
+├── tests/              # Test suite
+│   ├── __init__.py
+│   ├── conftest.py     # Pytest fixtures
+│   ├── unit/
+│   │   ├── test_services.py
+│   │   └── test_models.py
+│   └── integration/
+│       └── test_api.py
+│
+├── scripts/            # Utility scripts
+│   ├── check_compliance.py  # From DISCOVER-003
+│   └── analyze_survey.py    # From DISCOVER-002
+│
+└── docs/               # Documentation
+    ├── API.md          # API documentation
+    ├── DEPLOYMENT.md   # Deployment guide
+    └── MIGRATION.md    # Migration from v1
+```
+
+**📝 Essential Files Content**:
+
+**1. `.gitignore`** (Python + IDE + OS):
+
+```gitignore
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+*.log
+data/
+uploads/
+```
+
+**2. `.env.example`** (Document all required variables):
+
+```bash
+# Railway provides automatically
+PORT=8000
+RAILWAY_ENVIRONMENT=production
+
+# API Keys (required)
+OPENAI_API_KEY=sk-...
+LANGFUSE_PUBLIC_KEY=pk-lf-...
+LANGFUSE_SECRET_KEY=sk-lf-...
+
+# Database (Railway provides)
+DATABASE_URL=postgresql://...
+
+# App Configuration
+LOG_LEVEL=info
+API_KEY_LENGTH=32
+DAILY_TOKEN_LIMIT=100000
+
+# Optional
+SENTRY_DSN=
+SLACK_WEBHOOK_URL=
+```
+
+**3. `README.md`** (Clear, concise documentation):
+
+```markdown
+# La Factoria Simple v2
+
+A simplified content generation service using AI, built for 1-10 users.
+
+## Quick Start
+
+1. Clone and setup:
+   ```bash
+   git clone <repo-url>
+   cd la-factoria-simple-v2
+   python -m venv venv
+   source venv/bin/activate  # or `venv\Scripts\activate` on Windows
+   pip install -r requirements-dev.txt
+   ```
+
+2. Configure environment:
+
+   ```bash
+   cp .env.example .env
+   # Edit .env with your API keys
+   ```
+
+3. Run locally:
+
+   ```bash
+   uvicorn app.main:app --reload
+   # Visit http://localhost:8000
+   ```
+
+4. Run tests:
+
+   ```bash
+   pytest
+   ```
+
+## Deployment
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Railway deployment.
+
+## Architecture
+
+- **Backend**: FastAPI + OpenAI/Anthropic
+- **Frontend**: Simple HTML/CSS/JS
+- **Database**: PostgreSQL (via Railway)
+- **Monitoring**: Langfuse
+- **Hosting**: Railway
+
+## API Documentation
+
+Once running, visit:
+
+- Swagger UI: <http://localhost:8000/docs>
+- ReDoc: <http://localhost:8000/redoc>
+
+```
+
+**4. `requirements.txt`** (Production dependencies):
+```txt
+# Core
+fastapi==0.110.3
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9
+
+# AI/LLM
+openai==1.35.10
+langfuse==2.38.2
+tiktoken==0.7.0
+
+# Database
+sqlalchemy==2.0.30
+asyncpg==0.29.0
+alembic==1.13.1
+
+# Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-dotenv==1.0.1
+
+# Utilities
+pydantic==2.7.4
+pydantic-settings==2.3.4
+tenacity==8.4.2
+httpx==0.27.0
+```
+
+**5. `requirements-dev.txt`** (Development dependencies):
+
+```txt
+# Include production
+-r requirements.txt
+
+# Testing
+pytest==8.2.2
+pytest-asyncio==0.23.7
+pytest-cov==5.0.0
+pytest-mock==3.14.0
+
+# Code quality
+black==24.4.2
+flake8==7.0.0
+isort==5.13.2
+mypy==1.10.0
+
+# Development
+ipython==8.24.0
+pre-commit==3.7.1
+```
+
+**6. `pyproject.toml`** (Modern Python configuration):
+
+```toml
+[tool.black]
+line-length = 88
+target-version = ['py311', 'py312']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+addopts = "-v --cov=app --cov-report=html"
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+strict_optional = true
+```
+
+**7. `app/__init__.py`**:
+
+```python
+"""La Factoria Simple v2 - Simplified content generation service."""
+
+__version__ = "2.0.0"
+```
+
+**8. `app/main.py`** (FastAPI app skeleton):
+
+```python
+"""Main FastAPI application."""
+import os
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
+from app.api import health, auth, generate
+from app.config import settings
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle startup and shutdown events."""
+    # Startup
+    print(f"Starting La Factoria v2 on port {settings.PORT}")
+    yield
+    # Shutdown
+    print("Shutting down...")
+
+
+app = FastAPI(
+    title="La Factoria Simple",
+    version="2.0.0",
+    lifespan=lifespan,
+    docs_url="/docs" if settings.SHOW_DOCS else None,
+    redoc_url="/redoc" if settings.SHOW_DOCS else None,
+)
+
+# CORS for frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure properly for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
+
+# Include routers
+app.include_router(health.router, tags=["health"])
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(generate.router, prefix="/api/v1", tags=["generate"])
+
+
+@app.get("/")
+async def root():
+    """Serve the frontend."""
+    with open("frontend/index.html") as f:
+        return f.read()
+```
+
+**🚀 Initialization Script** (`scripts/init_project.sh`):
+
+```bash
+#!/bin/bash
+# Initialize La Factoria Simple v2 project
+
+echo "🚀 Initializing La Factoria Simple v2..."
+
+# Create directory structure
+mkdir -p app/{api,services,models,core}
+mkdir -p tests/{unit,integration}
+mkdir -p frontend/{static,templates}
+mkdir -p scripts/{migration,analysis}
+mkdir -p docs
+
+# Create __init__.py files
+find app tests -type d -exec touch {}/__init__.py \;
+
+# Create essential files
+touch .gitignore .env.example README.md requirements.txt requirements-dev.txt
+touch runtime.txt railway.json Procfile pytest.ini pyproject.toml
+touch app/main.py app/config.py
+touch frontend/index.html frontend/static/{style.css,script.js}
+
+echo "✅ Project structure created!"
+echo "📝 Next steps:"
+echo "1. Copy content from this guide to each file"
+echo "2. Run: pip install -r requirements-dev.txt"
+echo "3. Configure .env file"
+echo "4. Start coding!"
+```
+
+**⚠️ Common Mistakes to Avoid**:
+
+1. **Over-complicating structure**:
+   - Wrong: Deep nesting with many empty folders
+   - Right: Flat structure with clear purpose
+
+2. **Missing **init**.py**:
+
+   ```bash
+   # Always create these for Python packages
+   find app tests -type d -exec touch {}/__init__.py \;
+   ```
+
+3. **Hardcoding configuration**:
+   - Wrong: `API_KEY = "sk-123"` in code
+   - Right: Use environment variables via config.py
+
+4. **No .env.example**:
+   - Always provide example with all required vars
+   - Never commit actual .env file
+
+**✅ Quality Gates**:
+
+- [ ] All directories created with proper structure
+- [ ] .gitignore includes all necessary patterns
+- [ ] .env.example documents all variables
+- [ ] README.md has clear quick start
+- [ ] requirements.txt has pinned versions
+- [ ] **init**.py in all Python packages
+- [ ] pyproject.toml configured for tools
+
+**📤 Expected Outputs**:
+
+1. Complete directory structure
+2. All essential configuration files
+3. Python package structure ready
+4. Development environment configured
+
+**🔗 Impact on Other Tasks**:
+
+- All subsequent tasks depend on this structure
+- **API-001**: Will create `app/api/health.py`
+- **TEST-001**: Will use `tests/` structure
+- **DEPLOY-001**: Uses railway.json and Procfile
+
 ### **SETUP-002**: Initialize Railway project (1h)
 
 **🎯 Objective**: Set up a new Railway project optimized for FastAPI deployment with minimal configuration. Focus on simplicity and cost-effectiveness for 1-10 users.
@@ -1335,7 +1772,7 @@ class CostMonitor:
 - [x] DISCOVER-001: Fully enhanced with anti-hallucination context
 - [x] DISCOVER-002: Fully enhanced with anti-hallucination context
 - [x] DISCOVER-003: Fully enhanced with anti-hallucination context
-- [ ] SETUP-001: Pending enhancement
+- [x] SETUP-001: Fully enhanced with repository structure details
 - [x] SETUP-002: Fully enhanced with Railway-specific context
 - [ ] SETUP-003: Pending enhancement
 - [ ] API-001: Pending enhancement
