@@ -10,7 +10,7 @@
          - Parse and validate input parameters
          - Initialize progress tracking
          - Set up error handling context
-      
+
       2. **Pre-Execution Phase**:
          - Check required tools availability
          - Verify file/directory permissions
@@ -54,7 +54,7 @@
     </standard_patterns>
     <integration_example>
       ```xml
-      <include>components/workflow/command-execution.md</include>
+      @.claude/components/workflow/command-execution.md
       
       <steps>
         <step name="Initialize">

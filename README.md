@@ -1,540 +1,100 @@
-# AI Content Factory
+# La Factoria Simple v2
 
-[![Coverage](https://codecov.io/gh/username/la-factoria-v2/branch/main/graph/badge.svg)](https://codecov.io/gh/username/la-factoria-v2)
-[![CI/CD](https://github.com/username/la-factoria-v2/workflows/La%20Factoria%20CI%2FCD%20Pipeline/badge.svg)](https://github.com/username/la-factoria-v2/actions)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+A dramatically simplified content generation system. From 50,000+ lines to <1,000 lines.
 
-An AI-powered content and podcast factory that transforms textual input (e.g., a topic, syllabus) into comprehensive educational materials including podcast scripts, study guides, summaries, FAQs, flashcards, and more.
-
-## Overview
-
-The AI Content Factory uses Google Cloud Vertex AI (Gemini models) to generate structured, educational content from simple text inputs. The system follows an outline-driven approach where a master content outline is first generated, then used as the foundation for creating various derivative content types in parallel.
-
-## Features
-
-- **Master Content Outline Generation**: Creates structured learning frameworks from input text
-- **Multi-Format Content Generation**: Supports podcast scripts, study guides, one-pagers, detailed reading materials, FAQs, flashcards, and reading guide questions
-- **Quality Validation**: Comprehensive content quality assessment and iterative refinement
-- **Intelligent Caching**: High-quality content caching with TTL and quality-based retention
-- **Cost Optimization**: Token limit monitoring and cost tracking for AI API usage
-- **Async Processing**: Background job processing for complex content generation tasks
-
-## Architecture
-
-```mermaid
-graph TB
-    Client[Client Application] --> API[FastAPI Application]
-    API --> Auth[API Key Authentication]
-    API --> ContentGen[Content Generation Service]
-    ContentGen --> LLM[LLM Client Service]
-    LLM --> VertexAI[Vertex AI Gemini]
-    ContentGen --> Cache[Redis Cache]
-    ContentGen --> Jobs[Job Management]
-    Jobs --> Firestore[Firestore Database]
-```
-
-For detailed architecture information, see [docs/architecture-map.md](docs/architecture-map.md).
-
-## API Endpoints
-
-### Health Checks
-
-#### Unprotected Health Check
+## Quick Start
 
 ```bash
-GET /healthz
-```
-
-Basic service health check (no authentication required).
-
-**Response:**
-
-```json
-{
-  "status": "healthy",
-  "timestamp": "2024-01-15T10:30:00Z"
-}
-```
-
-#### Protected Health Check
-
-```bash
-GET /api/v1/health
-Headers: X-API-Key: your-api-key
-```
-
-Comprehensive health check including AI service connectivity (requires API key).
-
-**Response:**
-
-```json
-{
-  "status": "healthy",
-  "services": {
-    "vertex_ai": "connected",
-    "cache": "connected",
-    "firestore": "connected"
-  },
-  "timestamp": "2024-01-15T10:30:00Z"
-}
-```
-
-### Content Generation
-
-#### Generate Content
-
-```bash
-POST /api/v1/content/generate
-Headers:
-  Content-Type: application/json
-  X-API-Key: your-api-key
-```
-
-**Request Body:**
-
-```json
-{
-  "syllabus_text": "Introduction to Machine Learning: supervised learning, unsupervised learning, neural networks, and practical applications using Python.",
-  "target_format": "comprehensive",
-  "enable_caching": true
-}
-```
-
-**Response:**
-
-```json
-{
-  "content": {
-    "content_outline": {
-      "title": "Introduction to Machine Learning",
-      "overview": "Comprehensive guide covering ML fundamentals...",
-      "sections": [...]
-    },
-    "podcast_script": {
-      "title": "ML Fundamentals Podcast",
-      "introduction": "Welcome to our exploration of machine learning...",
-      "main_content": "...",
-      "conclusion": "..."
-    },
-    "study_guide": {
-      "title": "Machine Learning Study Guide",
-      "overview": "...",
-      "key_concepts": [...],
-      "detailed_content": "...",
-      "summary": "..."
-    },
-    "faqs": {
-      "items": [
-        {
-          "question": "What is machine learning?",
-          "answer": "Machine learning is a subset of artificial intelligence..."
-        }
-      ]
-    }
-  },
-  "metadata": {
-    "generation_time": "45.2s",
-    "cache_hit": false,
-    "quality_score": 0.87
-  }
-}
-```
-
-#### Target Formats
-
-- `guide`: Study guide only
-- `podcast`: Podcast script only
-- `one_pager`: One-page summary only
-- `comprehensive`: All content types (default)
-
-### Job Management
-
-#### Create Async Job
-
-```bash
-POST /api/v1/jobs
-Headers:
-  Content-Type: application/json
-  X-API-Key: your-api-key
-```
-
-#### Get Job Status
-
-```bash
-GET /api/v1/jobs/{job_id}
-Headers: X-API-Key: your-api-key
-```
-
-## Getting Started
-
-### Prerequisites
-
-- Python 3.11+
-- Google Cloud Project with Vertex AI enabled
-- Redis (for caching)
-- Firestore (for job persistence)
-
-### Installation
-
-1. **Clone the repository:**
-
-```bash
-git clone <repository-url>
-cd ai-content-factory
-```
-
-2. **Install dependencies:**
-
-```bash
+# Install dependencies
 pip install -r requirements.txt
-pip install -r requirements-dev.txt  # For development
-```
 
-3. **Set up environment variables:**
-
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
-
-Required environment variables:
-
-```bash
-# Core API Configuration
-API_KEY=your-secret-api-key
-GCP_PROJECT_ID=your-gcp-project-id
-GCP_LOCATION=us-central1
-
-# AI Service Configuration
-GEMINI_MODEL_NAME=models/gemini-2.5-flash-preview-05-20
-
-# Required API Keys
-ELEVENLABS_API_KEY=your-elevenlabs-key
-JWT_SECRET_KEY=your-jwt-secret-key-minimum-32-characters-long
-
-# Frontend Configuration
-VITE_API_BASE_URL=http://localhost:8000
-
-# CORS Configuration
-CORS_ORIGINS=http://localhost:3000,http://localhost:5173
-```
-
-📖 **For a complete list of all configuration options, see [Configuration Guide](docs/CONFIGURATION.md)**
-
-4. **Initialize Google Cloud authentication:**
-
-```bash
-gcloud auth application-default login
-```
-
-### Local Development
-
-1. **Start the development server:**
-
-```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
-```
-
-2. **Test the API:**
-
-```bash
-curl -X GET http://localhost:8080/healthz
-```
-
-3. **Test protected endpoint:**
-
-```bash
-curl -X GET http://localhost:8080/api/v1/health \
-  -H "X-API-Key: your-api-key"
-```
-
-### Docker Development
-
-1. **Build the container:**
-
-```bash
-docker build -t ai-content-factory .
-```
-
-2. **Run with Docker Compose:**
-
-```bash
-docker-compose up -d
-```
-
-This starts the application with Redis and other dependencies.
-
-## Testing
-
-### Running Tests
-
-**All tests:**
-
-```bash
-pytest
-```
-
-**Unit tests only:**
-
-```bash
-pytest tests/unit/
-```
-
-**Integration tests:**
-
-```bash
-pytest tests/integration/
-```
-
-**With coverage:**
-
-```bash
-pytest --cov=app --cov-report=html
-```
-
-### Test Configuration
-
-Tests use mocked external services by default. To run integration tests against real services:
-
-```bash
-export INTEGRATION_TESTS=true
-pytest tests/integration/
-```
-
-## Code Quality
-
-### Linting and Formatting
-
-**Format code:**
-
-```bash
-black app/ tests/
-```
-
-**Check formatting:**
-
-```bash
-black --check app/ tests/
-```
-
-**Lint code:**
-
-```bash
-flake8 app/ tests/
-```
-
-**Type checking:**
-
-```bash
-mypy app/
-```
-
-### Pre-commit Hooks
-
-Install pre-commit hooks to automatically format and lint code:
-
-```bash
-pre-commit install
-```
-
-This will run `black`, `flake8`, and `mypy` on every commit.
-
-### Development Validation Script
-
-Run all quality checks:
-
-```bash
-# Check code quality
-black --check app/ tests/
-flake8 app/ tests/
-mypy app/
+# Run locally
+cd src && uvicorn main:app --reload
 
 # Run tests
 pytest
-
-# Check Docker build
-docker build --no-cache .
 ```
 
-## Configuration
+## Project Status
 
-### Settings
+### ✅ Completed
 
-Application settings are managed through `app/core/config/settings.py` with support for:
+- Project structure (5 directories)
+- Health check endpoint with TDD
+- Prompt templates extracted (10 templates)
+- Migration guide created
+- Archive strategy documented
 
-- Environment variables
-- Google Secret Manager (for production)
-- Sensible defaults for development
+### 🚧 In Progress
 
-### Secret Management
+- Content generation endpoint
+- Simple authentication
+- Railway deployment
 
-**Development:** Use `.env` file or environment variables
-**Production:** Secrets automatically loaded from Google Secret Manager
+### 📋 Planned
 
-### Caching Configuration
+- User migration tools
+- Railway Postgres integration
+- Production deployment
 
-```bash
-# Redis Configuration
-REDIS_URL=redis://localhost:6379
-CACHE_TTL_SECONDS=3600
-CACHE_MIN_QUALITY_RETRIEVAL=0.75
+## Architecture
 
-# Content caching is conditional based on quality scores
+```
+la-factoria-simple-v2/
+├── src/                    # Backend API (<200 lines target)
+│   └── main.py            # FastAPI application
+├── static/                 # Frontend (vanilla JS)
+├── tests/                  # TDD test suite
+├── prompts/               # AI prompt templates
+├── scripts/               # Migration scripts
+└── docs/                  # Documentation
 ```
 
-### Cost Management
+## Simplification Metrics
 
-```bash
-# Token and cost limits
-MAX_TOKENS_PER_CONTENT_TYPE=1000
-MAX_COST_PER_REQUEST=0.50
-ENABLE_COST_TRACKING=true
-```
+| Metric | Old System | New System | Reduction |
+|--------|------------|------------|-----------|
+| Files | 1,000+ | <20 | 98% |
+| Dependencies | 69 | <15 | 78% |
+| Lines of Code | 50,000+ | <1,000 | 98% |
+| Setup Time | 2 days | 10 minutes | 99% |
+| Monthly Cost | $500+ | $20 | 96% |
 
-## Deployment
+## Development Process
 
-### Google Cloud Run
+Following rigorous methodology:
 
-The application is designed for deployment on Google Cloud Run with:
+1. **Explore** - Deep analysis before decisions
+2. **Plan** - Detailed roadmap
+3. **Critique** - Stress test the plan  
+4. **Correct** - Refine based on critique
+5. **Atomize** - Break into 2-4 hour tasks
+6. **Implement** - TDD for each task
+7. **Gate** - Quality checks
+8. **Commit** - Atomic commits
+9. **Review** - Holistic assessment
 
-- Automatic scaling
-- Service-to-service authentication
-- Integration with Google Cloud services
+## Key Decisions
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed deployment instructions.
+- **Railway over GCP**: Managed infrastructure
+- **Vanilla JS over React**: No build complexity
+- **Postgres over Firestore**: Simple SQL
+- **Sync over Async**: Direct processing
+- **Langfuse (Phase 2)**: External prompt management
 
-### Infrastructure as Code
+## Migration from Old System
 
-Terraform configurations are available in the `iac/` directory for provisioning:
+See [docs/MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) for detailed steps.
 
-- Cloud Run services
-- Firestore database
-- Secret Manager secrets
-- IAM roles and policies
-
-## Monitoring
-
-### Monitoring Stack
-
-The application includes a complete monitoring solution with Prometheus and Grafana:
-
-```bash
-# Start monitoring stack
-cd monitoring
-docker-compose up -d
-
-# Access services
-# Prometheus: http://localhost:9090
-# Grafana: http://localhost:3001 (admin/admin)
-# Alertmanager: http://localhost:9093
-```
-
-### Health Checks
-
-- `/healthz`: Basic liveness probe (unauthenticated)
-- `/health`: Monitoring health check with timestamp
-- `/api/v1/health`: Comprehensive readiness probe with dependency checks
-- `/metrics`: Prometheus metrics endpoint (unauthenticated)
-
-### Metrics
-
-The application exposes detailed Prometheus metrics:
-
-**HTTP Metrics:**
-
-- `http_requests_total` - Request counts by method, endpoint, status
-- `http_request_duration_seconds` - Request latency histograms
-- `http_requests_active` - Currently active requests
-
-**Business Metrics:**
-
-- `content_generation_total` - Content generation by type and status
-- `content_generation_duration_seconds` - Generation time histograms
-- `audio_generation_total` - Audio generation metrics
-- `jobs_created_total` / `jobs_completed_total` - Job processing metrics
-
-**Infrastructure Metrics:**
-
-- `database_connections_active` / `database_connections_max` - Connection pool usage
-- `database_query_duration_seconds` - Query performance
-- `cache_operations_total` - Cache hit/miss rates
-- `external_api_requests_total` - External API call metrics
-
-### Dashboards
-
-Pre-configured Grafana dashboards include:
-
-- **API Overview** - Request rates, errors, latency percentiles
-- **Database Monitoring** - Connection pools, query performance
-- **System Metrics** - CPU, memory, disk, network usage
-
-### Alerting
-
-Configured alerts for:
-
-- API availability and error rates
-- High latency (P95/P99)
-- Database connection pool exhaustion
-- External API failures
-- System resource usage
-
-### Logging
-
-Structured JSON logging with:
-
-- Correlation IDs for request tracing
-- Cost tracking for AI API calls
-- Quality metrics for generated content
-- Performance monitoring
-- Security event logging
-
-See [docs/MONITORING_SETUP.md](docs/MONITORING_SETUP.md) for detailed configuration.
+Old system preserved at tag: `v2.0-enterprise-final`
 
 ## Contributing
 
-1. **Fork the repository**
-2. **Create a feature branch:** `git checkout -b feature/amazing-feature`
-3. **Follow coding standards:** Use `black`, `flake8`, and `mypy`
-4. **Add tests:** Ensure new functionality is tested
-5. **Update documentation:** Update relevant docs and docstrings
-6. **Submit a pull request**
-
-See [docs/developer/best_practices.md](docs/developer/best_practices.md) for detailed development guidelines.
-
-## Security
-
-- **API Key Authentication:** All endpoints require valid API keys
-- **Input Validation:** Comprehensive request validation with Pydantic
-- **Secret Management:** Secure handling of API keys and credentials
-- **Rate Limiting:** Configurable request rate limits
-- **Network Security:** Internal endpoints isolated from external access
+1. Follow TDD approach
+2. Keep it simple
+3. Document decisions
+4. One task = one commit
 
 ## License
 
-[License information]
-
-## Support
-
-For questions, issues, or contributions:
-
-- **Issues:** Use GitHub Issues for bug reports and feature requests
-- **Documentation:** See the `docs/` directory for detailed documentation
-- **Architecture:** Review `docs/architecture-map.md` for system design
-
----
-
-## AI Context Dump & Summary Scripts
-
-This project includes scripts to generate comprehensive context dumps for AI analysis:
-
-- **`scripts/generate_ai_context_dump.py`**: Compiles project files into `ai_context_dump.md`
-- **`scripts/generate_ai_context_summary.py`**: Creates high-level summary in `ai_context_summary.md`
-- **`scripts/generate_ai_context.py`**: Orchestrates both scripts
-
-### Usage
-
-```bash
-python scripts/generate_ai_context.py
-```
-
-Generated files are available in the `ai_context/` directory and are automatically updated via CI.
+MIT - Keep it simple!

@@ -679,6 +679,34 @@ This comprehensive guide synthesizes best practices from 20+ online sources to p
 
 ## Troubleshooting Common Issues
 
+### Model Token Limit Error: "max_tokens > 8192"
+
+**Problem**: Claude Code shows error: `max_tokens: 20000 > 8192, which is the maximum allowed number of output tokens for claude-3-5-sonnet-20241022`
+
+**Cause**: Using outdated Sonnet 3.5 model instead of newer Sonnet 4 with higher token limits
+
+**Solution**: Update model configuration in `.claude/settings.json`:
+
+```json
+{
+  "model": "claude-sonnet-4-20250514"
+}
+```
+
+**Model Recommendations (2025)**:
+- ✅ **Recommended**: `claude-sonnet-4-20250514` (high token limits, best performance)
+- ⚠️ **Legacy**: `claude-3-5-sonnet-20241022` (limited to 8,192 tokens)
+- ⚡ **Fast**: `claude-3-5-haiku-20241022` (for simple tasks)
+
+### Quick Fix
+```bash
+# Check current model
+grep '"model"' .claude/settings.json
+
+# Update to Sonnet 4
+sed -i '' 's/claude-3-5-sonnet-20241022/claude-sonnet-4-20250514/' .claude/settings.json
+```
+
 ### Hooks Format Error: "Expected object, but received array"
 
 **Problem**: Claude Code CLI shows error: `hooks: Expected object, but received array`

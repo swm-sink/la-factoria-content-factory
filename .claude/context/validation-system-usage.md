@@ -199,6 +199,48 @@ export CLAUDE_VALIDATION_ENABLED=true
 export CLAUDE_VALIDATION_STRICT=false
 ```
 
+## New Validation Workflow (Optimal Approach)
+
+### Tier-Based Strategy
+
+**Tier 1: Pre-commit (Critical Function Only)**
+- Basic file hygiene (JSON/YAML syntax, merge conflicts)
+- Claude Code settings validation
+- Fast (<5 seconds), non-controversial checks
+
+**Tier 2: Manual Validation (Development Quality)**
+```bash
+# Source validation commands
+source .claude/validation-commands.sh
+
+# Available commands
+validate                 # Full system validation
+validate-agents         # Agent system validation  
+validate-context        # Context files validation
+validate-commands       # Commands validation
+health-check           # Quick Claude Code functionality check
+```
+
+**Tier 3: CI/Release (Comprehensive Quality)**
+- Full validation system for releases
+- Educational content standards
+- Zero-tolerance quality gates
+
+### Manual Validation Usage
+
+```bash
+# Check if Claude Code can function
+health-check
+
+# Run full validation when needed (not blocking commits)
+validate
+
+# Component-specific validation
+validate-context     # When working on context files
+validate-commands    # When working on command files
+validate-agents      # When working on agent files
+```
+
 ## Claude Code Integration
 
 ### Allowed Scripts in settings.json

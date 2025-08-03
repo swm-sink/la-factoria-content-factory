@@ -5,10 +5,10 @@ adaptation_pattern:
   metadata:
     name: "Data Science ML Platform"
     description: "Optimized for data science teams working with ML pipelines and notebooks"
-    author: "Claude Code Community" 
+    author: "Claude Code Community"
     version: "1.0"
     created: "2025-07-28"
-  
+
   configuration:
     placeholders:
       DOMAIN: "data-science"
@@ -24,7 +24,7 @@ adaptation_pattern:
       SECURITY_LEVEL: "standard"
       PERFORMANCE_PRIORITY: "optimized"
       USER_BASE: "internal"
-  
+
   command_selection:
     include:
       categories:
@@ -47,7 +47,7 @@ adaptation_pattern:
       commands:
         - "/ui-test"
         - "/frontend-build"
-  
+
   domain_specific:
     commands:
       - name: "/notebook-run"
@@ -62,7 +62,7 @@ adaptation_pattern:
       - name: "/experiment-track"
         description: "Track experiments with MLflow or similar"
         usage: "/experiment-track --name \"feature_engineering_v2\""
-  
+
   customizations:
     settings:
       notebooks:
@@ -72,7 +72,7 @@ adaptation_pattern:
       compute:
         gpu_support: true
         distributed: "spark,dask"
-    
+
     workflows:
       model_development:
         steps:
@@ -81,21 +81,21 @@ adaptation_pattern:
           - "/model-train --cross-validate"
           - "/model-evaluate --test-set"
           - "/experiment-track --compare"
-      
+
       production_pipeline:
         steps:
           - "/pipeline data-ingestion"
           - "/pipeline feature-engineering"
           - "/pipeline model-inference"
           - "/monitor-metrics --model-drift"
-  
+
   success_metrics:
     setup_time: "10 minutes"
     commands_adapted: 52
     readiness_score: "89%"
     notebook_integration: "complete"
     time_saved: "15 months"
-  
+
   notes:
     - "Includes Jupyter notebook integration"
     - "ML experiment tracking built-in"

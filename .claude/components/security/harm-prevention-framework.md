@@ -1,9 +1,11 @@
 # Harm Prevention Framework
+
 *Comprehensive safety system for Claude Code command execution*
 
 ## Core Safety Principles
 
 ### 1. Input Validation & Sanitization
+
 ```xml
 <security_validation>
   <input_sanitization>
@@ -31,6 +33,7 @@
 ```
 
 ### 2. Constitutional AI Safety Constraints
+
 ```xml
 <constitutional_ai>
   <harm_prevention>
@@ -51,6 +54,7 @@
 ```
 
 ### 3. Least Privilege Enforcement
+
 ```xml
 <privilege_control>
   <command_scope>
@@ -77,10 +81,11 @@
 ```
 
 ### 4. Integration Pattern
+
 ```xml
 <integration_usage>
   <!-- Include at start of any command that could modify system -->
-  <include>components/security/harm-prevention-framework.md</include>
+  @.claude/components/security/harm-prevention-framework.md
   
   <safety_check>
     <validate_input/>
@@ -92,6 +97,7 @@
 ```
 
 ### 5. Monitoring & Alerts
+
 ```xml
 <monitoring>
   <security_events>

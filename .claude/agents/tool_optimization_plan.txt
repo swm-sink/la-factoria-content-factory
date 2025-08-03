@@ -1,0 +1,42 @@
+# Tool Optimization Plan - Principle of Least Privilege
+
+## Agent Categories and Minimal Tool Requirements:
+
+### 1. Research/Analysis Agents (Read-only + specific needs)
+- content-researcher: WebSearch, WebFetch, Read, Task (remove Grep, Glob - not needed for research)
+- context-explorer: Read, LS, Bash, TodoWrite (remove Grep, Glob - basic analysis)
+- project-assessor: Read, Bash, Grep, Glob, TodoWrite (assessment needs file analysis)
+
+### 2. Planning Agents (Read + Write + Analysis)
+- dev-planner: Read, Write, TodoWrite, WebSearch (remove Edit, Grep, Glob - planning focused)
+- context-planner: Read, Write, LS, TodoWrite (remove Edit, Grep, Glob - planning focused)
+
+### 3. Implementation Agents (Full file manipulation)
+- dev-implementer: Read, Write, Edit, MultiEdit, Bash, TodoWrite (core implementation tools)
+- context-implementer: Read, Write, Edit, MultiEdit, LS, TodoWrite (context file manipulation)
+- code-cleaner: Read, Write, Edit, MultiEdit, Bash, Grep, Glob (code manipulation + analysis)
+
+### 4. Validation Agents (Analysis + Testing)
+- dev-validator: Bash, Grep, Glob, TodoWrite (validation testing)
+- cleanup-validator: Bash, Read, Grep, Glob, TodoWrite (analysis focused)
+- context-validator: Bash, Read, LS, TodoWrite (context analysis)
+
+### 5. Content Generation Agents (Read + Write + Minimal)
+- study-guide: Read, Write, Task (remove unnecessary tools)
+- podcast-script: Read, Write, Task (remove unnecessary tools)
+- master-outline: Read, Write, Task (remove unnecessary tools)
+
+### 6. Orchestrator Agents (Coordination + Management)
+- dev-orchestrator: Read, Write, TodoWrite, Task (coordination focused)
+- content-orchestrator: Read, Write, TodoWrite, Task, WebSearch (content coordination)
+- cleanup-orchestrator: Read, Write, TodoWrite, Task, Bash (cleanup coordination)
+- context-orchestrator: Read, Write, TodoWrite, Task, LS (context coordination)
+
+### 7. Specialized Technical Agents (Domain-specific tools)
+- fastapi-dev: Read, Write, Edit, Bash, TodoWrite (backend development)
+- frontend-dev: Read, Write, Edit, TodoWrite (frontend development)
+- db-dev: Read, Write, Edit, Bash (database work)
+- security-dev: Read, Bash, Grep, Glob, WebSearch (security analysis)
+- perf-dev: Read, Bash, Grep, Glob (performance analysis)
+- dev-deployer: Bash, Read, Write, TodoWrite (deployment focused)
+EOF < /dev/null

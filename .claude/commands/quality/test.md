@@ -4,9 +4,12 @@ description: "Unified intelligent testing framework with automated test generati
 usage: "[type] [target] [options]"
 tools: Read, Write, Edit, Bash, Grep
 ---
-# /test - Unified Intelligent Testing Framework for .
+# /test - Unified Intelligent Testing Framework for
+
 Comprehensive testing solution for Python applications, combining unit, integration, and coverage analysis with automated test generation, environment management, and advanced reporting capabilities tailored for backend projects.
+
 ## Usage
+
 ```bash
 # Unit Testing
 /test unit "src/module.py"                          # Run unit tests for a specific file
@@ -33,6 +36,7 @@ Comprehensive testing solution for Python applications, combining unit, integrat
 /test --watch                                      # Continuous testing mode
 /test --pattern "*_critical_*"                     # Test specific patterns
 ```
+
 <command_file>
   <metadata>
     <name>/test</name>
@@ -40,7 +44,7 @@ Comprehensive testing solution for Python applications, combining unit, integrat
     <usage>
       <![CDATA[
       /test [type] [target] [options]
-      
+
       Types: unit, integration, coverage, report, all
       Options: --coverage, --env, --format, --parallel, --watch, --gaps, --setup-db, --generate, --pattern, --threshold
       ]]>
@@ -117,17 +121,17 @@ Comprehensive testing solution for Python applications, combining unit, integrat
   </examples>
   <claude_prompt>
     <prompt>
-      <!-- Standard DRY Components -->
-      <include>components/validation/validation-framework.md</include>
-      <include>components/workflow/command-execution.md</include>
-      <include>components/workflow/error-handling.md</include>
-      <include>components/interaction/progress-reporting.md</include>
-      <include>components/analysis/codebase-discovery.md</include>
-      <include>components/analysis/dependency-mapping.md</include>
-      <include>components/workflow/report-generation.md</include>
-      <include>components/testing/testing-framework.md</include>
-      <include>components/reporting/generate-structured-report.md</include>
-      
+      <!-- Standard DRY Components (Anthropic-Compliant) -->
+      @.claude/components/validation/validation-framework.md
+      @.claude/components/workflow/command-execution.md
+      @.claude/components/workflow/error-handling.md
+      @.claude/components/interaction/progress-reporting.md
+      @.claude/components/analysis/codebase-discovery.md
+      @.claude/components/analysis/dependency-mapping.md
+      @.claude/components/workflow/report-generation.md
+      @.claude/components/testing/testing-framework.md
+      @.claude/components/reporting/generate-structured-report.md
+
 You are an advanced unified testing specialist for . with expertise in Python testing frameworks and backend best practices. The user wants to perform comprehensive testing operations including unit testing, integration testing, coverage analysis, and test reporting for their small team.
 
 **Unified Testing Process:**
@@ -141,6 +145,7 @@ You are an advanced unified testing specialist for . with expertise in Python te
 **Type-Specific Strategies:**
 
 ### Unit Testing (type=unit)
+
 - Analyze code structure to identify testable units
 - Generate comprehensive test cases for functions, classes, and edge cases
 - Support automated test generation for new code
@@ -148,6 +153,7 @@ You are an advanced unified testing specialist for . with expertise in Python te
 - Track line, branch, and function coverage
 
 ### Integration Testing (type=integration)
+
 - Set up test environment using Docker, Kubernetes, or local services
 - Manage service dependencies and startup sequences
 - Execute integration test suites with real service interactions
@@ -155,6 +161,7 @@ You are an advanced unified testing specialist for . with expertise in Python te
 - Support database setup and seeding
 
 ### Coverage Analysis (type=coverage)
+
 - Analyze existing test coverage across the codebase
 - Identify untested code paths and coverage gaps
 - Generate detailed coverage reports with metrics
@@ -162,6 +169,7 @@ You are an advanced unified testing specialist for . with expertise in Python te
 - Enforce coverage thresholds
 
 ### Test Reporting (type=report)
+
 - Aggregate test results from all sources
 - Generate reports in multiple formats (HTML, PDF, JSON, JUnit)
 - Show historical trends and comparisons
@@ -169,6 +177,7 @@ You are an advanced unified testing specialist for . with expertise in Python te
 - Provide actionable improvement suggestions
 
 ### All Tests (type=all)
+
 - Execute complete test suite in optimal order
 - Run unit tests first, then integration tests
 - Generate comprehensive coverage analysis
@@ -183,6 +192,7 @@ You are an advanced unified testing specialist for . with expertise in Python te
 5. **Trend Analysis**: Track test metrics over time
 
 **Implementation Requirements:**
+
 - Detect and use appropriate testing framework ([INSERT_TEST_FRAMEWORK] or alternatives)
 - Support Python languages and frameworks
 - Integrate with GitHub Actions pipelines

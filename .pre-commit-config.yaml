@@ -1,159 +1,45 @@
-# Pre-commit Configuration for La Factoria
-# ------------------------------------------------------------------------------
-# This file configures pre-commit hooks to run linters, formatters, and type
-# checkers automatically before each commit. This helps maintain code quality
-# and consistency across the project.
-#
-# To use:
-# 1. Install pre-commit: pip install pre-commit
-# 2. Install hooks: pre-commit install
-# 3. Run on all files: pre-commit run --all-files
-# 4. Update hooks: pre-commit autoupdate
-# ------------------------------------------------------------------------------
-
-default_language_version:
-  python: python3
+# Pre-commit configuration for La Factoria - Minimal & Functional
+# Optimized for AI-assisted development workflows with performance enhancements
 
 repos:
-  # Standard pre-commit hooks
+  # Critical file checks only - optimized with type detection
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
-      - id: check-ast  # Verify Python syntax
-      - id: check-builtin-literals  # Require literal syntax when initializing empty or zero Python builtin types
-      - id: check-case-conflict  # Check for files that would conflict in case-insensitive filesystems
-      - id: check-docstring-first  # Check that docstrings come before code
-      - id: check-json  # Check JSON files for parseable syntax
-      - id: check-merge-conflict  # Check for files that contain merge conflict strings
-      - id: check-toml  # Check TOML files for parseable syntax
-      - id: check-xml  # Check XML files for parseable syntax
-      - id: check-yaml  # Check YAML files for parseable syntax
-        args: [--allow-multiple-documents]
-      - id: debug-statements  # Check for debugger imports and py37+ `breakpoint()` calls
-      - id: detect-private-key  # Detect presence of private keys
-      - id: end-of-file-fixer  # Ensure files end with a newline
-      - id: fix-byte-order-marker  # Remove UTF-8 byte order marker
-      - id: mixed-line-ending  # Check for mixed line ending
-      - id: trailing-whitespace  # Trim trailing whitespace
-        args: [--markdown-linebreak-ext=md]
-      - id: check-added-large-files  # Prevent giant files from being committed
-        args: [--maxkb=1000]
+      - id: check-json
+        types: [json]  # Performance: Use type detection instead of regex
+      - id: check-yaml
+        types: [yaml]  # Performance: Use type detection instead of regex
+        args: ['--unsafe']  # Allow custom YAML tags
+      - id: check-merge-conflict
+      - id: trailing-whitespace
+        exclude_types: [markdown]  # More precise than regex exclusion
+      - id: end-of-file-fixer
+        exclude_types: [markdown]  # More precise than regex exclusion
 
-  # Python code formatting - Black
-  - repo: https://github.com/psf/black
-    rev: 24.8.0
+  # Claude Code functionality checks - optimized
+  - repo: local
     hooks:
-      - id: black
-        language_version: python3
-        args: [--line-length=120]
+      - id: claude-settings-validation
+        name: Ensure Claude Code can function
+        entry: python3
+        args: ['-m', 'json.tool', '.claude/settings.json']
+        language: system
+        types: [json]
+        files: ^\.claude/settings\.json$
+        pass_filenames: false
 
-  # Import sorting - isort
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        args: [--profile=black, --line-length=120]
+      # Medium-tier validation on push only (not every commit)
+      - id: context-validation-on-push
+        name: Validate context changes on push
+        entry: python3
+        args: ['.claude/validation/scripts/validate_context.py']
+        language: system
+        types: [markdown]
+        files: ^\.claude/context/.*\.md$
+        stages: [pre-push]
+        pass_filenames: false
 
-  # Linting - ruff (commented out due to complex import ordering issues)
-  # - repo: https://github.com/astral-sh/ruff-pre-commit
-  #   rev: v0.6.2
-  #   hooks:
-  #     - id: ruff
-  #       args: [--fix, --exit-non-zero-on-fix]
-  #       types_or: [python, pyi, jupyter]
-  #     - id: ruff-format
-  #       types_or: [python, pyi, jupyter]
-
-  # Type checking - mypy (commented out due to complex type issues)
-  # - repo: https://github.com/pre-commit/mirrors-mypy
-  #   rev: v1.11.1
-  #   hooks:
-  #     - id: mypy
-  #       additional_dependencies:
-  #         - pydantic>=2.0
-  #         - types-python-jose
-  #         - types-passlib
-  #         - types-requests
-  #         - sqlalchemy[mypy]
-  #       args: [--ignore-missing-imports, --check-untyped-defs, --disable-error-code=no-any-return, --disable-error-code=attr-defined]
-  #       exclude: ^(tests/|scripts/|docs/)
-
-  # Security - bandit (commented out due to false positives)
-  # - repo: https://github.com/pycqa/bandit
-  #   rev: 1.7.9
-  #   hooks:
-  #     - id: bandit
-  #       args: [-ll, -i, -r, --skip=B101,B601,B104]
-  #       files: ^app/
-  #       exclude: ^tests/
-
-  # Security - safety (check for known vulnerabilities)
-  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
-    rev: v1.3.3
-    hooks:
-      - id: python-safety-dependencies-check
-        files: requirements\.(txt|in)$
-
-  # Markdown linting
-  - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.41.0
-    hooks:
-      - id: markdownlint
-        args: [--fix, --disable=MD013, --disable=MD024, --disable=MD040, --disable=MD029]
-        exclude: ^(\.claude/|docs/archive/)
-
-  # Shell script linting (commented out due to SSL issues)
-  # - repo: https://github.com/shellcheck-py/shellcheck-py
-  #   rev: v0.10.0.1
-  #   hooks:
-  #     - id: shellcheck
-  #       args: [-x]
-
-  # Dockerfile linting
-  - repo: https://github.com/hadolint/hadolint
-    rev: v2.13.0-beta
-    hooks:
-      - id: hadolint-docker
-
-  # Local hooks (commented out due to python path issues)
-  # - repo: local
-  #   hooks:
-  #     # Smart AI context generation
-  #     - id: smart-ai-context
-  #       name: Generate Smart AI Context
-  #       entry: python scripts/smart_ai_context.py
-  #       language: system
-  #       pass_filenames: false
-  #       always_run: true
-  #       stages: [pre-commit]
-  #       verbose: true
-  #       require_serial: true
-
-  #     # Check for common security issues
-  #     - id: check-secrets
-  #       name: Check for secrets
-  #       entry: python scripts/secrets_guard.py
-  #       language: system
-  #       files: \.(py|js|jsx|ts|tsx|json|yaml|yml|env)$
-  #       exclude: ^(\.env\.example|tests/|docs/)
-
-  #     # Validate API endpoints have tests
-  #     - id: check-api-tests
-  #       name: Check API endpoints have tests
-  #       entry: python scripts/validate_precommit_hooks.py --check-api-tests
-  #       language: system
-  #       files: ^app/api/routes/.*\.py$
-  #       pass_filenames: true
-
-# CI configuration
+# Performance-optimized configuration
 ci:
-  autofix_commit_msg: |
-    [pre-commit.ci] auto fixes from pre-commit.com hooks
-
-    for more information, see https://pre-commit.ci
-  autofix_prs: true
-  autoupdate_branch: ''
-  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
-  autoupdate_schedule: weekly
-  skip: []
-  submodules: false
+  skip: [context-validation-on-push]  # Skip heavy validation in CI

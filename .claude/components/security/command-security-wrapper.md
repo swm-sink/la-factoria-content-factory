@@ -13,7 +13,7 @@ Comprehensive security wrapper for command injection prevention, input validatio
           <!-- Prevent command injection through shell metacharacters -->
           const DANGEROUS_CHARS = /[;|&$`><(){}[\]\\'"]/g;
           const PATH_TRAVERSAL = /\.\.(\/|\\)/g;
-          
+
           function sanitizeShellInput(input) {
             if (!input || typeof input !== 'string') {
               throw new SecurityError('Input must be a non-empty string');
@@ -299,7 +299,7 @@ Comprehensive security wrapper for command injection prevention, input validatio
       <!-- How to integrate security wrapper into commands -->
       <usage_example>
         ```xml
-        <include>components/security/command-security-wrapper.md</include>
+        @.claude/components/security/command-security-wrapper.md
         
         <validation_step>
           <!-- Apply security validation before any bash execution -->
@@ -368,6 +368,7 @@ Comprehensive command security wrapper implemented with:
 **Integration Patterns:** Ready-to-use templates for command integration
 
 **Security Features:**
+
 - Prevents command injection through shell metacharacters
 - Blocks path traversal attacks
 - Validates repository URLs and version numbers

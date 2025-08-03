@@ -7,18 +7,18 @@ project_config:
     name: "casablanca"
     domain: "general"
     generated_on: "2025-07-29 13:40:25"
-    
+
   placeholders:
     # Core project identifiers
     PROJECT_NAME: "casablanca"
     DOMAIN: "general"
     TECH_STACK: "Mixed"
     PRIMARY_LANGUAGE: "Unknown"
-    
+
     # Development tools
     TESTING_FRAMEWORK: "Manual"
     CI_CD_PLATFORM: "GitHub Actions"
-    
+
     # Default values (customize as needed)
     TEAM_SIZE: "small"
     WORKFLOW_TYPE: "agile"

@@ -8,7 +8,7 @@ adaptation_pattern:
     author: "Claude Code Community"
     version: "1.0"
     created: "2025-07-28"
-  
+
   configuration:
     placeholders:
       DOMAIN: "web-dev"
@@ -24,7 +24,7 @@ adaptation_pattern:
       SECURITY_LEVEL: "standard"
       PERFORMANCE_PRIORITY: "balanced"
       USER_BASE: "b2c"
-  
+
   command_selection:
     include:
       categories:
@@ -47,7 +47,7 @@ adaptation_pattern:
         - "/secure-audit"
         - "/pipeline"
         - "/swarm"
-  
+
   customizations:
     settings:
       hooks_enabled: true
@@ -58,20 +58,20 @@ adaptation_pattern:
           permission: "ask"
         Bash:
           permission: "ask"
-    
+
     workflows:
       feature_development:
         steps:
           - "/task \"create feature\""
           - "/dev test"
           - "/deploy staging"
-  
+
   success_metrics:
     setup_time: "5 minutes"
     commands_adapted: 45
     readiness_score: "87%"
     time_saved: "14 months"
-  
+
   notes:
     - "Perfect for MVPs and rapid prototyping"
     - "Includes monitoring from day one"

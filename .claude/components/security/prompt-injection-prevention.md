@@ -1,9 +1,11 @@
 # Prompt Injection Prevention Framework
+
 *Advanced defense against prompt injection attacks*
 
 ## Detection Patterns
 
 ### 1. Injection Signature Detection
+
 ```xml
 <injection_detection>
   <high_risk_patterns>
@@ -33,6 +35,7 @@
 ```
 
 ### 2. Context Preservation
+
 ```xml
 <context_protection>
   <immutable_directives>
@@ -53,6 +56,7 @@
 ```
 
 ### 3. Response Sanitization
+
 ```xml
 <output_sanitization>
   <filter_sensitive_info>
@@ -73,6 +77,7 @@
 ```
 
 ### 4. Real-time Validation
+
 ```xml
 <runtime_validation>
   <input_preprocessing>
@@ -92,6 +97,7 @@
 ```
 
 ### 5. Response Framework
+
 ```xml
 <injection_response>
   <severity_levels>
@@ -118,7 +124,7 @@
 ```xml
 <!-- Include in command header -->
 <security_check>
-  <include>components/security/prompt-injection-prevention.md</include>
+  @.claude/components/security/prompt-injection-prevention.md
   
   <validation_sequence>
     1. Scan input for injection patterns

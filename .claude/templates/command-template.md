@@ -9,6 +9,7 @@ allowed-tools: Read, Write, Edit, Bash, Grep
 Clear description of the command's purpose and functionality.
 
 ## Usage
+
 ```bash
 /command-name required_arg                   # Basic usage
 /command-name --flag                         # With flags
@@ -59,22 +60,24 @@ Clear description of the command's purpose and functionality.
   <claude_prompt>
     <prompt>
       <!-- Standard components (always include) -->
-      <include>components/validation/validation-framework.md</include>
-      <include>components/workflow/command-execution.md</include>
-      <include>components/workflow/error-handling.md</include>
-      <include>components/interaction/progress-reporting.md</include>
-      
+      @.claude/components/validation/validation-framework.md
+      @.claude/components/workflow/command-execution.md
+      @.claude/components/workflow/error-handling.md
+      @.claude/components/interaction/progress-reporting.md
+
       <!-- Command-specific components -->
-      <include>components/category/specific-component.md</include>
-      
+      @.claude/components/category/specific-component.md
+
 You are a [role] specialist. The user wants to [accomplish what].
 
 **Process:**
+
 1. **Step 1**: Clear action description
 2. **Step 2**: Next action description  
 3. **Step 3**: Final action description
 
 **Implementation Strategy:**
+
 - Bullet point of what to do
 - Another action item
 - Final consideration
@@ -90,4 +93,5 @@ You are a [role] specialist. The user wants to [accomplish what].
       <value>config.section.property</value>
     </uses_config_values>
   </dependencies>
+
 </command_file>

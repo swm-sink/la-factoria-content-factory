@@ -21,11 +21,11 @@ def get_test_data_dir():
         Path(".claude/validation/test_data"),
         Path("validation/test_data")
     ]
-    
+
     for path in possible_paths:
         if path.exists() or path.parent.exists():
             return path
-    
+
     # Default to relative path if nothing else works
     return Path("test_data")
 
@@ -40,7 +40,7 @@ def validation_config():
         Path("validation/config/validation.yaml"),
         Path("config/validation.yaml")
     ]
-    
+
     for config_path in possible_paths:
         if config_path.exists():
             try:
@@ -48,7 +48,7 @@ def validation_config():
                     return yaml.safe_load(f)
             except Exception:
                 continue
-    
+
     # Default test configuration - works in any environment
     return {
         'validation': {
@@ -68,28 +68,28 @@ def validation_config():
 def test_directory_structure():
     """Create temporary directory structure for testing - portable and environment-agnostic"""
     temp_dir = tempfile.mkdtemp(prefix="claude_validation_test_")
-    
+
     try:
         # Create test .claude structure
         claude_dir = Path(temp_dir) / ".claude"
         claude_dir.mkdir(exist_ok=True)
-        
+
         # Create subdirectories with error handling
         subdirs = [
-            "agents", "commands", "context", "domains", "examples", 
+            "agents", "commands", "context", "domains", "examples",
             "memory", "indexes", "validation/scripts", "validation/config",
             "artifacts/reports/validation", "hooks"
         ]
-        
+
         for subdir in subdirs:
             try:
                 (claude_dir / subdir).mkdir(parents=True, exist_ok=True)
             except Exception as e:
                 # Log but don't fail - allows tests to run even with permission issues
                 print(f"Warning: Could not create test directory {subdir}: {e}")
-        
+
         yield temp_dir
-        
+
     finally:
         # Robust cleanup that handles permission errors
         try:
@@ -186,7 +186,7 @@ def mock_validation_results():
             'success_rate': 1.0
         },
         'context': {
-            'status': 'PASS', 
+            'status': 'PASS',
             'steps_completed': 6,
             'steps_passed': 6,
             'steps_failed': 0,
@@ -194,7 +194,7 @@ def mock_validation_results():
         },
         'commands': {
             'status': 'PASS',
-            'steps_completed': 5, 
+            'steps_completed': 5,
             'steps_passed': 5,
             'steps_failed': 0,
             'success_rate': 1.0
@@ -205,14 +205,14 @@ def mock_validation_results():
 def reports_directory():
     """Create temporary reports directory - portable across environments"""
     temp_dir = tempfile.mkdtemp(prefix="validation_reports_")
-    
+
     try:
         # Create date-based subdirectory with error handling
         date_dir = Path(temp_dir) / datetime.now().strftime("%Y-%m-%d")
         date_dir.mkdir(parents=True, exist_ok=True)
-        
+
         yield date_dir
-        
+
     finally:
         # Robust cleanup
         try:
@@ -253,38 +253,38 @@ def educational_content_types():
 
 class ValidationTestHelper:
     """Helper class for validation testing"""
-    
+
     @staticmethod
     def create_test_file(directory: Path, filename: str, content: str) -> Path:
         """Create a test file with given content"""
         file_path = directory / filename
         file_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(content)
-        
+
         return file_path
-    
+
     @staticmethod
     def count_validation_steps(results: Dict[str, Any]) -> int:
         """Count total validation steps from results"""
         return sum(
-            result.get('steps_completed', 0) 
-            for result in results.values() 
+            result.get('steps_completed', 0)
+            for result in results.values()
             if isinstance(result, dict)
         )
-    
+
     @staticmethod
     def calculate_overall_success_rate(results: Dict[str, Any]) -> float:
         """Calculate overall success rate from validation results"""
         total_steps = 0
         passed_steps = 0
-        
+
         for result in results.values():
             if isinstance(result, dict):
                 total_steps += result.get('steps_completed', 0)
                 passed_steps += result.get('steps_passed', 0)
-        
+
         return passed_steps / max(total_steps, 1)
 
 @pytest.fixture
@@ -299,7 +299,7 @@ def pytest_configure(config):
         "markers", "integration: marks tests as integration tests"
     )
     config.addinivalue_line(
-        "markers", "unit: marks tests as unit tests" 
+        "markers", "unit: marks tests as unit tests"
     )
     config.addinivalue_line(
         "markers", "validation: marks tests as validation tests"
@@ -333,7 +333,7 @@ def create_test_data_files():
     try:
         if not TEST_DATA_DIR.exists():
             TEST_DATA_DIR.mkdir(parents=True, exist_ok=True)
-        
+
         # Create sample test files with error handling
         sample_files = {
             "valid_agent.md": """---
@@ -369,14 +369,14 @@ Educational context for testing La Factoria system.
 - Target: Testing purposes
 """
         }
-        
+
         for filename, content in sample_files.items():
             try:
                 with open(TEST_DATA_DIR / filename, 'w', encoding='utf-8') as f:
                     f.write(content)
             except Exception as e:
                 print(f"Warning: Could not create test file {filename}: {e}")
-    
+
     except Exception as e:
         print(f"Warning: Could not create test data directory: {e}")
 

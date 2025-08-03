@@ -10,10 +10,10 @@ security_level: CRITICAL
 # Deploy .
 
 <!-- SECURITY: Include command security wrapper for injection prevention -->
-<include>components/security/command-security-wrapper.md</include>
+@.claude/components/security/command-security-wrapper.md
 <!-- SECURITY: Include functional credential protection -->
-<include>components/security/credential-protection.md</include>
-<include>components/security/protection-feedback.md</include>
+@.claude/components/security/credential-protection.md
+@.claude/components/security/protection-feedback.md
 
 **CRITICAL SECURITY NOTICE**: This command executes deployment operations with elevated privileges. ALL inputs are validated using security wrapper functions to prevent command injection, path traversal, and credential exposure.
 

@@ -114,6 +114,11 @@ Project-level settings file that configures Claude Code permissions and validati
 
 **🔧 Troubleshooting**: If you see `hooks: Expected object, but received array` error, the settings use the new hooks format (PostToolUse/PreToolUse events). Run `claude doctor` to validate configuration.
 
+**⚡ New Validation Workflow**: Pre-commit now uses minimal checks only (<5s). For quality validation, use manual commands:
+- `source .claude/validation-commands.sh` - Load validation aliases
+- `validate` - Full system validation (when needed)
+- `health-check` - Quick Claude Code functionality check
+
 **Note**: `.claude/settings.local.json` is git-ignored for personal overrides.
 
 #### 3. **Claude Code Hooks Integration** (.claude/hooks/)

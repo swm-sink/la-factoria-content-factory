@@ -17,7 +17,7 @@ Unified validation framework that ensures data integrity, format compliance, and
             - Encoding validation (UTF-8 compliance)
             - Whitespace normalization
           </string_validation>
-          
+
           <number_validation>
             - Type checking (integer vs float)
             - Range validation (min/max values)
@@ -427,7 +427,7 @@ Unified validation framework that ensures data integrity, format compliance, and
       <!-- How to integrate validation into commands -->
       <command_integration>
         ```xml
-        <include>components/validation/input-validation.md</include>
+        @.claude/components/validation/input-validation.md
         
         <arguments>
           <argument name="feature_name" type="string" required="true">

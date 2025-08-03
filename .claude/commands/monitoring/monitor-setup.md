@@ -7,7 +7,35 @@ tools: Write, Read, Edit, Bash
 security: input-validation-framework.md
 ---
 
-# Monitoring Setup for .
+# Monitoring Setup for
+
+## Instructions
+
+Set up comprehensive monitoring for your production application. Choose from different monitoring stacks and components based on your infrastructure needs.
+
+**Quick Setup:**
+
+```bash
+/monitor-setup                      # Default Prometheus stack
+/monitor-setup --stack prometheus  # Explicit Prometheus
+/monitor-setup --components all    # All monitoring components
+```
+
+**Specific Stacks:**
+
+```bash
+/monitor-setup --stack datadog     # DataDog monitoring
+/monitor-setup --stack newrelic    # New Relic APM
+/monitor-setup --stack cloudwatch  # AWS CloudWatch
+```
+
+**Component Selection:**
+
+```bash
+/monitor-setup --components app    # Application metrics only
+/monitor-setup --components infra  # Infrastructure metrics only
+/monitor-setup --components custom # Custom metrics setup
+```
 
 ## Input Validation
 
@@ -64,6 +92,7 @@ credentials_protected = sum(1 for c in protected_configs.values() if c.get("cred
 
 **Validation Result:**
 ✅ **SECURE**: All inputs validated successfully
+
 - Stack: `{stack}` (validated)
 - Components: `{components}` (validated)
 - Monitoring configs: `{len(protected_configs)}` (validated)
@@ -87,30 +116,39 @@ I'll help you establish comprehensive monitoring for **.** running on **producti
 ## Monitoring Stacks
 
 ### Prometheus Stack
+
 Open-source monitoring:
+
 ```bash
 /monitor-setup --stack prometheus
 ```
+
 - Metrics collection
 - AlertManager
 - Grafana dashboards
 - Service discovery
 
 ### DataDog
+
 Enterprise monitoring:
+
 ```bash
 /monitor-setup --stack datadog
 ```
+
 - APM integration
 - Log management
 - Infrastructure monitoring
 - AI-powered insights
 
 ### CloudWatch
+
 AWS-native monitoring:
+
 ```bash
 /monitor-setup --stack cloudwatch
 ```
+
 - Native production integration
 - Cost optimization
 - Automated actions
@@ -119,28 +157,36 @@ AWS-native monitoring:
 ## Component Monitoring
 
 ### Application Monitoring
+
 Python specific:
+
 - Request rates
 - Error rates
 - Response times
 - Business metrics
 
 ### Infrastructure Monitoring
+
 production resources:
+
 - CPU/Memory usage
 - Disk I/O
 - Network traffic
 - Container health
 
 ### Database Monitoring
+
 [INSERT_DATABASE_TYPE] metrics:
+
 - Query performance
 - Connection pools
 - Replication lag
 - Storage usage
 
 ### API Monitoring
+
 [INSERT_API_STYLE] endpoints:
+
 - Endpoint availability
 - Response times
 - Error rates
@@ -149,14 +195,18 @@ production resources:
 ## Alert Configuration
 
 ### For small Teams
+
 Alert routing:
+
 - Critical: PagerDuty
 - Warnings: Slack
 - Info: Email digest
 - Custom: Webhooks
 
 ### standard Security
+
 Security monitoring:
+
 - Unauthorized access
 - Suspicious patterns
 - Compliance violations
@@ -165,21 +215,27 @@ Security monitoring:
 ## Dashboard Creation
 
 ### Executive Dashboard
+
 For stakeholders:
+
 - Business KPIs
 - System health
 - Cost metrics
 - User experience
 
 ### Developer Dashboard
+
 For small team:
+
 - Error logs
 - Performance metrics
 - Deployment status
 - Debug information
 
 ### SRE Dashboard
+
 For operations:
+
 - SLI/SLO tracking
 - Incident metrics
 - Capacity planning
@@ -188,12 +244,14 @@ For operations:
 ## Integration Points
 
 ### With GitHub Actions
+
 - Deployment markers
 - Performance regression
 - Automated rollback
 - Success metrics
 
 ### With agile
+
 - Sprint metrics
 - Feature tracking
 - Team velocity
@@ -202,6 +260,7 @@ For operations:
 ## Cost Optimization
 
 For balanced:
+
 - Metric retention
 - Sampling strategies
 - Alert fatigue prevention

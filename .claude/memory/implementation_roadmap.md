@@ -2,9 +2,17 @@
 
 ## 🏗️ Implementation Strategy
 
+**ALIGNED WITH SIMPLIFICATION PLAN**: Simple implementation (Railway, minimal code) + Comprehensive AI context (.claude/ system)
+
+### Dual-Track Approach
+
+- **Track 1**: Minimal codebase implementation (<1500 lines, Railway deployment)
+- **Track 2**: Comprehensive context engineering (full .claude/ directory for Claude Code effectiveness)
+
 ### Atomic Task Breakdown
 
 #### Sprint 1: Foundation (Days 1-5)
+
 ```yaml
 TASK-001:
   title: "Initialize simple project structure"
@@ -19,7 +27,7 @@ TASK-001:
     - All tests pass
     - Railway deployment successful
     - Health endpoint responds
-  atomic_commit: "feat: initialize minimal tikal-simple structure with health check"
+  atomic_commit: "feat: initialize minimal la-factoria-simple structure with health check"
 
 TASK-002:
   title: "Implement basic content generation"
@@ -55,6 +63,7 @@ TASK-003:
 ```
 
 #### Sprint 2: Data & Frontend (Days 6-10)
+
 ```yaml
 TASK-004:
   title: "Add Railway Postgres"
@@ -90,6 +99,7 @@ TASK-005:
 ```
 
 #### Sprint 3: Essential Features (Days 11-15)
+
 ```yaml
 TASK-006:
   title: "Add simple user deletion (GDPR)"
@@ -127,6 +137,7 @@ TASK-007:
 ## 🧪 TDD Templates
 
 ### Backend Test Template
+
 ```python
 # tests/test_feature.py
 import pytest
@@ -153,6 +164,7 @@ class TestFeature:
 ```
 
 ### Frontend Test Template
+
 ```javascript
 // tests/frontend.test.js
 describe('Frontend Tests', () => {
@@ -183,6 +195,7 @@ describe('Frontend Tests', () => {
 ## 🚦 Quality Gates
 
 ### Code Quality Gates
+
 ```yaml
 simplicity_gates:
   file_size:
@@ -204,6 +217,7 @@ simplicity_gates:
 ```
 
 ### Deployment Gates
+
 ```yaml
 deployment_gates:
   test_coverage:
@@ -226,6 +240,7 @@ deployment_gates:
 ## 📝 Atomic Commit Strategy
 
 ### Commit Message Format
+
 ```
 <type>: <description>
 
@@ -238,12 +253,14 @@ Complexity: -X lines removed
 ```
 
 ### Commit Types for Simplification
+
 - `simplify`: Reducing complexity
 - `remove`: Deleting unnecessary code
 - `consolidate`: Combining multiple files/functions
 - `replace`: Swapping complex solution for simple one
 
 ### Example Commits
+
 ```bash
 simplify: replace 15 middleware with 3 essential ones
 
@@ -280,24 +297,28 @@ Complexity: -1200 lines, -5 dependencies
 ## 🎯 Success Criteria
 
 ### Week 1 Checkpoint
+
 - [ ] Basic API running on Railway
 - [ ] Content generation working with Langfuse
 - [ ] Simple frontend deployed
 - [ ] <500 total lines of code
 
 ### Week 2 Checkpoint  
+
 - [ ] Database persistence working
 - [ ] Basic auth implemented
 - [ ] User deletion (GDPR) added
 - [ ] <1000 total lines of code
 
 ### Week 3 Checkpoint
+
 - [ ] All essential features migrated
 - [ ] Old system archived
 - [ ] Documentation updated
 - [ ] <1500 total lines of code
 
 ### Final Success Metrics
+
 - **Developer Experience**: New dev productive in <1 hour
 - **Deployment**: Git push = deployed in <2 minutes  
 - **Maintenance**: <2 hours/month effort
