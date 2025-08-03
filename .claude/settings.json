@@ -1,46 +1,140 @@
 {
-  "tools": {
-    "Read": "allow",
-    "Write": "ask",
-    "Edit": "ask", 
-    "MultiEdit": "ask",
-    "Bash": "ask",
-    "Glob": "allow",
-    "Grep": "allow",
-    "LS": "allow",
-    "WebFetch": "ask",
-    "WebSearch": "ask",
-    "TodoWrite": "allow",
-    "Task": "allow",
-    "NotebookRead": "allow",
-    "NotebookEdit": "ask"
+  "permissions": {
+    "allow": [
+      "Bash(python .claude/validation/scripts/validate_system.py)",
+      "Bash(python .claude/validation/scripts/validate_commands.py)",
+      "Bash(python .claude/validation/scripts/validate_context.py)",
+      "Bash(python .claude/validation/scripts/validate_agents.py)",
+      "Bash(pytest .claude/validation/ -v)",
+      "Bash(pytest .claude/validation/scripts/ -v)",
+      "Bash(python -m pytest .claude/validation/)",
+      "Bash(python -m pytest .claude/validation/scripts/)",
+      "Bash(python3 .claude/validation/scripts/validate_system.py)",
+      "Bash(python3 .claude/validation/scripts/validate_commands.py)",
+      "Bash(python3 .claude/validation/scripts/validate_context.py)",
+      "Bash(python3 .claude/validation/scripts/validate_agents.py)",
+      "Bash(python3 -m pytest .claude/validation/)",
+      "Bash(python3 -m pytest .claude/validation/scripts/)",
+      "Bash(npm run lint)",
+      "Bash(npm run test)",
+      "Bash(npm run test:*)",
+      "Bash(npm run build)",
+      "Bash(pytest tests/)",
+      "Bash(python -m pytest tests/)",
+      "Bash(pre-commit run --all-files)",
+      "Bash(git status)",
+      "Bash(git diff)",
+      "Bash(git diff --cached)",
+      "Bash(git log --oneline -10)",
+      "Bash(git add .claude/validation/)",
+      "Bash(git add .claude/)",
+      "Read(.claude/**/*)",
+      "Read(la-factoria/**/*)",
+      "Read(scripts/**/*)",
+      "Read(tests/**/*)",
+      "Read(src/**/*)",
+      "Edit(.claude/**/*.md)",
+      "Edit(.claude/**/*.py)",
+      "Edit(.claude/**/*.yaml)",
+      "Edit(.claude/**/*.json)",
+      "Edit(.claude/**/*.ini)",
+      "Edit(la-factoria/**/*.md)",
+      "Edit(scripts/**/*.py)",
+      "Edit(tests/**/*.py)",
+      "Edit(src/**/*.py)",
+      "Write(.claude/validation/**/*.py)",
+      "Write(.claude/validation/**/*.md)",
+      "Write(.claude/validation/**/*.yaml)",
+      "Write(.claude/validation/**/*.ini)",
+      "Write(.claude/context/**/*.md)",
+      "Write(.claude/artifacts/**/*)",
+      "Write(tests/**/*.py)",
+      "Write(scripts/**/*.py)"
+    ],
+    "deny": [
+      "Bash(npm run dev:*)",
+      "Bash(npm run serve:*)",
+      "Bash(npm run start:*)",
+      "Bash(npm run start &)",
+      "Bash(git push:*)",
+      "Bash(rm -rf:*)",
+      "Bash(sudo:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(*&)",
+      "Bash(nohup:*)",
+      "Bash(op:*)"
+    ],
+    "additionalDirectories": [
+      ".claude/validation/", 
+      ".claude/commands/", 
+      ".claude/context/",
+      ".claude/artifacts/",
+      "la-factoria/",
+      "scripts/",
+      "tests/",
+      "src/"
+    ],
+    "defaultMode": "acceptEdits"
   },
-  "memory": {
-    "enabled": true,
-    "maxTokens": 50000
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+    "PYTHONPATH": ".:.claude/validation/scripts:.claude/validation",
+    "CLAUDE_VALIDATION_ENABLED": "true",
+    "CLAUDE_VALIDATION_STRICT": "false",
+    "CLAUDE_PROJECT_ROOT": ".",
+    "VALIDATION_CONFIG_PATH": ".claude/validation/config",
+    "VALIDATION_TEST_MODE": "true",
+    "NODE_ENV": "development"
   },
-  "hooks": {
-    "enabled": true,
-    "pre-command": "echo 'Executing command with security validation...'",
-    "post-command": "echo 'Command completed. Reviewing for security compliance...'"
-  },
-  "security": {
-    "maxFileSize": "10MB",
-    "allowedPaths": [".claude/", "tests/", "*.md", "*.json", "*.py"],
-    "blockedPaths": ["/etc/", "/bin/", "/usr/", "~/.ssh/", "*.key", "*.pem"],
-    "maxBashCommands": 5,
-    "requireApprovalFor": ["rm", "mv", "cp", "sudo", "curl", "wget", "git push"]
-  },
-  "context": {
-    "loadPattern": "*.md",
-    "excludePaths": [
-      "*.tmp",
-      "*.bak", 
-      "temp/*"
-    ]
-  },
-  "experimental": {
-    "promptEngineering": true,
-    "multiAgentOrchestration": true
-  }
+  "cleanupPeriodDays": 30,
+  "includeCoAuthoredBy": true,
+  "model": "claude-3-5-sonnet-20241022",
+  "hooks": [
+    {
+      "matcher": "Edit|Write",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "if [[ \"$CLAUDE_FILE_PATHS\" =~ \\.claude/commands/.*\\.md$ ]]; then python3 .claude/validation/scripts/validate_commands.py \"$CLAUDE_FILE_PATHS\" || echo 'Command validation completed with warnings'; fi"
+        }
+      ]
+    },
+    {
+      "matcher": "Edit|Write",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "if [[ \"$CLAUDE_FILE_PATHS\" =~ \\.claude/context/.*\\.md$ ]]; then python3 .claude/validation/scripts/validate_context.py \"$CLAUDE_FILE_PATHS\" || echo 'Context validation completed with warnings'; fi"
+        }
+      ]
+    },
+    {
+      "matcher": "Write",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "if [[ \"$CLAUDE_FILE_PATHS\" =~ agent-.*\\.md$ ]]; then python3 .claude/validation/scripts/validate_agents.py \"$CLAUDE_FILE_PATHS\" || echo 'Agent validation completed with warnings'; fi"
+        }
+      ]
+    },
+    {
+      "matcher": "Edit",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "if [[ \"$CLAUDE_FILE_PATHS\" =~ \\.py$ ]]; then python3 -m black \"$CLAUDE_FILE_PATHS\" 2>/dev/null || echo 'Black formatting skipped'; fi"
+        }
+      ]
+    },
+    {
+      "matcher": "Write",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "if [[ \"$CLAUDE_FILE_PATHS\" =~ test_.*\\.py$ ]]; then python3 -m pytest \"$CLAUDE_FILE_PATHS\" --tb=short -q || echo 'Tests completed with warnings'; fi"
+        }
+      ]
+    }
+  ]
 }
