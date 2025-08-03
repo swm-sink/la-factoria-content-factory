@@ -112,6 +112,8 @@ Project-level settings file that configures Claude Code permissions and validati
 
 **📚 Comprehensive Settings Guide**: See `.claude/context/claude-code-settings-guide.md` for detailed configuration options, maximum autonomy settings, MCP server setup, and advanced hooks configuration based on 20+ online sources.
 
+**🔧 Troubleshooting**: If you see `hooks: Expected object, but received array` error, the settings use the new hooks format (PostToolUse/PreToolUse events). Run `claude doctor` to validate configuration.
+
 **Note**: `.claude/settings.local.json` is git-ignored for personal overrides.
 
 #### 3. **Claude Code Hooks Integration** (.claude/hooks/)

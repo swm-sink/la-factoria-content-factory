@@ -676,3 +676,66 @@ export CLAUDE_CODE_API_KEY_HELPER_TTL_MS=3600000
 ```
 
 This comprehensive guide synthesizes best practices from 20+ online sources to provide maximum autonomy while maintaining security, performance, and development workflow optimization for Claude Code.
+
+## Troubleshooting Common Issues
+
+### Hooks Format Error: "Expected object, but received array"
+
+**Problem**: Claude Code CLI shows error: `hooks: Expected object, but received array`
+
+**Cause**: Using old hooks format (array-based) instead of new format (object-based)
+
+**Old Format (INVALID)**:
+```json
+{
+  "hooks": [
+    {
+      "matcher": "Edit|Write",
+      "hooks": [{"type": "command", "command": "echo test"}]
+    }
+  ]
+}
+```
+
+**New Format (VALID)**:
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [{"type": "command", "command": "echo test"}]
+      }
+    ]
+  }
+}
+```
+
+### Quick Fix Steps
+
+1. **Identify the issue**: Run `claude doctor` to confirm hooks format error
+2. **Backup current settings**: `cp .claude/settings.json .claude/settings.json.backup`
+3. **Convert format**: Wrap hooks array in event objects (`PostToolUse`, `PreToolUse`, `UserPromptSubmit`)
+4. **Validate syntax**: `python3 -m json.tool .claude/settings.json`
+5. **Test settings**: Run `claude doctor` again to verify fix
+
+### Event Types and Usage
+
+- **PostToolUse**: Runs after tool execution (formatting, validation, testing)
+- **PreToolUse**: Runs before tool execution (pre-checks, logging)
+- **UserPromptSubmit**: Runs when user submits a prompt (security, logging)
+
+### Validation Commands
+
+```bash
+# Check JSON syntax
+python3 -m json.tool .claude/settings.json > /dev/null && echo "Valid" || echo "Invalid"
+
+# Test Claude Code settings
+claude doctor
+
+# Validate specific hook command
+python3 .claude/validation/scripts/validate_commands.py .claude/commands/example.md
+```
+
+This comprehensive guide synthesizes best practices from 20+ online sources to provide maximum autonomy while maintaining security, performance, and development workflow optimization for Claude Code.

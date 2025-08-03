@@ -90,51 +90,76 @@
   "cleanupPeriodDays": 30,
   "includeCoAuthoredBy": true,
   "model": "claude-3-5-sonnet-20241022",
-  "hooks": [
-    {
-      "matcher": "Edit|Write",
-      "hooks": [
-        {
-          "type": "command",
-          "command": "if [[ \"$CLAUDE_FILE_PATHS\" =~ \\.claude/commands/.*\\.md$ ]]; then python3 .claude/validation/scripts/validate_commands.py \"$CLAUDE_FILE_PATHS\" || echo 'Command validation completed with warnings'; fi"
-        }
-      ]
-    },
-    {
-      "matcher": "Edit|Write",
-      "hooks": [
-        {
-          "type": "command",
-          "command": "if [[ \"$CLAUDE_FILE_PATHS\" =~ \\.claude/context/.*\\.md$ ]]; then python3 .claude/validation/scripts/validate_context.py \"$CLAUDE_FILE_PATHS\" || echo 'Context validation completed with warnings'; fi"
-        }
-      ]
-    },
-    {
-      "matcher": "Write",
-      "hooks": [
-        {
-          "type": "command",
-          "command": "if [[ \"$CLAUDE_FILE_PATHS\" =~ agent-.*\\.md$ ]]; then python3 .claude/validation/scripts/validate_agents.py \"$CLAUDE_FILE_PATHS\" || echo 'Agent validation completed with warnings'; fi"
-        }
-      ]
-    },
-    {
-      "matcher": "Edit",
-      "hooks": [
-        {
-          "type": "command",
-          "command": "if [[ \"$CLAUDE_FILE_PATHS\" =~ \\.py$ ]]; then python3 -m black \"$CLAUDE_FILE_PATHS\" 2>/dev/null || echo 'Black formatting skipped'; fi"
-        }
-      ]
-    },
-    {
-      "matcher": "Write",
-      "hooks": [
-        {
-          "type": "command",
-          "command": "if [[ \"$CLAUDE_FILE_PATHS\" =~ test_.*\\.py$ ]]; then python3 -m pytest \"$CLAUDE_FILE_PATHS\" --tb=short -q || echo 'Tests completed with warnings'; fi"
-        }
-      ]
-    }
-  ]
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [[ \"$CLAUDE_FILE_PATHS\" =~ \\.claude/commands/.*\\.md$ ]]; then python3 .claude/validation/scripts/validate_commands.py \"$CLAUDE_FILE_PATHS\" || echo 'Command validation completed with warnings'; fi",
+            "timeout": 15000,
+            "failOnError": false
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [[ \"$CLAUDE_FILE_PATHS\" =~ \\.claude/context/.*\\.md$ ]]; then python3 .claude/validation/scripts/validate_context.py \"$CLAUDE_FILE_PATHS\" || echo 'Context validation completed with warnings'; fi",
+            "timeout": 15000,
+            "failOnError": false
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [[ \"$CLAUDE_FILE_PATHS\" =~ agent-.*\\.md$ ]]; then python3 .claude/validation/scripts/validate_agents.py \"$CLAUDE_FILE_PATHS\" || echo 'Agent validation completed with warnings'; fi",
+            "timeout": 15000,
+            "failOnError": false
+          }
+        ]
+      },
+      {
+        "matcher": "Edit.*\\.py$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -m black \"$CLAUDE_FILE_PATHS\" 2>/dev/null || echo 'Black formatting completed'",
+            "timeout": 10000,
+            "failOnError": false
+          }
+        ]
+      },
+      {
+        "matcher": "Write.*test.*\\.py$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -m pytest \"$CLAUDE_FILE_PATHS\" --tb=short -q || echo 'Tests completed with warnings'",
+            "timeout": 30000,
+            "failOnError": false
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Validating operation on: $CLAUDE_FILE_PATHS'",
+            "timeout": 5000,
+            "failOnError": false
+          }
+        ]
+      }
+    ]
+  }
 }

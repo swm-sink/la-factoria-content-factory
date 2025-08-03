@@ -228,21 +228,68 @@ export CLAUDE_VALIDATION_STRICT=false
 
 ### Hooks Integration
 
+**Current Format (2024-2025)**:
 ```json
 {
-  "hooks": [
-    {
-      "matcher": "Edit|Write",
-      "hooks": [
-        {
-          "type": "command",
-          "command": "if [[ \"$CLAUDE_FILE_PATHS\" =~ \\.claude/commands/.*\\.md$ ]]; then python .claude/validation/scripts/validate_commands.py \"$CLAUDE_FILE_PATHS\" || echo 'Validation failed - please review'; fi"
-        }
-      ]
-    }
-  ]
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [[ \"$CLAUDE_FILE_PATHS\" =~ \\.claude/commands/.*\\.md$ ]]; then python3 .claude/validation/scripts/validate_commands.py \"$CLAUDE_FILE_PATHS\" || echo 'Command validation completed with warnings'; fi",
+            "timeout": 15000,
+            "failOnError": false
+          }
+        ]
+      },
+      {
+        "matcher": "Edit.*\\.py$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -m black \"$CLAUDE_FILE_PATHS\" 2>/dev/null || echo 'Black formatting completed'",
+            "timeout": 10000,
+            "failOnError": false
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Validating operation on: $CLAUDE_FILE_PATHS'",
+            "timeout": 5000,
+            "failOnError": false
+          }
+        ]
+      }
+    ]
+  }
 }
 ```
+
+### Hooks Troubleshooting
+
+**Common Issue**: `hooks: Expected object, but received array`
+
+**Solution**: Update from old array format to new object format:
+
+1. **Check current format**: Run `claude doctor` to identify issues
+2. **Backup settings**: `cp .claude/settings.json .claude/settings.json.backup`
+3. **Convert to new format**: Wrap hooks in event objects (`PostToolUse`, `PreToolUse`)
+4. **Test configuration**: `python3 -m json.tool .claude/settings.json`
+5. **Verify with doctor**: Run `claude doctor` again
+
+### Hook Event Types
+
+- **PostToolUse**: Validation and formatting after file operations
+- **PreToolUse**: Pre-checks and logging before operations  
+- **UserPromptSubmit**: Security validation of user prompts (optional)
 
 ## Report Generation and Artifacts
 
