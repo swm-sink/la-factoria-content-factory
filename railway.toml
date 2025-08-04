@@ -6,8 +6,8 @@ builder = "nixpacks"
 buildCommand = "pip install -r requirements.txt"
 
 [deploy]
-startCommand = "uvicorn main:app --host 0.0.0.0 --port $PORT"
-healthcheckPath = "/api/v1/health"
+startCommand = "uvicorn src.main:app --host 0.0.0.0 --port $PORT --workers 1"
+healthcheckPath = "/health"
 healthcheckTimeout = 30
 restartPolicyType = "on-failure"
 restartPolicyMaxRetries = 3
@@ -15,17 +15,19 @@ restartPolicyMaxRetries = 3
 # Production environment configuration
 [environments.production]
 variables = [
-  "NODE_ENV=production",
+  "ENVIRONMENT=production",
   "DATABASE_URL=${{DATABASE_URL}}",
   "REDIS_URL=${{REDIS_URL}}",
-  "API_SECRET_KEY=${{API_SECRET_KEY}}",
+  "LA_FACTORIA_API_KEY=${{LA_FACTORIA_API_KEY}}",
+  "SECRET_KEY=${{SECRET_KEY}}",
   "OPENAI_API_KEY=${{OPENAI_API_KEY}}",
   "ANTHROPIC_API_KEY=${{ANTHROPIC_API_KEY}}",
-  "VERTEX_AI_CREDENTIALS=${{VERTEX_AI_CREDENTIALS}}",
+  "GOOGLE_CLOUD_PROJECT=${{GOOGLE_CLOUD_PROJECT}}",
+  "GOOGLE_CLOUD_REGION=us-central1",
   "LANGFUSE_PUBLIC_KEY=${{LANGFUSE_PUBLIC_KEY}}",
   "LANGFUSE_SECRET_KEY=${{LANGFUSE_SECRET_KEY}}",
-  "LANGFUSE_HOST=${{LANGFUSE_HOST}}",
-  "CORS_ORIGINS=https://lafactoria.app",
+  "LANGFUSE_HOST=https://cloud.langfuse.com",
+  "ALLOWED_ORIGINS=https://lafactoria.app",
   "LOG_LEVEL=INFO",
   "QUALITY_THRESHOLD_OVERALL=0.70",
   "QUALITY_THRESHOLD_EDUCATIONAL=0.75",
@@ -35,10 +37,10 @@ variables = [
 # Staging environment configuration
 [environments.staging]
 variables = [
-  "NODE_ENV=staging",
+  "ENVIRONMENT=staging",
   "DATABASE_URL=${{STAGING_DATABASE_URL}}",
-  "LOG_LEVEL=debug",
-  "CORS_ORIGINS=*"
+  "LOG_LEVEL=DEBUG",
+  "ALLOWED_ORIGINS=*"
 ]
 
 # Resource allocation for educational content generation workloads

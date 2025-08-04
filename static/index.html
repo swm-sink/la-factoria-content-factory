@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Factoria - Educational Content Generator</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎓 La Factoria</h1>
+            <p class="subtitle">AI-powered educational content generation platform</p>
+        </header>
+
+        <main>
+            <section class="intro">
+                <h2>Generate Educational Content</h2>
+                <p>Create high-quality educational materials using AI. Choose from 8 different content types tailored for various learning needs.</p>
+            </section>
+
+            <section class="content-form">
+                <form id="contentForm">
+                    <div class="form-group">
+                        <label for="apiKey">API Key:</label>
+                        <input type="password" id="apiKey" name="apiKey" placeholder="Enter your API key" required>
+                        <small>Your API key will be stored locally and used to authenticate requests.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="topic">Educational Topic:</label>
+                        <input type="text" id="topic" name="topic" placeholder="e.g., Python Programming Basics" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="contentType">Content Type:</label>
+                        <select id="contentType" name="contentType" required>
+                            <option value="">Select content type...</option>
+                            <option value="master_content_outline">Master Content Outline</option>
+                            <option value="podcast_script">Podcast Script</option>
+                            <option value="study_guide">Study Guide</option>
+                            <option value="one_pager_summary">One-Pager Summary</option>
+                            <option value="detailed_reading_material">Detailed Reading Material</option>
+                            <option value="faq_collection">FAQ Collection</option>
+                            <option value="flashcards">Flashcards</option>
+                            <option value="reading_guide_questions">Reading Guide Questions</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ageGroup">Target Audience:</label>
+                        <select id="ageGroup" name="ageGroup">
+                            <option value="general">General</option>
+                            <option value="elementary">Elementary School</option>
+                            <option value="middle_school">Middle School</option>
+                            <option value="high_school">High School</option>
+                            <option value="college">College</option>
+                            <option value="adult_learning">Adult Learning</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="requirements">Additional Requirements (optional):</label>
+                        <textarea id="requirements" name="requirements" rows="3" placeholder="Any specific requirements or constraints..."></textarea>
+                    </div>
+
+                    <button type="submit" id="generateBtn" class="btn-primary">
+                        <span class="btn-text">Generate Content</span>
+                        <span class="btn-loading" style="display: none;">Generating...</span>
+                    </button>
+                </form>
+            </section>
+
+            <section class="results" id="resultsSection" style="display: none;">
+                <h3>Generated Content</h3>
+                <div class="content-info">
+                    <div class="quality-score">
+                        <strong>Quality Score:</strong> <span id="qualityScore">-</span>
+                    </div>
+                    <div class="generation-time">
+                        <strong>Generation Time:</strong> <span id="generationTime">-</span>ms
+                    </div>
+                </div>
+                <div class="content-output">
+                    <pre id="contentOutput"></pre>
+                </div>
+                <div class="actions">
+                    <button onclick="copyContent()" class="btn-secondary">Copy Content</button>
+                    <button onclick="downloadContent()" class="btn-secondary">Download</button>
+                </div>
+            </section>
+
+            <section class="error" id="errorSection" style="display: none;">
+                <h3>⚠️ Error</h3>
+                <p id="errorMessage"></p>
+            </section>
+        </main>
+
+        <footer>
+            <div class="content-types">
+                <h3>Supported Content Types</h3>
+                <div class="types-grid">
+                    <div class="type-card">
+                        <h4>Master Content Outline</h4>
+                        <p>Foundation structure with learning objectives</p>
+                    </div>
+                    <div class="type-card">
+                        <h4>Study Guide</h4>
+                        <p>Comprehensive material with key concepts</p>
+                    </div>
+                    <div class="type-card">
+                        <h4>Flashcards</h4>
+                        <p>Term-definition pairs for memorization</p>
+                    </div>
+                    <div class="type-card">
+                        <h4>Podcast Script</h4>
+                        <p>Conversational audio content with notes</p>
+                    </div>
+                    <div class="type-card">
+                        <h4>One-Pager Summary</h4>
+                        <p>Concise overview with takeaways</p>
+                    </div>
+                    <div class="type-card">
+                        <h4>FAQ Collection</h4>
+                        <p>Question-answer pairs for common topics</p>
+                    </div>
+                    <div class="type-card">
+                        <h4>Reading Material</h4>
+                        <p>In-depth content with examples</p>
+                    </div>
+                    <div class="type-card">
+                        <h4>Guide Questions</h4>
+                        <p>Discussion questions for comprehension</p>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
