@@ -245,3 +245,4 @@ test-reports/
 pyvenv.cfg
 pip-selfcheck.json
 .terraform/
+git-auth.sh
