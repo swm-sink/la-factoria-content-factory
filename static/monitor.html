@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Factoria - System Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-healthy { background-color: #4caf50; }
+        .status-warning { background-color: #ff9800; }
+        .status-error { background-color: #f44336; }
+        .status-loading { background-color: #2196f3; animation: pulse 1.5s infinite; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .metric:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .metric-value {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-good { background-color: #4caf50; }
+        .progress-warning { background-color: #ff9800; }
+        .progress-danger { background-color: #f44336; }
+
+        .refresh-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            font-size: 1rem;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .loading {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .content-types {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .content-type {
+            background: #f5f5f5;
+            padding: 8px 12px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .timestamp {
+            color: #999;
+            font-size: 0.9rem;
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 La Factoria Monitor</h1>
+            <p>Educational Content Platform - System Health Dashboard</p>
+        </div>
+
+        <div class="dashboard" id="dashboard">
+            <div class="loading">Loading system status...</div>
+        </div>
+
+        <div class="timestamp" id="timestamp"></div>
+    </div>
+
+    <button class="refresh-btn" onclick="loadDashboard()">🔄 Refresh</button>
+
+    <script>
+        // Dashboard refresh interval (30 seconds)
+        let refreshInterval;
+
+        async function loadDashboard() {
+            const dashboard = document.getElementById('dashboard');
+            dashboard.innerHTML = '<div class="loading">Loading system status...</div>';
+
+            try {
+                // Load system health and metrics
+                const [healthResponse, metricsResponse, educationalResponse] = await Promise.all([
+                    fetch('/api/v1/health/detailed'),
+                    fetch('/api/v1/metrics'),
+                    fetch('/api/v1/metrics/educational')
+                ]);
+
+                const health = healthResponse.ok ? await healthResponse.json() : null;
+                const metrics = metricsResponse.ok ? await metricsResponse.json() : null;
+                const educational = educationalResponse.ok ? await educationalResponse.json() : null;
+
+                renderDashboard(health, metrics, educational);
+
+                document.getElementById('timestamp').textContent =
+                    `Last updated: ${new Date().toLocaleString()}`;
+
+            } catch (error) {
+                dashboard.innerHTML = `
+                    <div class="card">
+                        <div class="error">
+                            Failed to load system status: ${error.message}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderDashboard(health, metrics, educational) {
+            const dashboard = document.getElementById('dashboard');
+            let html = '';
+
+            // System Health Card
+            if (health) {
+                const statusClass = health.status === 'healthy' ? 'status-healthy' :
+                                   health.status === 'degraded' ? 'status-warning' : 'status-error';
+
+                html += `
+                    <div class="card">
+                        <h3>
+                            <span class="status-indicator ${statusClass}"></span>
+                            System Health
+                        </h3>
+                        <div class="metric">
+                            <span class="metric-label">Overall Status</span>
+                            <span class="metric-value">${health.status.toUpperCase()}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Environment</span>
+                            <span class="metric-value">${health.environment}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Response Time</span>
+                            <span class="metric-value">${health.response_time_ms}ms</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Database</span>
+                            <span class="metric-value">${health.checks.database?.status || 'Unknown'}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // AI Providers Card
+            if (health?.checks?.ai_providers) {
+                const providers = health.checks.ai_providers;
+                html += `
+                    <div class="card">
+                        <h3>
+                            <span class="status-indicator ${providers.status === 'healthy' ? 'status-healthy' : 'status-error'}"></span>
+                            AI Providers
+                        </h3>
+                        <div class="metric">
+                            <span class="metric-label">Available Providers</span>
+                            <span class="metric-value">${providers.total_configured}</span>
+                        </div>
+                        <div class="content-types">
+                            ${providers.available_providers.map(p =>
+                                `<div class="content-type">${p.toUpperCase()}</div>`
+                            ).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // System Resources Card
+            if (metrics?.system) {
+                const system = metrics.system;
+                html += `
+                    <div class="card">
+                        <h3>
+                            <span class="status-indicator status-healthy"></span>
+                            System Resources
+                        </h3>
+                        <div class="metric">
+                            <span class="metric-label">CPU Usage</span>
+                            <span class="metric-value">${system.cpu?.percent?.toFixed(1) || 0}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill ${getProgressClass(system.cpu?.percent || 0)}"
+                                 style="width: ${system.cpu?.percent || 0}%"></div>
+                        </div>
+
+                        <div class="metric" style="margin-top: 15px;">
+                            <span class="metric-label">Memory Usage</span>
+                            <span class="metric-value">${system.memory?.percent_used?.toFixed(1) || 0}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill ${getProgressClass(system.memory?.percent_used || 0)}"
+                                 style="width: ${system.memory?.percent_used || 0}%"></div>
+                        </div>
+
+                        <div class="metric" style="margin-top: 15px;">
+                            <span class="metric-label">Available Memory</span>
+                            <span class="metric-value">${system.memory?.available_gb?.toFixed(1) || 0} GB</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Educational Metrics Card
+            if (educational) {
+                html += `
+                    <div class="card">
+                        <h3>
+                            <span class="status-indicator status-healthy"></span>
+                            Educational Metrics
+                        </h3>
+                        <div class="metric">
+                            <span class="metric-label">Quality Threshold</span>
+                            <span class="metric-value">${educational.quality_thresholds?.overall || 0.70}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Educational Threshold</span>
+                            <span class="metric-value">${educational.quality_thresholds?.educational || 0.75}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Factual Threshold</span>
+                            <span class="metric-value">${educational.quality_thresholds?.factual || 0.85}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Content Types Card
+            html += `
+                <div class="card">
+                    <h3>
+                        <span class="status-indicator status-healthy"></span>
+                        Content Types
+                    </h3>
+                    <p style="margin-bottom: 15px; color: #666;">8 Educational Content Types Available</p>
+                    <div class="content-types">
+                        <div class="content-type">Master Outline</div>
+                        <div class="content-type">Study Guide</div>
+                        <div class="content-type">Flashcards</div>
+                        <div class="content-type">Podcast Script</div>
+                        <div class="content-type">One-Pager</div>
+                        <div class="content-type">Reading Material</div>
+                        <div class="content-type">FAQ Collection</div>
+                        <div class="content-type">Guide Questions</div>
+                    </div>
+                </div>
+            `;
+
+            // Application Metrics Card
+            if (metrics?.application) {
+                const app = metrics.application;
+                html += `
+                    <div class="card">
+                        <h3>
+                            <span class="status-indicator status-healthy"></span>
+                            Application Stats
+                        </h3>
+                        <div class="metric">
+                            <span class="metric-label">Total Content Generated</span>
+                            <span class="metric-value">${app.total_content_generated || 0}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Last 24 Hours</span>
+                            <span class="metric-value">${app.content_last_24h || 0}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Average Quality (24h)</span>
+                            <span class="metric-value">${(app.average_quality_24h || 0).toFixed(3)}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Uptime</span>
+                            <span class="metric-value">${app.uptime?.uptime_human || 'Unknown'}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            dashboard.innerHTML = html;
+        }
+
+        function getProgressClass(percentage) {
+            if (percentage < 60) return 'progress-good';
+            if (percentage < 80) return 'progress-warning';
+            return 'progress-danger';
+        }
+
+        // Initialize dashboard
+        loadDashboard();
+
+        // Set up auto-refresh
+        refreshInterval = setInterval(loadDashboard, 30000);
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>
