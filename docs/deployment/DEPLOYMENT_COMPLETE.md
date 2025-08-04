@@ -48,7 +48,7 @@
 ### Option 1: Automated Deployment (Recommended)
 ```bash
 # Run the complete deployment script
-./deploy_to_railway.sh
+./scripts/deploy_to_railway.sh
 ```
 
 **This script will:**
@@ -297,4 +297,4 @@ railway status           # Check deployment status
 
 ---
 
-*🚀 Run `./deploy_to_railway.sh` to begin production deployment*
+*🚀 Run `./scripts/deploy_to_railway.sh` to begin production deployment*

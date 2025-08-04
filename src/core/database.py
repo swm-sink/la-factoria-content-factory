@@ -200,3 +200,14 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Failed to get table stats: {e}")
             return {"error": str(e)}
+
+# FastAPI dependency for database sessions
+async def get_db():
+    """
+    FastAPI dependency for getting database sessions
+    """
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()

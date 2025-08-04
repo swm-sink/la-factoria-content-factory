@@ -13,8 +13,8 @@ import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from ..core.config import settings
-from ..core.database import get_db
+from ...core.config import settings
+from ...core.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
