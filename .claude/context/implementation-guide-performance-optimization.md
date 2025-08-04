@@ -11,10 +11,10 @@ Add performance optimization import to any command file:
 
 ```markdown
 <!-- At the top of command file, after standard DRY components -->
-<include>context/performance-optimization-architecture.md</include>
-<include>context/layer-1-core-essential.md</include>
-<include>context/contextual-memory-manager.md</include>
-<include>context/batchprompt-methodology.md</include>
+@.claude/context/performance-optimization-architecture.md
+@.claude/context/layer-1-core-essential.md
+@.claude/context/contextual-memory-manager.md
+@.claude/context/batchprompt-methodology.md
 ```
 
 ### Step 2: Command Complexity Assessment
@@ -43,28 +43,28 @@ Replace full context loading with semantic layers:
 
 **Before (Traditional):**
 ```markdown
-<include>context/git-history-antipatterns.md</include>
-<include>context/llm-antipatterns.md</include>
-<include>context/modular-components.md</include>
-<include>context/orchestration-patterns.md</include>
-<include>context/prompt-engineering-best-practices.md</include>
-<include>context/experimental-framework-guide.md</include>
-<include>context/quality-assessment-report.md</include>
+@.claude/context/git-history-antipatterns.md
+@.claude/context/llm-antipatterns.md
+@.claude/context/modular-components.md
+@.claude/context/orchestration-patterns.md
+@.claude/context/prompt-engineering-best-practices.md
+@.claude/context/experimental-framework-guide.md
+@.claude/context/quality-assessment-report.md
 ```
 
 **After (Optimized):**
 ```markdown
 <!-- Layer 1: Always loaded (8K tokens) -->
-<include>context/layer-1-core-essential.md</include>
+@.claude/context/layer-1-core-essential.md
 
 <!-- Layer 2: Conditional loading based on command type -->
 <conditional_include command_type="moderate|complex">
-  <include>context/layer-2-contextual-adaptive.md</include>
+  @.claude/context/layer-2-contextual-adaptive.md
 </conditional_include>
 
 <!-- Layer 3: On-demand for complex operations only -->
 <conditional_include complexity_score=">7">
-  <include>context/layer-3-deep-context.md</include>
+  @.claude/context/layer-3-deep-context.md
 </conditional_include>
 ```
 
@@ -82,7 +82,7 @@ context_layers: ["layer_1_core"]
   <claude_prompt>
     <prompt>
       <!-- Performance optimized context loading -->
-      <include>context/layer-1-core-essential.md</include>
+      @.claude/context/layer-1-core-essential.md
       
       <!-- Parallel execution enabled -->
       <parallel_execution enabled="true" max_tools="3">
@@ -114,14 +114,14 @@ context_layers: ["layer_1_core", "layer_2_contextual"]
   <claude_prompt>
     <prompt>
       <!-- Layered context loading -->
-      <include>context/layer-1-core-essential.md</include>
-      <include>context/layer-2-contextual-adaptive.md</include>
+      @.claude/context/layer-1-core-essential.md
+      @.claude/context/layer-2-contextual-adaptive.md
       
       <!-- Selective component loading -->
       <conditional_include>
-        <include>components/testing/tdd-cycle-enhanced.md</include>
-        <include>components/security/owasp-compliance.md</include>
-        <include>components/actions/parallel-execution.md</include>
+        @.claude/components/testing/tdd-cycle-enhanced.md
+        @.claude/components/security/owasp-compliance.md
+        @.claude/components/actions/parallel-execution.md
       </conditional_include>
       
       <!-- BatchPrompt methodology -->
@@ -166,9 +166,9 @@ context_layers: ["layer_1_core", "layer_2_contextual", "layer_3_deep"]
   <claude_prompt>
     <prompt>
       <!-- Full context loading with compression -->
-      <include>context/layer-1-core-essential.md</include>
-      <include>context/layer-2-contextual-adaptive.md</include>
-      <include>context/layer-3-deep-context.md</include>
+      @.claude/context/layer-1-core-essential.md
+      @.claude/context/layer-2-contextual-adaptive.md
+      @.claude/context/layer-3-deep-context.md
       
       <!-- Skeleton-of-Thought prompting enabled -->
       <sot_prompting enabled="true" complexity_threshold="7">
