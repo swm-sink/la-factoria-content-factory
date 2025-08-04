@@ -1,0 +1,49 @@
+{
+  "deployment_info": {
+    "platform": "Railway",
+    "project_name": "La Factoria Educational Content Platform",
+    "version": "1.0.0",
+    "deployment_date": "2025-08-04T10:15:39.804572",
+    "environment": "production"
+  },
+  "features": {
+    "educational_content_types": [
+      "master_content_outline",
+      "podcast_script",
+      "study_guide",
+      "one_pager_summary",
+      "detailed_reading_material",
+      "faq_collection",
+      "flashcards",
+      "reading_guide_questions"
+    ],
+    "ai_providers": [
+      "OpenAI",
+      "Anthropic",
+      "Vertex AI"
+    ],
+    "quality_assessment": {
+      "overall_threshold": 0.7,
+      "educational_threshold": 0.75,
+      "factual_threshold": 0.85
+    },
+    "database": "PostgreSQL on Railway",
+    "frontend": "Professional web interface",
+    "monitoring": "Health checks and performance metrics"
+  },
+  "endpoints": {
+    "health": "/health",
+    "docs": "/docs",
+    "root": "/",
+    "api_base": "/api/v1",
+    "content_generation": "/api/v1/content/generate/{content_type}"
+  },
+  "deployment_checklist": {
+    "project_structure": true,
+    "configuration": true,
+    "database_migration": "Ready",
+    "environment_variables": "Configured in Railway",
+    "monitoring": "Health checks configured",
+    "frontend": "Static files ready"
+  }
+}
