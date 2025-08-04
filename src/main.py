@@ -42,10 +42,13 @@ app.add_middleware(
 # Static files for frontend
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Include API routes (will be added after routes are created)
-# app.include_router(content_generation.router, prefix="/api/v1", tags=["Content Generation"])
-# app.include_router(health.router, prefix="/api/v1", tags=["Health"])
-# app.include_router(admin.router, prefix="/api/v1/admin", tags=["Administration"])
+# Include API routes
+from .api.routes import content_generation, health, admin, monitoring
+
+app.include_router(monitoring.router, prefix="/api/v1", tags=["Monitoring"])
+app.include_router(content_generation.router, prefix="/api/v1", tags=["Content Generation"])
+app.include_router(health.router, prefix="/api/v1", tags=["Health"])
+app.include_router(admin.router, prefix="/api/v1/admin", tags=["Administration"])
 
 # Initialize services on startup
 @app.on_event("startup")
