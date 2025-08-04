@@ -1,0 +1,48 @@
+# Railway Configuration for La Factoria Educational Content Platform
+# Based on PRP-005: Deployment & Operations specifications
+
+[build]
+builder = "nixpacks"
+buildCommand = "pip install -r requirements.txt"
+
+[deploy]
+startCommand = "uvicorn main:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/api/v1/health"
+healthcheckTimeout = 30
+restartPolicyType = "on-failure"
+restartPolicyMaxRetries = 3
+
+# Production environment configuration
+[environments.production]
+variables = [
+  "NODE_ENV=production",
+  "DATABASE_URL=${{DATABASE_URL}}",
+  "REDIS_URL=${{REDIS_URL}}",
+  "API_SECRET_KEY=${{API_SECRET_KEY}}",
+  "OPENAI_API_KEY=${{OPENAI_API_KEY}}",
+  "ANTHROPIC_API_KEY=${{ANTHROPIC_API_KEY}}",
+  "VERTEX_AI_CREDENTIALS=${{VERTEX_AI_CREDENTIALS}}",
+  "LANGFUSE_PUBLIC_KEY=${{LANGFUSE_PUBLIC_KEY}}",
+  "LANGFUSE_SECRET_KEY=${{LANGFUSE_SECRET_KEY}}",
+  "LANGFUSE_HOST=${{LANGFUSE_HOST}}",
+  "CORS_ORIGINS=https://lafactoria.app",
+  "LOG_LEVEL=INFO",
+  "QUALITY_THRESHOLD_OVERALL=0.70",
+  "QUALITY_THRESHOLD_EDUCATIONAL=0.75",
+  "QUALITY_THRESHOLD_FACTUAL=0.85"
+]
+
+# Staging environment configuration
+[environments.staging]
+variables = [
+  "NODE_ENV=staging",
+  "DATABASE_URL=${{STAGING_DATABASE_URL}}",
+  "LOG_LEVEL=debug",
+  "CORS_ORIGINS=*"
+]
+
+# Resource allocation for educational content generation workloads
+[resources]
+cpu = 2
+memory = 4096
+storage = 50

@@ -1,0 +1,30 @@
+# La Factoria Educational Content Platform - Python Dependencies
+# Following simplification plan: ~15 dependencies for minimal but complete implementation
+
+# Core FastAPI Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+pydantic==2.5.0
+
+# Database Integration (Railway Postgres)
+asyncpg==0.29.0
+sqlalchemy[asyncio]==2.0.23
+
+# AI Provider Integrations
+openai==1.3.7
+anthropic==0.7.7
+google-cloud-aiplatform==1.38.1
+
+# Prompt Management and Observability
+langfuse==2.6.3
+
+# Educational Content Processing
+textstat==0.7.3
+
+# Configuration and Environment
+python-dotenv==1.0.0
+
+# Development and Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
