@@ -47,6 +47,8 @@ class EducationalQualityAssessor:
                 self._assess_learning_objective_alignment(content, learning_objectives),
                 self._assess_engagement_elements(content_text),
                 self._assess_structural_quality(content_text, content_type),
+                self._assess_factual_accuracy(content_text, content_type),
+                self._assess_blooms_taxonomy_alignment(content_text, age_group),
                 return_exceptions=True
             )
 
@@ -57,10 +59,12 @@ class EducationalQualityAssessor:
             alignment = assessments[3] if not isinstance(assessments[3], Exception) else 0.5
             engagement = assessments[4] if not isinstance(assessments[4], Exception) else 0.5
             structural = assessments[5] if not isinstance(assessments[5], Exception) else 0.5
+            factual_accuracy = assessments[6] if not isinstance(assessments[6], Exception) else 0.7
+            blooms_alignment = assessments[7] if not isinstance(assessments[7], Exception) else 0.5
 
             # Calculate overall quality score
             quality_score = self._calculate_overall_quality(
-                cognitive_load, readability, effectiveness, alignment, engagement, structural
+                cognitive_load, readability, effectiveness, alignment, engagement, structural, factual_accuracy
             )
 
             return {
@@ -71,15 +75,21 @@ class EducationalQualityAssessor:
                 "learning_objective_alignment": alignment,
                 "engagement_score": engagement,
                 "structural_quality": structural,
+                "factual_accuracy": factual_accuracy,
+                "blooms_taxonomy_alignment": blooms_alignment,
                 "meets_quality_threshold": quality_score >= self.min_quality_threshold,
                 "meets_educational_threshold": effectiveness >= self.min_educational_threshold,
-                "meets_factual_threshold": True,  # Placeholder for factual accuracy
+                "meets_factual_threshold": factual_accuracy >= self.min_factual_threshold,
+                "quality_improvement_suggestions": self._generate_improvement_suggestions(
+                    effectiveness, factual_accuracy, structural, engagement
+                ),
                 "assessment_metadata": {
                     "content_type": content_type,
                     "age_group": age_group,
                     "text_length": len(content_text),
                     "has_learning_objectives": learning_objectives is not None,
-                    "assessment_version": "1.0"
+                    "assessment_version": "2.0",
+                    "assessed_at": str(__import__('datetime').datetime.utcnow())
                 }
             }
 
@@ -422,6 +432,227 @@ class EducationalQualityAssessor:
 
         return min(1.0, structure_score)
 
+    async def _assess_factual_accuracy(self, text: str, content_type: str) -> float:
+        """Assess factual accuracy using heuristic methods and validation checks"""
+
+        if not text:
+            return 0.5
+
+        accuracy_score = 0.8  # Base score
+        text_lower = text.lower()
+
+        # Check for common factual red flags
+        red_flags = [
+            # Scientific misconceptions
+            'the earth is flat', 'vaccines cause autism', 'evolution is just a theory',
+            'humans only use 10% of their brain', 'cracking knuckles causes arthritis',
+
+            # Mathematical errors (basic patterns)
+            '2 + 2 = 5', '1 + 1 = 3', 'pi = 3.14159265359',
+
+            # Historical inaccuracies
+            'columbus discovered america', 'napoleon was short',
+            'great wall of china visible from space',
+
+            # Common misconceptions
+            'lightning never strikes twice', 'goldfish have 3-second memory',
+            'different parts of tongue taste different flavors'
+        ]
+
+        # Penalize for red flags
+        for flag in red_flags:
+            if flag in text_lower:
+                accuracy_score -= 0.2
+                logger.warning(f"Potential factual inaccuracy detected: {flag}")
+
+        # Check for uncertainty indicators (good for accuracy)
+        uncertainty_indicators = [
+            'according to', 'research suggests', 'evidence indicates',
+            'studies show', 'it appears that', 'likely', 'possibly',
+            'scientists believe', 'current understanding'
+        ]
+
+        uncertainty_count = sum(1 for indicator in uncertainty_indicators if indicator in text_lower)
+        if uncertainty_count > 0:
+            accuracy_score += min(0.1, uncertainty_count * 0.02)  # Bonus for appropriate uncertainty
+
+        # Check for overly certain language (red flag)
+        overconfident_phrases = [
+            'always true', 'never wrong', 'absolutely certain',
+            'without doubt', 'completely proven', 'totally false'
+        ]
+
+        for phrase in overconfident_phrases:
+            if phrase in text_lower:
+                accuracy_score -= 0.1
+
+        # Check for citation/source indicators (positive)
+        citation_indicators = [
+            'according to research', 'study published', 'researchers found',
+            'peer-reviewed', 'journal of', 'university study',
+            'source:', 'reference:', 'bibliography'
+        ]
+
+        citation_count = sum(1 for indicator in citation_indicators if indicator in text_lower)
+        if citation_count > 0:
+            accuracy_score += min(0.15, citation_count * 0.05)
+
+        # Content type specific adjustments
+        if content_type in ['flashcards', 'faq_collection']:
+            # These should have higher accuracy standards
+            if 'question' in text_lower and 'answer' in text_lower:
+                # Check for Q&A consistency patterns
+                accuracy_score += 0.05
+
+        # Numerical consistency checks
+        numbers = re.findall(r'\d+(?:\.\d+)?', text)
+        if len(numbers) > 0:
+            # Basic sanity check for common mathematical relationships
+            try:
+                # Simple validation for basic math expressions
+                if '=' in text and any(op in text for op in ['+', '-', '*', '/']):
+                    # This is a simplified check - could be enhanced with expression evaluation
+                    accuracy_score += 0.05
+            except:
+                pass
+
+        return max(0.0, min(1.0, accuracy_score))
+
+    async def _assess_blooms_taxonomy_alignment(self, text: str, age_group: str) -> float:
+        """Assess alignment with Bloom's taxonomy cognitive levels"""
+
+        if not text:
+            return 0.5
+
+        text_lower = text.lower()
+
+        # Bloom's taxonomy keywords by level
+        blooms_keywords = {
+            'remember': [
+                'remember', 'recall', 'recognize', 'identify', 'define',
+                'describe', 'list', 'name', 'state', 'match'
+            ],
+            'understand': [
+                'understand', 'explain', 'interpret', 'summarize', 'classify',
+                'compare', 'contrast', 'demonstrate', 'illustrate'
+            ],
+            'apply': [
+                'apply', 'use', 'implement', 'execute', 'carry out',
+                'practice', 'solve', 'demonstrate', 'operate'
+            ],
+            'analyze': [
+                'analyze', 'examine', 'investigate', 'categorize', 'differentiate',
+                'distinguish', 'compare', 'contrast', 'break down'
+            ],
+            'evaluate': [
+                'evaluate', 'assess', 'judge', 'critique', 'justify',
+                'argue', 'defend', 'support', 'decide', 'recommend'
+            ],
+            'create': [
+                'create', 'design', 'develop', 'construct', 'produce',
+                'generate', 'build', 'compose', 'plan', 'formulate'
+            ]
+        }
+
+        # Expected levels by age group
+        age_expectations = {
+            'elementary': ['remember', 'understand', 'apply'],
+            'middle_school': ['remember', 'understand', 'apply', 'analyze'],
+            'high_school': ['understand', 'apply', 'analyze', 'evaluate'],
+            'college': ['apply', 'analyze', 'evaluate', 'create'],
+            'adult_learning': ['apply', 'analyze', 'evaluate', 'create'],
+            'general': ['understand', 'apply', 'analyze']
+        }
+
+        expected_levels = age_expectations.get(age_group, ['understand', 'apply'])
+
+        # Count keywords by level
+        level_scores = {}
+        for level, keywords in blooms_keywords.items():
+            count = sum(1 for keyword in keywords if keyword in text_lower)
+            level_scores[level] = count
+
+        # Calculate alignment score
+        alignment_score = 0.0
+        total_expected_levels = len(expected_levels)
+
+        for level in expected_levels:
+            if level_scores.get(level, 0) > 0:
+                alignment_score += 1.0 / total_expected_levels
+
+        # Bonus for appropriate distribution
+        total_keywords = sum(level_scores.values())
+        if total_keywords > 0:
+            # Check if content spans multiple cognitive levels appropriately
+            levels_present = sum(1 for count in level_scores.values() if count > 0)
+            if levels_present >= 2:
+                alignment_score += 0.1  # Bonus for cognitive diversity
+
+        # Penalty for inappropriate levels
+        inappropriate_levels = []
+        if age_group == 'elementary' and level_scores.get('evaluate', 0) > 0:
+            inappropriate_levels.append('evaluate')
+        if age_group == 'elementary' and level_scores.get('create', 0) > 0:
+            inappropriate_levels.append('create')
+
+        penalty = len(inappropriate_levels) * 0.1
+        alignment_score = max(0.0, alignment_score - penalty)
+
+        return min(1.0, alignment_score)
+
+    def _generate_improvement_suggestions(
+        self,
+        effectiveness: float,
+        factual_accuracy: float,
+        structural: float,
+        engagement: float
+    ) -> List[str]:
+        """Generate specific improvement suggestions based on quality scores"""
+
+        suggestions = []
+
+        # Educational effectiveness suggestions
+        if effectiveness < 0.75:
+            suggestions.extend([
+                "Add clear learning objectives at the beginning of the content",
+                "Include more practical examples to illustrate concepts",
+                "Add practice exercises or activities for hands-on learning",
+                "Provide summary sections to reinforce key concepts",
+                "Connect content to real-world applications"
+            ])
+
+        # Factual accuracy suggestions
+        if factual_accuracy < 0.85:
+            suggestions.extend([
+                "Verify all factual claims with reliable sources",
+                "Add appropriate uncertainty language where needed",
+                "Include citations or references for key information",
+                "Review content for common misconceptions",
+                "Have subject matter expert review technical content"
+            ])
+
+        # Structural quality suggestions
+        if structural < 0.70:
+            suggestions.extend([
+                "Add clear headings and subheadings for better organization",
+                "Use bullet points or numbered lists for key information",
+                "Include paragraph breaks for better readability",
+                "Add introduction and conclusion sections",
+                "Ensure logical flow from simple to complex concepts"
+            ])
+
+        # Engagement suggestions
+        if engagement < 0.65:
+            suggestions.extend([
+                "Add interactive questions throughout the content",
+                "Include thought-provoking discussion questions",
+                "Use concrete examples from everyday life",
+                "Add opportunities for self-reflection",
+                "Incorporate activities that encourage active participation"
+            ])
+
+        return suggestions[:10]  # Limit to top 10 suggestions
+
     def _calculate_overall_quality(
         self,
         cognitive_load: Dict[str, Any],
@@ -429,32 +660,35 @@ class EducationalQualityAssessor:
         effectiveness: float,
         alignment: float,
         engagement: float,
-        structural: float
+        structural: float,
+        factual_accuracy: float = 0.8
     ) -> float:
-        """Calculate weighted overall quality score"""
+        """Calculate weighted overall quality score based on La Factoria educational standards"""
 
         # Extract key metrics
         cognitive_appropriate = cognitive_load.get('appropriate_for_age', True)
         readability_score = readability.get('age_appropriateness_score', 0.5)
 
-        # Weight the different components
+        # Weight the different components according to La Factoria quality framework
         weights = {
-            'cognitive_load': 0.15,
-            'readability': 0.20,
-            'educational_effectiveness': 0.30,
-            'learning_alignment': 0.15,
-            'engagement': 0.10,
-            'structural_quality': 0.10
+            'educational_effectiveness': 0.30,  # Highest weight - pedagogical effectiveness
+            'factual_accuracy': 0.25,           # Critical for educational content
+            'readability': 0.15,                # Important for age appropriateness
+            'learning_alignment': 0.10,         # Learning objective alignment
+            'cognitive_load': 0.10,             # Age-appropriate cognitive complexity
+            'structural_quality': 0.05,         # Organization and clarity
+            'engagement': 0.05                  # Student engagement potential
         }
 
         # Calculate weighted score
         overall_score = (
-            (1.0 if cognitive_appropriate else 0.5) * weights['cognitive_load'] +
-            readability_score * weights['readability'] +
             effectiveness * weights['educational_effectiveness'] +
+            factual_accuracy * weights['factual_accuracy'] +
+            readability_score * weights['readability'] +
             alignment * weights['learning_alignment'] +
-            engagement * weights['engagement'] +
-            structural * weights['structural_quality']
+            (1.0 if cognitive_appropriate else 0.5) * weights['cognitive_load'] +
+            structural * weights['structural_quality'] +
+            engagement * weights['engagement']
         )
 
         return round(overall_score, 3)
@@ -469,10 +703,18 @@ class EducationalQualityAssessor:
             "learning_objective_alignment": 0.5,
             "engagement_score": 0.5,
             "structural_quality": 0.5,
+            "factual_accuracy": 0.5,
+            "blooms_taxonomy_alignment": 0.5,
             "meets_quality_threshold": False,
             "meets_educational_threshold": False,
             "meets_factual_threshold": False,
+            "quality_improvement_suggestions": [
+                "Assessment failed - please retry content generation",
+                "Ensure content has proper structure and educational value"
+            ],
             "assessment_metadata": {
-                "error": "Assessment failed - using default values"
+                "error": "Assessment failed - using default values",
+                "assessment_version": "2.0",
+                "assessed_at": str(__import__('datetime').datetime.utcnow())
             }
         }

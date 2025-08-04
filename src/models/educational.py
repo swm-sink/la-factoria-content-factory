@@ -53,7 +53,7 @@ class LearningObjective:
     subject_area: str               # Domain of knowledge (e.g., "Mathematics", "Science")
     specific_skill: str             # Specific skill to be developed
     measurable_outcome: str         # How success will be measured
-    difficulty_level: int = Field(default=5, ge=1, le=10)  # 1-10 scale
+    difficulty_level: int = 5       # 1-10 scale
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for API responses"""
@@ -71,10 +71,10 @@ class CognitiveLoadMetrics:
     Cognitive load assessment following Cognitive Load Theory
     Generated from educational-content-assessment.md
     """
-    intrinsic_load: float = Field(ge=0.0, le=1.0)    # Content complexity (0-1)
-    extraneous_load: float = Field(ge=0.0, le=1.0)   # Presentation complexity (0-1)
-    germane_load: float = Field(ge=0.0, le=1.0)      # Learning effort required (0-1)
-    total_cognitive_load: float = Field(ge=0.0, le=3.0)  # Sum of all loads
+    intrinsic_load: float = 0.0      # Content complexity (0-1)
+    extraneous_load: float = 0.0     # Presentation complexity (0-1)
+    germane_load: float = 0.0        # Learning effort required (0-1)
+    total_cognitive_load: float = 0.0  # Sum of all loads
 
     def __post_init__(self):
         """Calculate total cognitive load"""
