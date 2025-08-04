@@ -4,9 +4,9 @@
 
 ## Context Imports (Anthropic-Compliant)
 
-### Agent System & Orchestration
-@.claude/context/claude-code/README.md
-@.claude/context/claude-code/agent-architecture.md
+### Service Integration & Orchestration
+@.claude/context/claude-code/README.md  
+@.claude/examples/ai-integration/content-generation/ai_content_service.py
 
 ### AI Service Integration
 @.claude/examples/ai-integration/content-generation/ai_content_service.py
@@ -23,26 +23,31 @@
 @la-factoria/prompts/study_guide.md
 @.claude/prp/PRP-001-Educational-Content-Generation.md
 
-## 🧭 Claude Code Agent System
+## 🧭 Service-Based Content Generation
 
-**Advanced AI Orchestration**: Specialized 8-agent educational content generation with quality validation pipelines and swarm intelligence optimization.
+**Educational Content Service**: Single orchestration service coordinating AI providers with quality validation pipelines for comprehensive educational content generation.
 
-### Agent Navigation
-- **🤖 Agent Architecture**: 8 specialized content generation agents plus quality validation agents
-- **🔄 Orchestration Patterns**: Multi-agent coordination and workflow automation
-- **🎯 Quality Pipeline**: Educational standards validation and assessment systems
-- **🔄 File Hops**: `CLAUDE.md → .claude/context/claude-code/README.md → agent workflows`
+### Service Architecture
+- **🏗️ Service Orchestration**: EducationalContentService coordinates AI providers and quality assessment
+- **🔄 Provider Management**: AIProviderManager handles OpenAI, Anthropic, and Vertex AI integration
+- **🎯 Quality Pipeline**: Educational standards validation and assessment integration
+- **📋 Template Management**: PromptTemplateLoader manages all 8 content type templates
 
-### Agent Integration Workflows
-```bash
-# Multi-agent content generation
-/orchestrate-content "Python Programming" --complete-set --quality-validated
+### Service Integration Patterns
+```python
+# Educational content generation service
+service = EducationalContentService()
+content = await service.generate_educational_content(
+    content_type="study_guide",
+    topic="Python Programming",
+    target_audience="high_school"
+)
 
-# Agent-based quality optimization
-/swarm-optimize --content-type="all" --optimization-target="educational-effectiveness"
+# Quality assessment integration
+quality_scores = await service.assess_content_quality(content)
 
-# Specialized agent coordination
-/orchestrate --agents="research,outline,study-guide,validation" --coordination="hierarchical"
+# Multi-provider failover
+result = await service.generate_with_provider_fallback(request)
 ```
 
 ## 🤖 Domain Contents
