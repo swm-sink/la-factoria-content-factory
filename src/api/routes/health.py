@@ -8,7 +8,7 @@ from typing import Dict, Any
 import time
 import psutil
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ...models.content import HealthResponse
 from ...core.config import settings
@@ -31,9 +31,11 @@ async def health_check():
     try:
         services = {}
 
-        # Check database connectivity (placeholder)
+        # Check database connectivity (real implementation)
         try:
-            services["database"] = "healthy"  # Would implement actual DB check
+            from ...core.database import check_database_connection
+            db_connected = await check_database_connection()
+            services["database"] = "healthy" if db_connected else "unhealthy: connection failed"
         except Exception as e:
             services["database"] = f"unhealthy: {str(e)}"
 
@@ -55,7 +57,7 @@ async def health_check():
 
         return HealthResponse(
             status=overall_status,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             version=settings.APP_VERSION,
             services=services
         )
@@ -64,7 +66,7 @@ async def health_check():
         logger.error(f"Health check failed: {e}")
         return HealthResponse(
             status="unhealthy",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             version=settings.APP_VERSION,
             services={"error": str(e)}
         )
@@ -89,14 +91,10 @@ async def detailed_health_check():
         # Service checks
         service_health = {}
 
-        # Database health
+        # Database health (real implementation)
         try:
-            # Placeholder - would implement actual database connection test
-            service_health["database"] = {
-                "status": "healthy",
-                "url": settings.DATABASE_URL[:20] + "..." if settings.DATABASE_URL else "not configured",
-                "pool_size": settings.DB_POOL_SIZE
-            }
+            from ...core.database import get_database_info
+            service_health["database"] = await get_database_info()
         except Exception as e:
             service_health["database"] = {"status": "unhealthy", "error": str(e)}
 
@@ -143,7 +141,7 @@ async def detailed_health_check():
 
         return {
             "status": overall_status,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "version": settings.APP_VERSION,
             "environment": settings.ENVIRONMENT,
             "uptime_seconds": time.time(),  # Placeholder - would track actual uptime
@@ -156,7 +154,7 @@ async def detailed_health_check():
         logger.error(f"Detailed health check failed: {e}")
         return {
             "status": "unhealthy",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "error": str(e)
         }
 
@@ -174,7 +172,7 @@ async def ai_providers_health():
         health_status = await provider_manager.health_check()
 
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "providers": health_status,
             "provider_stats": provider_manager.get_provider_stats(),
             "overall_status": "healthy" if all(
@@ -185,7 +183,7 @@ async def ai_providers_health():
     except Exception as e:
         logger.error(f"AI providers health check failed: {e}")
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "overall_status": "unhealthy",
             "error": str(e)
         }
@@ -241,15 +239,23 @@ async def readiness_check():
         # Check if AI providers are configured
         checks.append(len(settings.available_ai_providers) > 0)
 
+        # Check database connectivity for readiness
+        try:
+            from ...core.database import check_database_connection
+            db_ready = await check_database_connection()
+            checks.append(db_ready)
+        except Exception:
+            checks.append(False)
+
         # All checks must pass for readiness
         if all(checks):
-            return {"status": "ready", "timestamp": datetime.utcnow().isoformat()}
+            return {"status": "ready", "timestamp": datetime.now(timezone.utc).isoformat()}
         else:
-            return {"status": "not ready", "timestamp": datetime.utcnow().isoformat()}, 503
+            return {"status": "not ready", "timestamp": datetime.now(timezone.utc).isoformat()}, 503
 
     except Exception as e:
         logger.error(f"Readiness check failed: {e}")
-        return {"status": "not ready", "error": str(e), "timestamp": datetime.utcnow().isoformat()}, 503
+        return {"status": "not ready", "error": str(e), "timestamp": datetime.now(timezone.utc).isoformat()}, 503
 
 @router.get("/live")
 async def liveness_check():
@@ -261,6 +267,6 @@ async def liveness_check():
     """
     return {
         "status": "alive",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "version": settings.APP_VERSION
     }

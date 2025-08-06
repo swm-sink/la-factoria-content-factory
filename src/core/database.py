@@ -3,7 +3,7 @@ Database connection and utilities for La Factoria
 Simple database setup using SQLAlchemy with Railway PostgreSQL
 """
 
-from sqlalchemy import create_engine, MetaData
+from sqlalchemy import create_engine, MetaData, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -79,7 +79,7 @@ async def check_database_connection():
     """
     try:
         with engine.connect() as connection:
-            connection.execute("SELECT 1")
+            connection.execute(text("SELECT 1"))
         return True
     except Exception as e:
         logger.error(f"Database connection check failed: {e}")
@@ -91,9 +91,15 @@ async def get_database_info():
     """
     try:
         with engine.connect() as connection:
-            # Get database version and basic info
-            result = connection.execute("SELECT version()").fetchone()
-            version = result[0] if result else "Unknown"
+            # Get database version and basic info (database-specific)
+            if settings.database_url.startswith("sqlite"):
+                # SQLite version query
+                result = connection.execute(text("SELECT sqlite_version()")).fetchone()
+                version = f"SQLite {result[0]}" if result else "SQLite (Unknown version)"
+            else:
+                # PostgreSQL version query
+                result = connection.execute(text("SELECT version()")).fetchone()
+                version = result[0] if result else "PostgreSQL (Unknown version)"
 
             return {
                 "status": "healthy",
@@ -134,7 +140,7 @@ class DatabaseManager:
 
                 for statement in statements:
                     if statement:
-                        connection.execute(statement)
+                        connection.execute(text(statement))
 
                 connection.commit()
 
@@ -179,7 +185,7 @@ class DatabaseManager:
                     """
 
                     try:
-                        result = connection.execute(table_stats_query)
+                        result = connection.execute(text(table_stats_query))
                         for row in result:
                             stats[row[0]] = {"row_count": row[1]}
                     except:
@@ -190,7 +196,7 @@ class DatabaseManager:
                     tables = ['users', 'educational_content', 'quality_assessments']
                     for table in tables:
                         try:
-                            result = connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()
+                            result = connection.execute(text(f"SELECT COUNT(*) FROM {table}")).fetchone()
                             stats[table] = {"row_count": result[0] if result else 0}
                         except:
                             stats[table] = {"row_count": 0, "error": "Table may not exist"}
@@ -206,8 +212,8 @@ async def get_db():
     """
     FastAPI dependency for getting database sessions
     """
-    async with AsyncSessionLocal() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
