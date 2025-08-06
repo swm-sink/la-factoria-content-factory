@@ -4,7 +4,7 @@ Following FastAPI and Pydantic best practices
 """
 
 from typing import Dict, List, Optional, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 
 from .educational import (
@@ -21,8 +21,7 @@ class ContentRequest(BaseModel):
         ...,
         min_length=3,
         max_length=500,
-        description="The educational topic or subject to generate content for",
-        example="Introduction to Python Programming"
+        description="The educational topic or subject to generate content for"
     )
     age_group: LearningLevel = Field(
         default=LearningLevel.GENERAL,
@@ -38,23 +37,22 @@ class ContentRequest(BaseModel):
         description="Additional requirements or constraints for content generation"
     )
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "topic": "Introduction to Python Programming",
-                "age_group": "high_school",
-                "learning_objectives": [
-                    {
-                        "cognitive_level": "understanding",
-                        "subject_area": "Computer Science",
-                        "specific_skill": "Python syntax comprehension",
-                        "measurable_outcome": "Student can explain basic Python syntax elements",
-                        "difficulty_level": 6
-                    }
-                ],
-                "additional_requirements": "Include practical coding examples and exercises"
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "topic": "Introduction to Python Programming",
+            "age_group": "high_school",
+            "learning_objectives": [
+                {
+                    "cognitive_level": "understanding",
+                    "subject_area": "Computer Science",
+                    "specific_skill": "Python syntax comprehension",
+                    "measurable_outcome": "Student can explain basic Python syntax elements",
+                    "difficulty_level": 6
+                }
+            ],
+            "additional_requirements": "Include practical coding examples and exercises"
         }
+    })
 
 class ContentResponse(BaseModel):
     """Response model for generated educational content"""
@@ -67,12 +65,9 @@ class ContentResponse(BaseModel):
     metadata: Optional[EducationalContentMetadata] = Field(default=None, description="Generation metadata and statistics")
     created_at: datetime = Field(..., description="Timestamp when content was generated")
 
-    class Config:
-        use_enum_values = True
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
-        schema_extra = {
+    model_config = ConfigDict(
+        use_enum_values=True,
+        json_schema_extra={
             "example": {
                 "id": "123e4567-e89b-12d3-a456-426614174000",
                 "content_type": "study_guide",
@@ -107,6 +102,7 @@ class ContentResponse(BaseModel):
                 "created_at": "2025-01-03T10:30:00Z"
             }
         }
+    )
 
 class ContentTypeInfo(BaseModel):
     """Information about a specific content type"""
@@ -127,10 +123,7 @@ class ErrorResponse(BaseModel):
     detail: str = Field(..., description="Detailed error message")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Error timestamp")
 
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
+    model_config = ConfigDict()
 
 class HealthResponse(BaseModel):
     """Health check response model"""
@@ -139,10 +132,7 @@ class HealthResponse(BaseModel):
     version: str = Field(..., description="Application version")
     services: Dict[str, str] = Field(default_factory=dict, description="Status of dependent services")
 
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
+    model_config = ConfigDict()
 
 # Content type configurations
 CONTENT_TYPE_CONFIGS = {

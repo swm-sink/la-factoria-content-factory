@@ -4,7 +4,7 @@ Using Pydantic Settings for environment variable management
 """
 
 from typing import List, Optional, Dict, Any
-from pydantic import Field
+from pydantic import Field, ConfigDict
 from pydantic_settings import BaseSettings
 import os
 
@@ -14,69 +14,67 @@ class Settings(BaseSettings):
     # Application settings
     APP_NAME: str = "La Factoria"
     APP_VERSION: str = "1.0.0"
-    ENVIRONMENT: str = Field(default="development", env="ENVIRONMENT")
-    DEBUG: bool = Field(default=True, env="DEBUG")
+    ENVIRONMENT: str = Field(default="development")
+    DEBUG: bool = Field(default=True)
 
     # API settings
     API_V1_PREFIX: str = "/api/v1"
-    API_KEY: Optional[str] = Field(default=None, env="LA_FACTORIA_API_KEY")
-    SECRET_KEY: str = Field(default="dev-secret-key-change-in-production", env="SECRET_KEY")
+    API_KEY: Optional[str] = Field(default=None, alias="LA_FACTORIA_API_KEY")
+    SECRET_KEY: str = Field(default="dev-secret-key-change-in-production")
 
     # CORS settings
     ALLOWED_ORIGINS: List[str] = Field(
-        default=["http://localhost:3000", "http://127.0.0.1:3000"],
-        env="ALLOWED_ORIGINS"
+        default=["http://localhost:3000", "http://127.0.0.1:3000"]
     )
 
     # Database settings (PostgreSQL on Railway)
-    DATABASE_URL: Optional[str] = Field(default=None, env="DATABASE_URL")
-    DB_POOL_SIZE: int = Field(default=10, env="DB_POOL_SIZE")
-    DB_MAX_OVERFLOW: int = Field(default=20, env="DB_MAX_OVERFLOW")
+    DATABASE_URL: Optional[str] = Field(default=None)
+    DB_POOL_SIZE: int = Field(default=10)
+    DB_MAX_OVERFLOW: int = Field(default=20)
 
     # Redis settings (for caching and sessions)
-    REDIS_URL: Optional[str] = Field(default=None, env="REDIS_URL")
-    CACHE_TTL: int = Field(default=3600, env="CACHE_TTL")  # 1 hour default
+    REDIS_URL: Optional[str] = Field(default=None)
+    CACHE_TTL: int = Field(default=3600)  # 1 hour default
 
     # AI Provider settings
-    OPENAI_API_KEY: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
-    ANTHROPIC_API_KEY: Optional[str] = Field(default=None, env="ANTHROPIC_API_KEY")
-    ELEVENLABS_API_KEY: Optional[str] = Field(default=None, env="ELEVENLABS_API_KEY")
-    GOOGLE_CLOUD_PROJECT: Optional[str] = Field(default=None, env="GOOGLE_CLOUD_PROJECT")
-    GOOGLE_CLOUD_REGION: str = Field(default="us-central1", env="GOOGLE_CLOUD_REGION")
+    OPENAI_API_KEY: Optional[str] = Field(default=None)
+    ANTHROPIC_API_KEY: Optional[str] = Field(default=None)
+    ELEVENLABS_API_KEY: Optional[str] = Field(default=None)
+    GOOGLE_CLOUD_PROJECT: Optional[str] = Field(default=None)
+    GOOGLE_CLOUD_REGION: str = Field(default="us-central1")
 
     # Langfuse settings (for prompt management and observability)
-    LANGFUSE_SECRET_KEY: Optional[str] = Field(default=None, env="LANGFUSE_SECRET_KEY")
-    LANGFUSE_PUBLIC_KEY: Optional[str] = Field(default=None, env="LANGFUSE_PUBLIC_KEY")
-    LANGFUSE_HOST: str = Field(default="https://cloud.langfuse.com", env="LANGFUSE_HOST")
+    LANGFUSE_SECRET_KEY: Optional[str] = Field(default=None)
+    LANGFUSE_PUBLIC_KEY: Optional[str] = Field(default=None)
+    LANGFUSE_HOST: str = Field(default="https://cloud.langfuse.com")
 
     # Content generation settings
-    DEFAULT_MAX_TOKENS: int = Field(default=3000, env="DEFAULT_MAX_TOKENS")
-    CONTENT_GENERATION_TIMEOUT: int = Field(default=120, env="CONTENT_GENERATION_TIMEOUT")  # seconds
-    MAX_CONCURRENT_GENERATIONS: int = Field(default=10, env="MAX_CONCURRENT_GENERATIONS")
+    DEFAULT_MAX_TOKENS: int = Field(default=3000)
+    CONTENT_GENERATION_TIMEOUT: int = Field(default=120)  # seconds
+    MAX_CONCURRENT_GENERATIONS: int = Field(default=10)
 
     # Quality assessment thresholds (from la-factoria-railway-deployment.md)
-    QUALITY_THRESHOLD_OVERALL: float = Field(default=0.70, env="QUALITY_THRESHOLD_OVERALL")
-    QUALITY_THRESHOLD_EDUCATIONAL: float = Field(default=0.75, env="QUALITY_THRESHOLD_EDUCATIONAL")
-    QUALITY_THRESHOLD_FACTUAL: float = Field(default=0.85, env="QUALITY_THRESHOLD_FACTUAL")
+    QUALITY_THRESHOLD_OVERALL: float = Field(default=0.70)
+    QUALITY_THRESHOLD_EDUCATIONAL: float = Field(default=0.75)
+    QUALITY_THRESHOLD_FACTUAL: float = Field(default=0.85)
 
     # Rate limiting settings
-    RATE_LIMIT_REQUESTS_PER_MINUTE: int = Field(default=60, env="RATE_LIMIT_REQUESTS_PER_MINUTE")
-    RATE_LIMIT_GENERATIONS_PER_HOUR: int = Field(default=100, env="RATE_LIMIT_GENERATIONS_PER_HOUR")
+    RATE_LIMIT_REQUESTS_PER_MINUTE: int = Field(default=60)
+    RATE_LIMIT_GENERATIONS_PER_HOUR: int = Field(default=100)
 
     # File storage settings
-    UPLOAD_MAX_SIZE: int = Field(default=10 * 1024 * 1024, env="UPLOAD_MAX_SIZE")  # 10MB
-    STATIC_FILES_DIR: str = Field(default="static", env="STATIC_FILES_DIR")
+    UPLOAD_MAX_SIZE: int = Field(default=10 * 1024 * 1024)  # 10MB
+    STATIC_FILES_DIR: str = Field(default="static")
 
     # Logging settings
-    LOG_LEVEL: str = Field(default="INFO", env="LOG_LEVEL")
+    LOG_LEVEL: str = Field(default="INFO")
     LOG_FORMAT: str = Field(
-        default="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        env="LOG_FORMAT"
+        default="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
 
     # Monitoring and health check settings
-    HEALTH_CHECK_TIMEOUT: int = Field(default=30, env="HEALTH_CHECK_TIMEOUT")
-    METRICS_ENABLED: bool = Field(default=True, env="METRICS_ENABLED")
+    HEALTH_CHECK_TIMEOUT: int = Field(default=30)
+    METRICS_ENABLED: bool = Field(default=True)
 
     @property
     def database_url(self) -> str:
@@ -159,10 +157,11 @@ class Settings(BaseSettings):
         }
         return configs.get(provider, {})
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True
+    )
 
 # Global settings instance
 settings = Settings()

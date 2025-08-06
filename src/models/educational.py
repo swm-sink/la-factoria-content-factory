@@ -7,7 +7,7 @@ Following learning science and cognitive load theory principles
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 import uuid
 
@@ -168,11 +168,9 @@ class EducationalContent(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: Optional[datetime] = None
 
-    class Config:
-        use_enum_values = True
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
+    model_config = ConfigDict(
+        use_enum_values=True
+    )
 
 # Database models (using SQLAlchemy patterns)
 from sqlalchemy import Column, String, DateTime, JSON, Numeric, Integer, Boolean, Text
