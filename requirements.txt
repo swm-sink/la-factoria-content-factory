@@ -39,5 +39,8 @@ pytest-asyncio==0.21.1
 # Optional: For ElevenLabs audio integration (commented out for minimal install)
 # elevenlabs==0.2.26
 
-# Optional: For enhanced caching (commented out for minimal install)
-# redis==5.0.1
+# Enhanced caching for 90% AI cost reduction
+redis==5.0.1
+
+# Rate limiting for AI cost protection
+slowapi==0.1.9

@@ -4,10 +4,15 @@ FastAPI endpoints for all 8 educational content types
 Following patterns from FastAPI context and educational requirements
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
 from typing import List, Dict, Any
 import logging
 import time
+
+# Simple rate limiting for AI cost protection
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from ...core.auth import verify_api_key
 from ...models.content import (
@@ -20,6 +25,9 @@ from ...models.educational import LaFactoriaContentType, LearningObjectiveModel
 from ...services.educational_content_service import EducationalContentService
 
 logger = logging.getLogger(__name__)
+
+# Simple rate limiter for expensive AI operations
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter()
 
@@ -58,8 +66,10 @@ async def get_content_types():
         )
 
 @router.post("/generate/master_content_outline", response_model=ContentResponse)
+@limiter.limit("10/minute")  # Simple: 10 content generations per minute per IP
 async def generate_master_content_outline(
-    request: ContentRequest,
+    request: Request,
+    content_request: ContentRequest,
     api_key: str = Depends(verify_api_key),
     content_service: EducationalContentService = Depends(get_content_service)
 ):
@@ -72,10 +82,10 @@ async def generate_master_content_outline(
     try:
         result = await content_service.generate_content(
             content_type=LaFactoriaContentType.MASTER_CONTENT_OUTLINE.value,
-            topic=request.topic,
-            age_group=request.age_group.value,
-            learning_objectives=[obj.to_learning_objective() for obj in request.learning_objectives] if request.learning_objectives else None,
-            additional_requirements=request.additional_requirements
+            topic=content_request.topic,
+            age_group=content_request.age_group.value,
+            learning_objectives=[obj.to_learning_objective() for obj in content_request.learning_objectives] if content_request.learning_objectives else None,
+            additional_requirements=content_request.additional_requirements
         )
 
         return ContentResponse(**result)
@@ -118,8 +128,10 @@ async def generate_podcast_script(
         )
 
 @router.post("/generate/study_guide", response_model=ContentResponse)
+@limiter.limit("10/minute")  # Simple: 10 content generations per minute per IP
 async def generate_study_guide(
-    request: ContentRequest,
+    request: Request,
+    content_request: ContentRequest,
     api_key: str = Depends(verify_api_key),
     content_service: EducationalContentService = Depends(get_content_service)
 ):
@@ -132,10 +144,10 @@ async def generate_study_guide(
     try:
         result = await content_service.generate_content(
             content_type=LaFactoriaContentType.STUDY_GUIDE.value,
-            topic=request.topic,
-            age_group=request.age_group.value,
-            learning_objectives=[obj.to_learning_objective() for obj in request.learning_objectives] if request.learning_objectives else None,
-            additional_requirements=request.additional_requirements
+            topic=content_request.topic,
+            age_group=content_request.age_group.value,
+            learning_objectives=[obj.to_learning_objective() for obj in content_request.learning_objectives] if content_request.learning_objectives else None,
+            additional_requirements=content_request.additional_requirements
         )
 
         return ContentResponse(**result)
