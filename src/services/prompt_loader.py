@@ -41,8 +41,11 @@ class PromptTemplateLoader:
         """Initialize the prompt loader and validate templates"""
         try:
             # Set up Jinja2 environment for template compilation
+            # Use {$ $} delimiters to avoid conflicts with JSON {{ }} in prompts
             self.jinja_env = Environment(
                 loader=FileSystemLoader(str(self.prompts_directory)),
+                variable_start_string='{$',
+                variable_end_string='$}',
                 trim_blocks=True,
                 lstrip_blocks=True
             )
@@ -176,8 +179,8 @@ class PromptTemplateLoader:
         """Extract Jinja2 variables from template content"""
         import re
 
-        # Find all {{variable}} patterns
-        variable_pattern = r'\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}'
+        # Find all {$variable$} patterns (using our custom delimiters)
+        variable_pattern = r'\{\$\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\$\}'
         variables = re.findall(variable_pattern, template_content)
 
         # Remove duplicates and sort

@@ -8,6 +8,7 @@ import logging
 from typing import Dict, Any, Optional, List
 import asyncio
 import re
+from datetime import datetime, timezone
 
 from ..models.educational import LearningObjective
 from ..core.config import settings
@@ -89,7 +90,7 @@ class EducationalQualityAssessor:
                     "text_length": len(content_text),
                     "has_learning_objectives": learning_objectives is not None,
                     "assessment_version": "2.0",
-                    "assessed_at": str(__import__('datetime').datetime.utcnow())
+                    "assessed_at": str(datetime.now(timezone.utc))
                 }
             }
 
@@ -104,9 +105,19 @@ class EducationalQualityAssessor:
         def extract_recursive(obj):
             if isinstance(obj, dict):
                 for key, value in obj.items():
-                    if key.lower() in ['content', 'text', 'description', 'answer', 'question', 'title']:
+                    # Extract text from common educational content keys
+                    if key.lower() in ['content', 'text', 'description', 'answer', 'question', 'title', 
+                                       'overview', 'introduction', 'summary', 'conclusion',
+                                       'learning_objectives', 'objectives', 'goals', 'outcomes',
+                                       'explanation', 'example', 'exercise', 'instruction',
+                                       'definition', 'concept', 'key_points', 'takeaways']:
                         if isinstance(value, str):
                             text_parts.append(value)
+                        elif isinstance(value, list):
+                            # Handle list of strings (like learning objectives)
+                            for item in value:
+                                if isinstance(item, str):
+                                    text_parts.append(item)
                     else:
                         extract_recursive(value)
             elif isinstance(obj, list):
@@ -715,6 +726,6 @@ class EducationalQualityAssessor:
             "assessment_metadata": {
                 "error": "Assessment failed - using default values",
                 "assessment_version": "2.0",
-                "assessed_at": str(__import__('datetime').datetime.utcnow())
+                "assessed_at": str(datetime.now(timezone.utc))
             }
         }

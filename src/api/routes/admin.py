@@ -6,7 +6,7 @@ Administrative endpoints for system management
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Dict, Any, List
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ...core.auth import verify_admin_api_key
 from ...core.config import settings
@@ -57,7 +57,7 @@ async def get_system_info(api_key: str = Depends(verify_admin_api_key)):
                 "max_concurrent": settings.MAX_CONCURRENT_GENERATIONS,
                 "rate_limit_per_minute": settings.RATE_LIMIT_REQUESTS_PER_MINUTE
             },
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
     except Exception as e:
@@ -103,7 +103,7 @@ async def get_content_stats(api_key: str = Depends(verify_admin_api_key)):
                 "successful_generations": 0,
                 "failed_generations": 0
             },
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
     except Exception as e:
@@ -126,7 +126,7 @@ async def get_ai_provider_stats(api_key: str = Depends(verify_admin_api_key)):
 
         return {
             "provider_stats": stats,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
     except Exception as e:
@@ -158,7 +158,7 @@ async def clear_cache(api_key: str = Depends(verify_admin_api_key)):
         return {
             "status": "success",
             "message": "All caches cleared successfully",
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
     except Exception as e:
@@ -190,7 +190,7 @@ async def reload_prompts(api_key: str = Depends(verify_admin_api_key)):
             "status": "success",
             "message": "Prompt templates reloaded successfully",
             "template_stats": template_stats,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
     except Exception as e:
@@ -223,7 +223,7 @@ async def get_prompt_info(api_key: str = Depends(verify_admin_api_key)):
         return {
             "template_stats": prompt_loader.get_template_stats(),
             "template_details": prompt_info,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
     except Exception as e:
@@ -278,7 +278,7 @@ async def update_config(
             "status": "success",
             "updated": updated,
             "invalid": invalid,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
     except Exception as e:
@@ -317,7 +317,7 @@ async def delete_user_data(
                 "generated_content": 0,  # Would be actual count
                 "analytics_data": 0
             },
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
     except Exception as e:
@@ -345,7 +345,7 @@ async def get_recent_logs(
         return {
             "logs": [
                 {
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                     "level": "INFO",
                     "message": "This is a placeholder log entry",
                     "logger": "la_factoria.admin"
@@ -355,7 +355,7 @@ async def get_recent_logs(
                 "lines_requested": lines,
                 "level_filter": level
             },
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
     except Exception as e:
