@@ -1,0 +1,251 @@
+{
+  "load_tests": [
+    {
+      "endpoint": "/api/v1/health",
+      "total_requests": 200,
+      "successful": 200,
+      "failed": 0,
+      "success_rate": 100.0,
+      "total_time": 0.08047699928283691,
+      "requests_per_second": 2485.1821238649663,
+      "response_times": {
+        "min": 3.3049583435058594,
+        "max": 11.055231094360352,
+        "mean": 6.85450553894043,
+        "median": 6.667494773864746,
+        "p95": 9.780561923980713,
+        "p99": 10.908427238464355
+      }
+    },
+    {
+      "endpoint": "/api/v1/content/generate",
+      "total_requests": 10,
+      "successful": 0,
+      "failed": 10,
+      "success_rate": 0.0,
+      "total_time": 0.004851102828979492,
+      "requests_per_second": 2061.3869366491376,
+      "response_times": {
+        "min": 0,
+        "max": 0,
+        "mean": 0,
+        "median": 0,
+        "p95": 0,
+        "p99": 0
+      }
+    }
+  ],
+  "mixed_test": [
+    {
+      "endpoint": "/api/v1/health",
+      "status": 200,
+      "time": 2.1026134490966797,
+      "success": true
+    },
+    {
+      "endpoint": "/api/v1/health",
+      "status": 200,
+      "time": 2.0809173583984375,
+      "success": true
+    },
+    {
+      "endpoint": "/api/v1/health",
+      "status": 200,
+      "time": 3.3578872680664062,
+      "success": true
+    },
+    {
+      "endpoint": "/api/v1/health",
+      "status": 200,
+      "time": 3.0100345611572266,
+      "success": true
+    },
+    {
+      "endpoint": "/api/v1/health",
+      "status": 200,
+      "time": 3.2851696014404297,
+      "success": true
+    },
+    {
+      "endpoint": "/api/v1/health",
+      "status": 200,
+      "time": 3.3102035522460938,
+      "success": true
+    },
+    {
+      "endpoint": "/api/v1/health",
+      "status": 200,
+      "time": 3.770112991333008,
+      "success": true
+    },
+    {
+      "endpoint": "/api/v1/health",
+      "status": 200,
+      "time": 3.759145736694336,
+      "success": true
+    },
+    {
+      "endpoint": "/api/v1/health",
+      "status": 200,
+      "time": 2.9230117797851562,
+      "success": true
+    },
+    {
+      "endpoint": "/api/v1/health",
+      "status": 200,
+      "time": 3.690004348754883,
+      "success": true
+    },
+    {
+      "endpoint": "/api/v1/health",
+      "status": 200,
+      "time": 3.569364547729492,
+      "success": true
+    },
+    {
+      "endpoint": "/api/v1/health",
+      "status": 200,
+      "time": 3.1900405883789062,
+      "success": true
+    },
+    {
+      "endpoint": "/api/v1/health",
+      "status": 200,
+      "time": 2.992868423461914,
+      "success": true
+    },
+    {
+      "endpoint": "/api/v1/health",
+      "status": 200,
+      "time": 2.428770065307617,
+      "success": true
+    },
+    {
+      "endpoint": "/api/v1/health",
+      "status": 200,
+      "time": 3.072977066040039,
+      "success": true
+    },
+    {
+      "endpoint": "/api/v1/health",
+      "status": 200,
+      "time": 3.149271011352539,
+      "success": true
+    },
+    {
+      "endpoint": "/api/v1/health",
+      "status": 200,
+      "time": 3.2041072845458984,
+      "success": true
+    },
+    {
+      "endpoint": "/api/v1/health",
+      "status": 200,
+      "time": 4.062891006469727,
+      "success": true
+    },
+    {
+      "endpoint": "/api/v1/health",
+      "status": 200,
+      "time": 2.997875213623047,
+      "success": true
+    },
+    {
+      "endpoint": "/api/v1/health",
+      "status": 200,
+      "time": 5.259037017822266,
+      "success": true
+    },
+    {
+      "endpoint": "/api/v1/content/types",
+      "status": 404,
+      "time": 3.0782222747802734,
+      "success": false
+    },
+    {
+      "endpoint": "/api/v1/content/types",
+      "status": 404,
+      "time": 3.228902816772461,
+      "success": false
+    },
+    {
+      "endpoint": "/api/v1/content/types",
+      "status": 404,
+      "time": 2.852916717529297,
+      "success": false
+    },
+    {
+      "endpoint": "/api/v1/content/types",
+      "status": 404,
+      "time": 4.034996032714844,
+      "success": false
+    },
+    {
+      "endpoint": "/api/v1/content/types",
+      "status": 404,
+      "time": 3.5848617553710938,
+      "success": false
+    },
+    {
+      "endpoint": "/api/v1/content/types",
+      "status": 404,
+      "time": 3.7178993225097656,
+      "success": false
+    },
+    {
+      "endpoint": "/api/v1/content/types",
+      "status": 404,
+      "time": 3.8361549377441406,
+      "success": false
+    },
+    {
+      "endpoint": "/api/v1/content/types",
+      "status": 404,
+      "time": 2.5637149810791016,
+      "success": false
+    },
+    {
+      "endpoint": "/api/v1/content/types",
+      "status": 404,
+      "time": 4.365205764770508,
+      "success": false
+    },
+    {
+      "endpoint": "/api/v1/content/generate",
+      "status": 404,
+      "time": 3.0260086059570312,
+      "success": false
+    },
+    {
+      "endpoint": "/api/v1/content/types",
+      "status": 404,
+      "time": 4.149913787841797,
+      "success": false
+    },
+    {
+      "endpoint": "/api/v1/content/generate",
+      "status": 404,
+      "time": 2.0182132720947266,
+      "success": false
+    },
+    {
+      "endpoint": "/api/v1/content/generate",
+      "status": 404,
+      "time": 1.920938491821289,
+      "success": false
+    },
+    {
+      "endpoint": "/api/v1/content/generate",
+      "status": 404,
+      "time": 3.3888816833496094,
+      "success": false
+    },
+    {
+      "endpoint": "/api/v1/content/generate",
+      "status": 404,
+      "time": 2.552032470703125,
+      "success": false
+    }
+  ],
+  "passed": false
+}

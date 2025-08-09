@@ -1,0 +1,63 @@
+{
+  "passed": false,
+  "checks_passed": [
+    "Input Validation",
+    "Authentication",
+    "Error Handling"
+  ],
+  "checks_failed": [
+    "Security Headers",
+    "Rate Limiting",
+    "CORS Configuration"
+  ],
+  "vulnerabilities": [
+    {
+      "type": "Missing Security Header",
+      "header": "X-Content-Type-Options",
+      "severity": "Medium",
+      "recommendation": "Add X-Content-Type-Options header to responses"
+    },
+    {
+      "type": "Missing Security Header",
+      "header": "X-Frame-Options",
+      "severity": "Medium",
+      "recommendation": "Add X-Frame-Options header to responses"
+    },
+    {
+      "type": "Missing Security Header",
+      "header": "Content-Security-Policy",
+      "severity": "Medium",
+      "recommendation": "Add Content-Security-Policy header to responses"
+    },
+    {
+      "type": "Missing Security Header",
+      "header": "Strict-Transport-Security",
+      "severity": "Medium",
+      "recommendation": "Add Strict-Transport-Security header to responses"
+    },
+    {
+      "type": "Missing Rate Limiting",
+      "severity": "Medium",
+      "recommendation": "Implement rate limiting to prevent abuse"
+    },
+    {
+      "type": "Permissive CORS",
+      "origin": "http://malicious-site.com",
+      "severity": "Medium",
+      "recommendation": "Restrict CORS to trusted domains"
+    },
+    {
+      "type": "Permissive CORS",
+      "origin": "null",
+      "severity": "Medium",
+      "recommendation": "Restrict CORS to trusted domains"
+    },
+    {
+      "type": "Permissive CORS",
+      "origin": "*",
+      "severity": "Medium",
+      "recommendation": "Restrict CORS to trusted domains"
+    }
+  ],
+  "critical_count": 0
+}
