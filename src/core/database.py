@@ -4,8 +4,7 @@ Simple database setup using SQLAlchemy with Railway PostgreSQL
 """
 
 from sqlalchemy import create_engine, MetaData, text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.pool import StaticPool
 import logging
 
@@ -13,7 +12,7 @@ from .config import settings
 
 logger = logging.getLogger(__name__)
 
-# SQLAlchemy setup
+# SQLAlchemy setup - using modern declarative_base from sqlalchemy.orm
 Base = declarative_base()
 metadata = MetaData()
 
