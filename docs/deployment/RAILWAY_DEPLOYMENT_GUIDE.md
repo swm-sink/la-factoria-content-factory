@@ -10,9 +10,87 @@
 - [x] Frontend interface (`static/` directory)
 - [x] Educational content system
 
+## Railway CLI Installation & Automation (2025)
+
+### Installation Options
+```bash
+# Method 1: NPM (Recommended)
+npm install -g @railway/cli
+
+# Method 2: Homebrew (macOS)
+brew install railway
+
+# Method 3: Verify Installation
+railway --version  # Should show v4.5.5+
+```
+
+### Authentication Strategy
+```bash
+# Interactive Setup (Initial)
+railway login
+
+# Programmatic Automation (CI/CD)
+export RAILWAY_TOKEN="your-project-token"
+# Create token: Railway Dashboard → Project Settings → Tokens
+```
+
+### Complete Automation Script
+```bash
+#!/bin/bash
+# La Factoria Railway Deployment Automation
+
+set -e  # Exit on error
+
+echo "🚀 La Factoria Railway Deployment Automation"
+
+# 1. Install Railway CLI (if not present)
+if ! command -v railway &> /dev/null; then
+    echo "Installing Railway CLI..."
+    npm install -g @railway/cli
+fi
+
+# 2. Authenticate (requires RAILWAY_TOKEN env var)
+if [ -z "$RAILWAY_TOKEN" ]; then
+    echo "❌ RAILWAY_TOKEN environment variable required"
+    echo "Create project token: Railway Dashboard → Project Settings → Tokens"
+    exit 1
+fi
+
+# 3. Initialize project
+echo "Initializing Railway project..."
+railway init
+
+# 4. Add PostgreSQL database
+echo "Adding PostgreSQL database..."
+railway add --database postgres
+
+# 5. Add Redis cache
+echo "Adding Redis cache..."
+railway add --database redis
+
+# 6. Configure environment variables
+echo "Setting environment variables..."
+railway variables --set "PYTHON_VERSION=3.11"
+railway variables --set "ENVIRONMENT=production"
+railway variables --set "API_SECRET_KEY=$API_SECRET_KEY"
+railway variables --set "OPENAI_API_KEY=$OPENAI_API_KEY"
+railway variables --set "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY"
+railway variables --set "LANGFUSE_PUBLIC_KEY=$LANGFUSE_PUBLIC_KEY"
+railway variables --set "LANGFUSE_SECRET_KEY=$LANGFUSE_SECRET_KEY"
+railway variables --set "LANGFUSE_HOST=$LANGFUSE_HOST"
+
+# 7. Deploy application
+echo "Deploying to Railway..."
+railway up
+
+echo "✅ Deployment complete!"
+echo "Check status: railway status"
+echo "View logs: railway logs"
+```
+
 ## Railway Deployment Steps
 
-### 1. Initial Deployment
+### 1. Manual Deployment
 ```bash
 # Connect to Railway (if not already done)
 railway login
