@@ -10,7 +10,7 @@ import time
 import psutil
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from ...core.config import settings
@@ -29,7 +29,7 @@ async def health_check():
     """
     return {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "version": "1.0.0",
         "environment": settings.ENVIRONMENT
     }
@@ -43,7 +43,7 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db)):
     start_time = time.time()
     health_status = {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "version": "1.0.0",
         "environment": settings.ENVIRONMENT,
         "checks": {},
@@ -84,7 +84,7 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db)):
         logger.error(f"Health check failed: {str(e)}")
         return {
             "status": "unhealthy",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "error": str(e),
             "response_time_ms": round((time.time() - start_time) * 1000, 2)
         }
@@ -97,7 +97,7 @@ async def get_system_metrics(db: AsyncSession = Depends(get_db)):
     """
     try:
         metrics = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "system": _get_system_metrics(),
             "application": await _get_application_metrics(db),
             "educational": await _get_educational_metrics(db),
@@ -171,7 +171,7 @@ async def get_educational_metrics(db: AsyncSession = Depends(get_db)):
         generation_trends = [dict(row._mapping) for row in result]
 
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "content_type_stats": content_stats,
             "quality_distribution": quality_distribution,
             "generation_trends": generation_trends,
@@ -200,7 +200,7 @@ async def get_service_status():
             "platform": "La Factoria Educational Content Platform",
             "version": "1.0.0",
             "environment": settings.ENVIRONMENT,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "uptime": _get_uptime(),
             "services": {
                 "api": "operational",
