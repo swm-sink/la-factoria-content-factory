@@ -238,6 +238,12 @@ Key context files in `.claude/context/`:
 
 ## Development Guidelines
 
+### Git Configuration (Repository-Specific)
+- **Author**: This repository uses swm-sink (stefan.menssink@gmail.com) for commits
+- **Authentication**: GitHub PAT (Personal Access Token) for push operations
+- **Configuration**: Run `.git-local-config.sh` to set repository-specific git settings
+- **Anti-Patterns**: See `.claude/memory/git_commit_patterns.md` for Phase 3C learnings
+
 ### Code Standards
 - **Python**: FastAPI patterns, PEP 8, type hints, Pydantic models
 - **Testing**: pytest with comprehensive coverage
