@@ -23,8 +23,8 @@
 @.claude/domains/operations/README.md
 
 ### Educational Integration
-@.claude/domains/educational/README.md
 @.claude/context/la-factoria-educational-schema.md
+@.claude/components/la-factoria/educational-standards.md
 
 ## 🧭 Claude Code Integration
 

@@ -2,8 +2,7 @@
 
 ## Context Imports (Anthropic-Compliant)
 
-### Educational Standards Context
-@.claude/components/la-factoria/educational-standards.md
+### Core Educational Context
 @.claude/context/educational-content-assessment.md
 
 ### Implementation References  

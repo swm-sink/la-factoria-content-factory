@@ -9,14 +9,12 @@
 @.claude/examples/ai-integration/content-generation/ai_content_service.py
 
 ### AI Service Integration
-@.claude/examples/ai-integration/content-generation/ai_content_service.py
 @.claude/context/la-factoria-prompt-integration.md
 @.claude/context/claude-4-best-practices.md
 
 ### Educational Context Integration
-@.claude/domains/educational/README.md
 @.claude/context/educational-content-assessment.md
-@.claude/components/la-factoria/quality-assessment.md
+@.claude/components/la-factoria/educational-standards.md
 
 ### Prompt Templates & Generation
 @la-factoria/prompts/master_content_outline.md
@@ -54,9 +52,11 @@ result = await service.generate_with_provider_fallback(request)
 
 ### Multi-Provider AI Architecture
 - **Provider Integration**: OpenAI, Anthropic, and Google Vertex AI service patterns
+- **MCP Compliance**: Model Context Protocol support for 2025 standards (universal AI connectivity)
 - **Failover Strategy**: Intelligent provider selection and redundancy mechanisms
 - **Cost Optimization**: Usage tracking and cost-per-generation optimization
 - **Performance Monitoring**: Real-time AI service performance and quality tracking
+- **Evaluation Framework**: 20-query testing standard for quality assessment and validation
 
 ### Prompt Engineering System
 - **Template Management**: Structured prompt templates for all 8 content types

@@ -2,12 +2,10 @@
 
 ## Context Imports (Anthropic-Compliant)
 
-### Quality Assessment Context
-@.claude/components/la-factoria/quality-assessment.md
+### Core Educational Context
 @.claude/context/educational-content-assessment.md
 
-### Implementation Context
-@.claude/domains/educational/README.md
+### Implementation References
 @.claude/prp/PRP-004-Quality-Assessment-System.md
 
 ## Age-Appropriate Content Guidelines

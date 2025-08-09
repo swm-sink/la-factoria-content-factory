@@ -10,13 +10,13 @@
 @.claude/context/la-factoria-railway-deployment.md
 
 ### Technical Implementation Context
-@.claude/domains/technical/README.md
 @.claude/examples/backend/fastapi-setup/main.py
+@.claude/context/fastapi.md
 
 ### Quality & Monitoring
-@.claude/domains/educational/README.md
 @.claude/components/la-factoria/quality-assessment.md
 @.claude/context/la-factoria-testing-framework.md
+@.claude/context/educational-content-assessment.md
 
 ## 🚀 Domain Contents
 
@@ -25,6 +25,8 @@
 - **Environment Management**: Development, staging, and production environment setup
 - **Scaling Strategy**: Automatic scaling and resource optimization
 - **Cost Management**: Predictable pricing and resource utilization monitoring
+- **Operations as Code**: Infrastructure automation following 2025 DevOps excellence standards
+- **Platform Engineering**: Standardized internal developer platform (IDP) patterns
 
 ### Monitoring and Observability
 - **Application Performance**: Response time, error rate, and throughput monitoring
