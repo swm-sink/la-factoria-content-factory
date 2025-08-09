@@ -1,0 +1,134 @@
+# Railway Deployment Configuration for La Factoria
+# ==============================================
+# Production-ready deployment with health checks and auto-scaling
+
+[build]
+builder = "nixpacks"
+buildCommand = "pip install -r requirements.txt"
+
+[deploy]
+startCommand = "uvicorn src.main:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/api/v1/health"
+healthcheckTimeout = 30
+restartPolicyType = "on-failure"
+restartPolicyMaxRetries = 3
+
+# Environment Configuration
+[env]
+# Application settings
+ENVIRONMENT = "production"
+APP_NAME = "La Factoria"
+APP_VERSION = "1.0.0"
+DEBUG = "false"
+
+# API Configuration
+API_V1_PREFIX = "/api/v1"
+
+# CORS Origins (update with your production domain)
+ALLOWED_ORIGINS = '["https://your-domain.com","https://www.your-domain.com"]'
+
+# Content Generation Settings
+DEFAULT_MAX_TOKENS = "3000"
+CONTENT_GENERATION_TIMEOUT = "120"
+MAX_CONCURRENT_GENERATIONS = "10"
+
+# Educational Quality Thresholds (based on learning science research)
+QUALITY_THRESHOLD_OVERALL = "0.70"
+QUALITY_THRESHOLD_EDUCATIONAL = "0.75"
+QUALITY_THRESHOLD_FACTUAL = "0.85"
+
+# Rate Limiting
+RATE_LIMIT_REQUESTS_PER_MINUTE = "100"
+RATE_LIMIT_GENERATIONS_PER_HOUR = "500"
+
+# Performance Settings
+DB_POOL_SIZE = "20"
+DB_MAX_OVERFLOW = "30"
+CACHE_TTL = "3600"
+
+# Monitoring and Logging
+LOG_LEVEL = "INFO"
+HEALTH_CHECK_TIMEOUT = "30"
+METRICS_ENABLED = "true"
+
+# File Upload Settings
+UPLOAD_MAX_SIZE = "10485760"
+STATIC_FILES_DIR = "static"
+
+# === CRITICAL: Set these in Railway Environment Variables ===
+#
+# Required for basic functionality:
+# - SECRET_KEY: Generate secure random string (32+ characters)
+# - LA_FACTORIA_API_KEY: API key for client authentication
+# - OPENAI_API_KEY: Get from https://platform.openai.com/api-keys
+#
+# Railway will automatically provide:
+# - DATABASE_URL: PostgreSQL connection string
+# - PORT: Application port (set automatically)
+#
+# Recommended for production quality:
+# - ANTHROPIC_API_KEY: Content generation fallback (get from https://console.anthropic.com/)
+# - REDIS_URL: Redis connection (Railway Redis addon)
+# - LANGFUSE_SECRET_KEY: AI observability (get from https://cloud.langfuse.com/)
+# - LANGFUSE_PUBLIC_KEY: AI cost tracking
+#
+# Optional enhancements:
+# - ELEVENLABS_API_KEY: Audio generation (get from https://elevenlabs.io/)
+# - GOOGLE_CLOUD_PROJECT: Vertex AI for cost optimization
+# - GOOGLE_CLOUD_REGION: Vertex AI region (defaults to us-central1)
+
+# === RAILWAY SERVICE CONFIGURATION ===
+
+[[services]]
+name = "la-factoria-api"
+source = "."
+
+[services.variables]
+# Production environment variables will be set here
+# Use Railway dashboard or CLI to configure:
+# railway variables set OPENAI_API_KEY=sk-your-key-here
+
+# === RAILWAY ADDONS CONFIGURATION ===
+
+# PostgreSQL Database (recommended plan: PostgreSQL Pro)
+[[addons]]
+plan = "postgresql"
+name = "la-factoria-db"
+
+# Redis Cache (recommended plan: Redis Pro)
+[[addons]]  
+plan = "redis"
+name = "la-factoria-cache"
+
+# === DEPLOYMENT NOTES ===
+#
+# 1. Initial Deployment:
+#    railway login
+#    railway init
+#    railway variables set OPENAI_API_KEY=sk-your-key-here
+#    railway variables set SECRET_KEY=your-secure-secret-key
+#    railway deploy
+#
+# 2. Health Check Verification:
+#    The health check endpoint /api/v1/health will verify:
+#    - Database connectivity
+#    - AI provider configuration
+#    - Redis cache availability
+#    - Application startup success
+#
+# 3. Auto-Scaling:
+#    Railway will automatically scale based on:
+#    - CPU usage (>70% triggers scaling)
+#    - Memory usage (>80% triggers scaling)
+#    - Request queue length
+#
+# 4. Monitoring:
+#    Railway provides built-in monitoring for:
+#    - Response times and error rates
+#    - Resource utilization
+#    - Health check status
+#    - Deployment success/failure
+#
+# 5. Custom Domain Setup:
+#    railway domain add your-domain.com
+#    # Update ALLOWED_ORIGINS to include your domain
