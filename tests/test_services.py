@@ -11,6 +11,11 @@ Comprehensive unit tests for all service components:
 Focus on business logic, error handling, and integration patterns.
 """
 
+# Fix Python path for src imports
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 import pytest
 import asyncio
 import json

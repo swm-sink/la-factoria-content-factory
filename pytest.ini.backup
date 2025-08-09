@@ -1,5 +1,6 @@
 [tool:pytest]
-# La Factoria Test Configuration - Simplified for stabilization
+# La Factoria Test Configuration - Backup
+# Comprehensive test setup for educational content platform
 
 # Test discovery patterns
 testpaths = tests
@@ -7,14 +8,19 @@ python_files = test_*.py *_test.py
 python_classes = Test*
 python_functions = test_*
 
-# Add source path for imports - CRITICAL for imports to work
+# Add source path for imports
 pythonpath = .
-
-# Basic options
 addopts =
+    --strict-markers
+    --strict-config
+    --verbose
     --tb=short
+    --cov=src
+    --cov-report=term-missing
+    --cov-report=html:htmlcov
+    --cov-report=xml
+    --cov-fail-under=80
     --asyncio-mode=auto
-    -v
 
 # Test markers for categorizing tests
 markers =
@@ -25,7 +31,6 @@ markers =
     security: Security and authentication tests
     educational: Educational quality and standards tests
     ai_integration: AI provider integration tests
-    real_ai: Tests that use real AI providers (consumes API credits)
     slow: Tests that take more than 5 seconds
     requires_api: Tests that require external API access
     requires_db: Tests that require database connection
@@ -37,4 +42,20 @@ asyncio_mode = auto
 filterwarnings =
     ignore::DeprecationWarning
     ignore::PendingDeprecationWarning
-    ignore::RuntimeWarning
+    ignore::RuntimeWarning:langfuse*
+    ignore::UserWarning:pydantic*
+
+# Minimum Python version
+minversion = 3.8
+
+# Test timeout (in seconds)
+timeout = 300
+
+# Log configuration for tests
+log_cli = true
+log_cli_level = INFO
+log_cli_format = %(asctime)s [%(levelname)8s] %(name)s: %(message)s
+log_cli_date_format=%Y-%m-%d %H:%M:%S
+
+# Test collection timeout
+collect_timeout = 60

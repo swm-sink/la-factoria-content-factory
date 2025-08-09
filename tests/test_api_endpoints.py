@@ -15,6 +15,11 @@ Tests for all 8 educational content generation endpoints:
 Plus batch generation, content types, and service endpoints.
 """
 
+# Fix Python path for src imports
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 import pytest
 import json
 from fastapi import status
@@ -31,13 +36,13 @@ class TestContentGenerationEndpoints:
     @pytest.mark.api
     @pytest.mark.asyncio
     async def test_master_content_outline_generation(
-        self, client, auth_headers, sample_learning_objectives, mock_ai_providers, assert_quality_thresholds
+        self, client, auth_headers, sample_learning_objectives, mock_ai_providers, assert_quality_thresholds, mock_verify_api_key
     ):
         """Test master content outline generation endpoint"""
         request_data = {
             "topic": "Introduction to Python Programming",
             "age_group": "high_school",
-            "learning_objectives": [obj.dict() for obj in sample_learning_objectives],
+            "learning_objectives": [obj.model_dump() for obj in sample_learning_objectives],
             "additional_requirements": "Include hands-on coding exercises"
         }
 
@@ -78,6 +83,19 @@ class TestContentGenerationEndpoints:
         # Validate quality metrics meet thresholds
         if content["quality_metrics"]:
             quality_metrics = content["quality_metrics"]
+            
+            # Debug: Print detailed quality metrics
+            print(f"\n=== Quality Metrics Debug ===")
+            print(f"Generated content keys: {list(generated.keys())}")
+            print(f"Generated content preview: {str(generated)[:500]}...")
+            print(f"Quality metrics: {quality_metrics}")
+            print(f"Overall score: {quality_metrics.get('overall_quality_score', 'N/A')}")
+            print(f"Educational effectiveness: {quality_metrics.get('educational_effectiveness', 'N/A')}")
+            print(f"Factual accuracy: {quality_metrics.get('factual_accuracy', 'N/A')}")
+            print(f"Structural quality: {quality_metrics.get('structural_quality', 'N/A')}")
+            print(f"Engagement score: {quality_metrics.get('engagement_score', 'N/A')}")
+            print("==========================\n")
+            
             assert_quality_thresholds(quality_metrics)
 
         # Validate metadata
@@ -390,14 +408,14 @@ class TestBatchGeneration:
             json={"topic": "Test", "age_group": "high_school"},
             headers=auth_headers
         )
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY  # FastAPI returns 422 for missing required query parameters
 
         # Test too many content types
-        too_many_types = list(LaFactoriaContentType)  # All 8 types
-        too_many_types.append("extra_type")  # Add one more
+        all_valid_types = [t.value for t in LaFactoriaContentType]  # All 8 types as strings
+        too_many_types = all_valid_types + ["extra_type"]  # Add one more (9 total)
 
         response = client.post(
-            f"/api/v1/generate/batch?content_types={','.join([t.value for t in too_many_types[:9]])}",
+            f"/api/v1/generate/batch?content_types={','.join(too_many_types)}",
             json={"topic": "Test", "age_group": "high_school"},
             headers=auth_headers
         )
@@ -583,7 +601,7 @@ class TestAPIValidationAndErrors:
             json=request_data
         )
 
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.status_code == status.HTTP_403_FORBIDDEN  # FastAPI HTTPBearer dependency returns 403 for missing auth
 
         # Test with invalid authentication
         invalid_headers = {"Authorization": "Bearer invalid-key"}

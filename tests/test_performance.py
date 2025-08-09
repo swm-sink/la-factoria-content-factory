@@ -11,6 +11,11 @@ Comprehensive performance testing covering:
 - AI provider integration performance
 """
 
+# Fix Python path for src imports
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 import pytest
 import asyncio
 import time
