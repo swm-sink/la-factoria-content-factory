@@ -1,0 +1,30 @@
+#!/bin/bash
+# Pre-commit hook to verify correct git configuration
+
+# Expected values
+EXPECTED_NAME="swm-sink"
+EXPECTED_EMAIL="stefan.menssink@gmail.com"
+
+# Get current configuration
+CURRENT_NAME=$(git config --local user.name)
+CURRENT_EMAIL=$(git config --local user.email)
+
+# Check if configuration matches
+if [ "$CURRENT_NAME" != "$EXPECTED_NAME" ] || [ "$CURRENT_EMAIL" != "$EXPECTED_EMAIL" ]; then
+    echo "❌ Git configuration error!"
+    echo ""
+    echo "Expected configuration:"
+    echo "  Name: $EXPECTED_NAME"
+    echo "  Email: $EXPECTED_EMAIL"
+    echo ""
+    echo "Current configuration:"
+    echo "  Name: $CURRENT_NAME"
+    echo "  Email: $CURRENT_EMAIL"
+    echo ""
+    echo "To fix this, run: ./.git-local-config.sh"
+    echo ""
+    exit 1
+fi
+
+# Configuration is correct
+exit 0

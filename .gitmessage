@@ -1,0 +1,23 @@
+# <type>: <subject> (max 50 chars)
+
+# <body> (optional, wrap at 72 chars)
+
+# <footer> (optional)
+# AI Agent Note: <context for autonomous development>
+
+# Type can be:
+#   feat     - new feature
+#   fix      - bug fix
+#   docs     - documentation only
+#   style    - formatting, missing semicolons, etc.
+#   refactor - code change that neither fixes a bug nor adds a feature
+#   test     - adding missing tests
+#   chore    - maintain, update dependencies, etc.
+#   analysis - code/architecture analysis findings
+#   memory   - updates to .claude/memory system
+#
+# Remember:
+# - Use imperative mood ("add" not "added")
+# - Don't end subject with period
+# - Reference issues/tickets when applicable
+# - Include AI Agent Note for autonomous context
