@@ -4,6 +4,11 @@ Quality Assessment Validation Script
 Validates the enhanced educational quality assessment system
 """
 
+# Fix Python path for src imports
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 import asyncio
 import sys
 import os
@@ -23,9 +28,11 @@ mock_config = types.ModuleType('config')
 mock_config.settings = MockSettings()
 sys.modules['src.core.config'] = mock_config
 
-from services.quality_assessor import EducationalQualityAssessor
-from models.educational import LearningObjective, CognitiveLevel
+from src.services.quality_assessor import EducationalQualityAssessor
+from src.models.educational import LearningObjective, CognitiveLevel
+import pytest
 
+@pytest.mark.asyncio
 async def test_enhanced_quality_assessment():
     """Test the enhanced quality assessment system"""
 

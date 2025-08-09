@@ -3,6 +3,11 @@ Integration tests for Quality Assessment System
 Tests integration with Educational Content Service and API endpoints
 """
 
+# Fix Python path for src imports
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
 from typing import Dict, Any

@@ -3,6 +3,11 @@ Comprehensive test suite for Educational Quality Assessment System
 Testing against La Factoria educational standards and quality thresholds
 """
 
+# Fix Python path for src imports
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 import pytest
 from unittest.mock import AsyncMock, Mock
 from typing import Dict, Any
