@@ -70,9 +70,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Include API routes
 from .api.routes import content_generation, health, admin, monitoring
 
-app.include_router(monitoring.router, prefix="/api/v1", tags=["Monitoring"])
-app.include_router(content_generation.router, prefix="/api/v1", tags=["Content Generation"])
+# Use health.router for all health and monitoring endpoints (includes /ready, /live, etc.)
 app.include_router(health.router, prefix="/api/v1", tags=["Health"])
+app.include_router(content_generation.router, prefix="/api/v1", tags=["Content Generation"])
+# Monitoring router conflicts with health router - using health router for all monitoring
+# app.include_router(monitoring.router, prefix="/api/v1", tags=["Monitoring"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["Administration"])
 
 # Root endpoint
