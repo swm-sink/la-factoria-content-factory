@@ -143,14 +143,14 @@ class Settings(BaseSettings):
             },
             "anthropic": {
                 "api_key": self.ANTHROPIC_API_KEY,
-                "model": "claude-3-sonnet-20240229",
+                "model": "claude-3-5-sonnet-20241022",
                 "temperature": 0.7,
                 "max_tokens": self.DEFAULT_MAX_TOKENS
             },
             "vertex_ai": {
                 "project": self.GOOGLE_CLOUD_PROJECT,
                 "location": self.GOOGLE_CLOUD_REGION,
-                "model": "text-bison",
+                "model": "gemini-1.5-flash",
                 "temperature": 0.7,
                 "max_tokens": self.DEFAULT_MAX_TOKENS
             },

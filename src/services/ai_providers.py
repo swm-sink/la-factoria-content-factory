@@ -251,7 +251,7 @@ class AIProviderManager:
 
         try:
             response = await client.messages.create(
-                model="claude-3-sonnet-20240229",
+                model="claude-3-5-sonnet-20241022",
                 max_tokens=max_tokens,
                 temperature=0.7,
                 messages=[
@@ -268,7 +268,7 @@ class AIProviderManager:
             return AIResponse(
                 content=content,
                 provider=AIProviderType.ANTHROPIC.value,
-                model="claude-3-sonnet-20240229",
+                model="claude-3-5-sonnet-20241022",
                 tokens_used=tokens_used,
                 generation_time=0.0,  # Will be set by caller
                 metadata={
@@ -285,35 +285,37 @@ class AIProviderManager:
     async def _generate_with_vertex_ai(self, prompt: str, max_tokens: int) -> AIResponse:
         """Generate content using Google Vertex AI"""
         try:
-            from vertexai.language_models import TextGenerationModel
+            from vertexai.generative_models import GenerativeModel
 
-            model = TextGenerationModel.from_pretrained("text-bison")
+            model = GenerativeModel("gemini-1.5-flash")
 
             # Run in executor to avoid blocking
             response = await asyncio.get_event_loop().run_in_executor(
                 None,
-                lambda: model.predict(
+                lambda: model.generate_content(
                     prompt,
-                    temperature=0.7,
-                    max_output_tokens=max_tokens,
-                    top_k=40,
-                    top_p=0.8
+                    generation_config={
+                        "temperature": 0.7,
+                        "max_output_tokens": max_tokens,
+                        "top_k": 40,
+                        "top_p": 0.8
+                    }
                 )
             )
 
             content = response.text
-            # Vertex AI doesn't provide token count in response
-            tokens_used = len(prompt.split()) + len(content.split())  # Rough estimate
+            # Gemini provides usage metadata
+            tokens_used = getattr(response, 'usage_metadata', {}).get('total_token_count', len(prompt.split()) + len(content.split()))
 
             return AIResponse(
                 content=content,
                 provider=AIProviderType.VERTEX_AI.value,
-                model="text-bison",
+                model="gemini-1.5-flash",
                 tokens_used=tokens_used,
                 generation_time=0.0,  # Will be set by caller
                 metadata={
-                    "is_blocked": response.is_blocked,
-                    "safety_attributes": response.safety_attributes.__dict__ if response.safety_attributes else {}
+                    "usage_metadata": getattr(response, 'usage_metadata', {}).__dict__ if hasattr(response, 'usage_metadata') else {},
+                    "safety_ratings": [rating.__dict__ for rating in getattr(response, 'candidates', [{}])[0].get('safety_ratings', [])] if getattr(response, 'candidates', None) else []
                 }
             )
 
