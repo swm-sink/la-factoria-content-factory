@@ -16,7 +16,8 @@ from pathlib import Path
 from ...core.config import settings
 from ...core.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
+from sqlalchemy import text, select, func, inspect
+from ...models.educational import EducationalContentDB, UserModel
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -244,14 +245,15 @@ async def _check_database_health(db: AsyncSession) -> Dict[str, Any]:
         # Simple connectivity test
         await db.execute(text("SELECT 1"))
 
-        # Check if main tables exist
-        table_check = await db.execute(text("""
-            SELECT table_name FROM information_schema.tables
-            WHERE table_schema = 'public'
-            AND table_name IN ('users', 'educational_content', 'quality_assessments')
-        """))
-
-        tables = [row[0] for row in table_check]
+        # Check if main tables exist using SQLAlchemy inspector
+        # SECURITY: Using SQLAlchemy's safe introspection instead of raw SQL
+        from sqlalchemy import inspect
+        from ...core.database import engine
+        
+        inspector = inspect(engine)
+        all_tables = inspector.get_table_names()
+        required_tables = ['users', 'educational_content', 'quality_assessments']
+        tables = [t for t in required_tables if t in all_tables]
 
         return {
             "status": "healthy",
@@ -340,23 +342,27 @@ def _get_system_metrics() -> Dict[str, Any]:
 async def _get_application_metrics(db: AsyncSession) -> Dict[str, Any]:
     """Get application-specific metrics"""
     try:
-        # Total content generated
-        total_content = await db.execute(text("SELECT COUNT(*) FROM educational_content"))
-        total_count = total_content.scalar()
+        # Total content generated using ORM
+        # SECURITY: Using ORM queries instead of raw SQL
+        total_query = select(func.count()).select_from(EducationalContentDB)
+        total_result = await db.execute(total_query)
+        total_count = total_result.scalar()
 
         # Content generated in last 24 hours
-        recent_content = await db.execute(text("""
-            SELECT COUNT(*) FROM educational_content
-            WHERE created_at >= NOW() - INTERVAL '24 hours'
-        """))
-        recent_count = recent_content.scalar()
+        from datetime import datetime, timedelta
+        cutoff_time = datetime.utcnow() - timedelta(hours=24)
+        recent_query = select(func.count()).select_from(EducationalContentDB).where(
+            EducationalContentDB.created_at >= cutoff_time
+        )
+        recent_result = await db.execute(recent_query)
+        recent_count = recent_result.scalar()
 
         # Average quality scores
-        quality_avg = await db.execute(text("""
-            SELECT AVG(quality_score) FROM educational_content
-            WHERE created_at >= NOW() - INTERVAL '24 hours'
-        """))
-        avg_quality = quality_avg.scalar() or 0
+        quality_query = select(func.avg(EducationalContentDB.quality_score)).where(
+            EducationalContentDB.created_at >= cutoff_time
+        )
+        quality_result = await db.execute(quality_query)
+        avg_quality = quality_result.scalar() or 0
 
         return {
             "total_content_generated": total_count or 0,

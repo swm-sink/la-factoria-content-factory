@@ -124,13 +124,33 @@ class DatabaseManager:
     @staticmethod
     async def run_migration(migration_file: str):
         """
-        Run a SQL migration file
+        Run a SQL migration file with path validation
 
         Args:
-            migration_file: Path to the SQL migration file
+            migration_file: Path to the SQL migration file (must be in migrations directory)
         """
+        import os
+        from pathlib import Path
+        
         try:
-            with open(migration_file, 'r') as f:
+            # SECURITY: Validate migration file path to prevent path traversal
+            migration_path = Path(migration_file).resolve()
+            base_dir = Path(__file__).parent.parent.parent  # Project root
+            migrations_dir = base_dir / 'migrations'
+            
+            # Ensure the file is within the migrations directory
+            if not str(migration_path).startswith(str(migrations_dir)):
+                raise ValueError(f"Migration file must be in migrations directory: {migration_file}")
+            
+            # Check if file exists and is a file (not directory)
+            if not migration_path.is_file():
+                raise FileNotFoundError(f"Migration file not found: {migration_file}")
+            
+            # Check file extension
+            if migration_path.suffix.lower() not in ['.sql', '.psql']:
+                raise ValueError(f"Invalid migration file type: {migration_path.suffix}")
+            
+            with open(migration_path, 'r') as f:
                 migration_sql = f.read()
 
             with engine.connect() as connection:
@@ -143,7 +163,7 @@ class DatabaseManager:
 
                 connection.commit()
 
-            logger.info(f"Migration {migration_file} executed successfully")
+            logger.info(f"Migration {migration_path.name} executed successfully")
 
         except Exception as e:
             logger.error(f"Migration {migration_file} failed: {e}")
@@ -191,14 +211,21 @@ class DatabaseManager:
                         # Fallback for basic stats
                         stats = {"note": "Table statistics not available"}
                 else:
-                    # SQLite version
-                    tables = ['users', 'educational_content', 'quality_assessments']
-                    for table in tables:
+                    # SQLite version - use whitelist with safe queries
+                    # SECURITY: Using explicit queries instead of string interpolation
+                    # to prevent SQL injection attacks
+                    safe_queries = {
+                        'users': "SELECT COUNT(*) FROM users",
+                        'educational_content': "SELECT COUNT(*) FROM educational_content",
+                        'quality_assessments': "SELECT COUNT(*) FROM quality_assessments"
+                    }
+                    
+                    for table_name, query in safe_queries.items():
                         try:
-                            result = connection.execute(text(f"SELECT COUNT(*) FROM {table}")).fetchone()
-                            stats[table] = {"row_count": result[0] if result else 0}
+                            result = connection.execute(text(query)).fetchone()
+                            stats[table_name] = {"row_count": result[0] if result else 0}
                         except:
-                            stats[table] = {"row_count": 0, "error": "Table may not exist"}
+                            stats[table_name] = {"row_count": 0, "error": "Table may not exist"}
 
                 return stats
 
