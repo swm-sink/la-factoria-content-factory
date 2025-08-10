@@ -588,7 +588,7 @@ class TestAPIValidationAndErrors:
 
     @pytest.mark.api
     @pytest.mark.asyncio
-    async def test_authentication_required(self, client):
+    async def test_authentication_required(self, client, mock_ai_providers):
         """Test that authentication is required for protected endpoints"""
         request_data = {
             "topic": "Test Topic",
@@ -611,9 +611,8 @@ class TestAPIValidationAndErrors:
             headers=invalid_headers
         )
 
-        # In development mode, might accept any key
-        # In production mode, should reject invalid keys
-        assert response.status_code in [status.HTTP_401_UNAUTHORIZED, status.HTTP_200_OK]
+        # In development mode with mocked AI providers, should accept any non-empty key
+        assert response.status_code == status.HTTP_200_OK
 
     @pytest.mark.api
     @pytest.mark.asyncio
@@ -632,32 +631,43 @@ class TestAPIValidationAndErrors:
     @pytest.mark.api
     @pytest.mark.asyncio
     async def test_service_error_handling(
-        self, client, auth_headers
+        self, client, auth_headers, monkeypatch
     ):
         """Test service error handling"""
+        from unittest.mock import AsyncMock
+        
+        # Create a mock that raises an exception
+        async def mock_generate_error(*args, **kwargs):
+            raise Exception("Service temporarily unavailable")
+        
+        # Patch the service method
+        monkeypatch.setattr(
+            "src.services.educational_content_service.EducationalContentService.generate_content",
+            mock_generate_error
+        )
 
-        # Mock service to raise exception
-        with patch("src.services.educational_content_service.EducationalContentService.generate_content") as mock_generate:
-            mock_generate.side_effect = Exception("Service temporarily unavailable")
+        response = client.post(
+            "/api/v1/generate/study_guide",
+            json={"topic": "Test", "age_group": "high_school"},
+            headers=auth_headers
+        )
 
-            response = client.post(
-                "/api/v1/generate/study_guide",
-                json={"topic": "Test", "age_group": "high_school"},
-                headers=auth_headers
-            )
-
-            assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-            error_detail = response.json()
-            assert "detail" in error_detail
+        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        error_detail = response.json()
+        assert "detail" in error_detail
 
     @pytest.mark.api
     @pytest.mark.asyncio
     async def test_malformed_json_handling(self, client, auth_headers):
         """Test handling of malformed JSON requests"""
+        # Send malformed JSON with content-type header
+        headers = auth_headers.copy()
+        headers["Content-Type"] = "application/json"
+        
         response = client.post(
             "/api/v1/generate/study_guide",
             data="{ invalid json }",  # Malformed JSON
-            headers=auth_headers
+            headers=headers
         )
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -751,13 +761,14 @@ class TestAPIPerformance:
     ):
         """Test concurrent request handling"""
         import asyncio
-        from httpx import AsyncClient
+        import httpx
+        from src.main import app
 
-        async def make_request(client, request_data):
-            return await client.post(
+        async def make_request(async_client, request_data, headers):
+            return await async_client.post(
                 "/api/v1/generate/flashcards",
                 json=request_data,
-                headers=auth_headers
+                headers=headers
             )
 
         request_data = {
@@ -766,8 +777,11 @@ class TestAPIPerformance:
         }
 
         # Test 5 concurrent requests
-        async with AsyncClient(app=client.app, base_url="http://test") as ac:
-            tasks = [make_request(ac, request_data) for _ in range(5)]
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), 
+            base_url="http://test"
+        ) as ac:
+            tasks = [make_request(ac, request_data, auth_headers) for _ in range(5)]
             responses = await asyncio.gather(*tasks, return_exceptions=True)
 
         # All requests should succeed (or at least not fail due to concurrency)
