@@ -301,8 +301,8 @@ def validate_query_params(params: Dict[str, Any]) -> Dict[str, Any]:
         elif key in ['sort', 'order', 'filter']:
             # Validate against whitelist
             if isinstance(value, str):
-                # Remove dangerous characters
-                sanitized[key] = re.sub(r'[^a-zA-Z0-9_,\-\. ]', '', value)
+                # Remove dangerous characters but preserve colons for filter syntax
+                sanitized[key] = re.sub(r'[^a-zA-Z0-9_,\-\.: ]', '', value)
             else:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -334,6 +334,6 @@ async def validate_request_size(request_body: bytes, max_size: int = 1024 * 1024
     """
     if len(request_body) > max_size:
         raise HTTPException(
-            status_code=status.HTTP_413_PAYLOAD_TOO_LARGE,
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=f"Request body too large (max {max_size} bytes)"
         )
