@@ -106,6 +106,10 @@ async def detailed_health_check():
             "elevenlabs_configured": settings.has_elevenlabs_config
         }
 
+        # Rate limiting health
+        from ...middleware.rate_limiting import enhanced_limiter
+        service_health["rate_limiting"] = await enhanced_limiter.health_check()
+
         # Configuration health
         service_health["configuration"] = {
             "environment": settings.ENVIRONMENT,

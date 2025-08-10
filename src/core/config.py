@@ -62,9 +62,17 @@ class Settings(BaseSettings):
     QUALITY_THRESHOLD_EDUCATIONAL: float = Field(default=0.75)
     QUALITY_THRESHOLD_FACTUAL: float = Field(default=0.85)
 
-    # Rate limiting settings
+    # Enhanced rate limiting settings
     RATE_LIMIT_REQUESTS_PER_MINUTE: int = Field(default=60)
     RATE_LIMIT_GENERATIONS_PER_HOUR: int = Field(default=100)
+    
+    # Endpoint-specific rate limits
+    RATE_LIMIT_AI_GENERATIONS_PER_5MIN: int = Field(default=5)  # Expensive AI endpoints
+    RATE_LIMIT_CHEAP_ENDPOINTS_PER_MIN: int = Field(default=100)  # Info endpoints
+    
+    # Redis rate limiting settings
+    REDIS_RATE_LIMIT_KEY_PREFIX: str = Field(default="rate_limit")
+    RATE_LIMIT_REDIS_TIMEOUT: int = Field(default=2)  # seconds
 
     # File storage settings
     UPLOAD_MAX_SIZE: int = Field(default=10 * 1024 * 1024)  # 10MB

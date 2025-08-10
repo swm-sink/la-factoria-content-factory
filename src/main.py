@@ -14,10 +14,11 @@ import logging
 import os
 from datetime import datetime, timezone
 
-# Rate limiting setup
+# Enhanced rate limiting setup
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from .middleware.rate_limiting import enhanced_limiter, RateLimitingMiddleware
 
 # Core configuration
 from .core.config import settings
@@ -34,11 +35,14 @@ async def lifespan(app: FastAPI):
     """Lifespan event handler for startup and shutdown"""
     # Startup
     logger.info("Starting La Factoria Educational Content Platform")
+    # Initialize enhanced rate limiter
+    health = await enhanced_limiter.health_check()
+    logger.info(f"Rate limiter status: {health}")
     yield
     # Shutdown
     logger.info("Shutting down La Factoria platform")
 
-# Rate limiter for AI cost protection
+# Rate limiter for AI cost protection (backward compatibility)
 limiter = Limiter(key_func=get_remote_address)
 
 # FastAPI app using exact pattern from context/fastapi.md lines 31-38
@@ -54,6 +58,9 @@ app = FastAPI(
 # Add rate limiting state and error handler
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Enhanced rate limiting middleware (must be added first)
+app.add_middleware(RateLimitingMiddleware, limiter=enhanced_limiter)
 
 # CORS middleware for frontend integration
 app.add_middleware(
