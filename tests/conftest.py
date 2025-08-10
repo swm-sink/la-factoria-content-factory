@@ -32,6 +32,10 @@ from httpx import AsyncClient
 from src.main import app
 from src.core.config import settings
 from src.core.auth import verify_api_key, api_key_manager
+from decimal import Decimal
+
+# Force development mode for all tests
+settings.API_KEY = None  # This enables development mode authentication
 from src.models.educational import (
     LaFactoriaContentType,
     LearningLevel,
@@ -68,6 +72,19 @@ def setup_test_environment():
     # Force reload settings to pick up environment changes
     from src.core.config import settings
     settings.API_KEY = None  # Explicitly set to None for test development mode
+    
+    # Helper for Decimal/float comparisons in tests
+    import builtins
+    
+    def assert_numeric_equal(val1, val2, tolerance=0.0001):
+        """Compare numeric values with tolerance for Decimal/float compatibility"""
+        try:
+            return abs(float(val1) - float(val2)) < tolerance
+        except:
+            return val1 == val2
+    
+    # Make available globally for tests
+    builtins.assert_numeric_equal = assert_numeric_equal
     
     yield
 
@@ -360,6 +377,33 @@ async def content_service(mock_ai_providers):
     service = EducationalContentService()
     await service.initialize()
     return service
+
+@pytest.fixture
+def content_service_sync(mock_ai_providers):
+    """Synchronous version of content service for non-async tests"""
+    async def create_service():
+        service = EducationalContentService()
+        await service.initialize()
+        return service
+    
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        service = loop.run_until_complete(create_service())
+        # Monkey-patch async methods to be sync for testing
+        original_generate = service.generate_content
+        
+        def sync_generate(*args, **kwargs):
+            new_loop = asyncio.new_event_loop()
+            try:
+                return new_loop.run_until_complete(original_generate(*args, **kwargs))
+            finally:
+                new_loop.close()
+        
+        service.generate_content = sync_generate
+        return service
+    finally:
+        loop.close()
 
 @pytest.fixture
 async def quality_assessor():
