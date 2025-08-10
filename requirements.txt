@@ -1,22 +1,23 @@
-# La Factoria Educational Content Platform - Python Dependencies
-# Following simplification plan: minimal but complete implementation
+# La Factoria Educational Content Platform - Updated Dependencies
+# Aligned with installed versions that work together
+# Generated after comprehensive dependency analysis
 
-# Core FastAPI Framework
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
+# Core FastAPI Framework (using latest compatible versions)
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
 python-multipart==0.0.6
-pydantic==2.5.0
-pydantic-settings==2.1.0
+pydantic==2.11.7
+pydantic-settings==2.10.1
 
-# Database Integration (Railway Postgres + SQLite for dev)
-asyncpg==0.29.0
+# Database Integration (PostgreSQL + SQLite for dev)
+asyncpg==0.30.0
 sqlalchemy==2.0.23
-psycopg2-binary==2.9.9
-alembic==1.13.1
+# psycopg2-binary==2.9.9  # Optional, asyncpg is preferred for async
+alembic==1.16.4
 
-# AI Provider Integrations
-openai==1.3.7
-anthropic==0.7.7
+# AI Provider Integrations (latest compatible versions)
+openai==1.97.1
+anthropic==0.58.2
 google-cloud-aiplatform==1.38.1
 
 # Prompt Management and Observability
@@ -32,15 +33,23 @@ psutil==5.9.6
 # Configuration and Environment
 python-dotenv==1.0.0
 
-# Development and Testing
-pytest==7.4.3
-pytest-asyncio==0.21.1
+# Development and Testing (updated versions)
+pytest==8.4.1
+pytest-asyncio==1.1.0
+pytest-benchmark==5.1.0
+pytest-cov==6.2.1
+pytest-mock==3.14.1
+pytest-timeout==2.4.0
 
-# Optional: For ElevenLabs audio integration (commented out for minimal install)
-# elevenlabs==0.2.26
-
-# Enhanced caching for 90% AI cost reduction
-redis==5.0.1
+# Enhanced caching for AI cost reduction
+redis==6.3.0
 
 # Rate limiting for AI cost protection
 slowapi==0.1.9
+
+# Additional production dependencies
+httpx==0.28.3  # For async HTTP client
+aiofiles==24.1.0  # For async file operations
+python-jose[cryptography]==3.3.0  # For JWT tokens
+passlib[bcrypt]==1.7.4  # For password hashing
+email-validator==2.1.1  # For email validation

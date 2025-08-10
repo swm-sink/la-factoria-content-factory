@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     DATABASE_URL: Optional[str] = Field(default=None)
     DB_POOL_SIZE: int = Field(default=10)
     DB_MAX_OVERFLOW: int = Field(default=20)
+    # Development database fallback (configurable via env)
+    DEV_DATABASE_URL: str = Field(default="sqlite:///./la_factoria_dev.db")
 
     # Redis settings (for caching and sessions)
     REDIS_URL: Optional[str] = Field(default=None)
@@ -78,11 +80,12 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        """Get database URL with fallback to SQLite for development"""
+        """Get database URL with configurable fallback for development"""
         if self.DATABASE_URL:
             return self.DATABASE_URL
         if self.ENVIRONMENT == "development":
-            return "sqlite:///./la_factoria_dev.db"
+            # Use configurable development database URL
+            return self.DEV_DATABASE_URL
         raise ValueError("DATABASE_URL must be set for non-development environments")
 
     @property
