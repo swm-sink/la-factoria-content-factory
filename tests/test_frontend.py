@@ -700,11 +700,11 @@ class TestUserWorkflows:
         soup = BeautifulSoup(html_content, 'html.parser')
 
         # Check form structure supports workflow
-        form = soup.find('form', id='content-form')
+        form = soup.find('form', id='contentForm')
         assert form is not None
 
         # Check required fields for workflow
-        required_fields = ['topic', 'content-type', 'age-group', 'api-key']
+        required_fields = ['topic', 'contentType', 'ageGroup', 'apiKey']
         for field_name in required_fields:
             field = soup.find(attrs={'name': field_name}) or soup.find(id=field_name)
             assert field is not None, f"Required field {field_name} not found"

@@ -74,14 +74,14 @@ class TestEducationalQualityAssessor:
         """Sample learning objectives for testing"""
         return [
             LearningObjective(
-                cognitive_level=CognitiveLevel.UNDERSTAND,
+                cognitive_level=CognitiveLevel.UNDERSTANDING,
                 subject_area="mathematics",
                 specific_skill="algebraic equations",
                 measurable_outcome="solve basic linear equations",
                 difficulty_level="beginner"
             ),
             LearningObjective(
-                cognitive_level=CognitiveLevel.APPLY,
+                cognitive_level=CognitiveLevel.APPLYING,
                 subject_area="mathematics",
                 specific_skill="problem solving",
                 measurable_outcome="apply algebra to real-world scenarios",

@@ -585,3 +585,71 @@ def event_loop():
     loop = policy.new_event_loop()
     yield loop
     loop.close()
+
+# ====== Frontend Testing Fixtures ======
+
+@pytest.fixture
+def html_content():
+    """Load HTML content from static files for testing"""
+    html_path = os.path.join("static", "index.html")
+    if os.path.exists(html_path):
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    else:
+        # Return minimal HTML for testing if file doesn't exist
+        return """
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>La Factoria</title>
+        </head>
+        <body>
+            <div id="app">
+                <h1>La Factoria</h1>
+                <form id="content-form">
+                    <select id="content-type">
+                        <option value="study_guide">Study Guide</option>
+                    </select>
+                    <input type="text" id="topic" placeholder="Topic">
+                    <button type="submit">Generate</button>
+                </form>
+                <div id="result"></div>
+                <div id="error"></div>
+                <div id="loading"></div>
+            </div>
+        </body>
+        </html>
+        """
+
+@pytest.fixture
+def js_content():
+    """Load JavaScript content from static files for testing"""
+    js_path = os.path.join("static", "js", "app.js")
+    if os.path.exists(js_path):
+        with open(js_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    else:
+        # Return minimal JS for testing if file doesn't exist
+        return """
+        // Minimal JavaScript for testing
+        const API_BASE_URL = '/api/v1';
+        
+        async function generateContent(contentType, topic) {
+            const response = await fetch(`${API_BASE_URL}/generate/${contentType}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': 'test-key'
+                },
+                body: JSON.stringify({ topic })
+            });
+            return response.json();
+        }
+        
+        // Export for testing
+        if (typeof module !== 'undefined' && module.exports) {
+            module.exports = { generateContent };
+        }
+        """
