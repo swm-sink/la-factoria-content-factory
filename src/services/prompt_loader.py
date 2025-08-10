@@ -7,10 +7,12 @@ Following patterns from la-factoria-prompt-integration.md
 import os
 import logging
 import json
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Tuple
 from pathlib import Path
 import asyncio
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
+import re
+from datetime import datetime
 
 from ..core.config import settings
 from ..models.educational import LaFactoriaContentType
@@ -24,6 +26,7 @@ class PromptTemplateLoader:
         self.prompts_directory = Path(prompts_directory)
         self.template_cache: Dict[str, str] = {}
         self.jinja_env: Optional[Environment] = None
+        self.version_cache: Dict[str, List[str]] = {}  # Cache available versions
 
         # Content type to file mapping
         self.template_files = {
@@ -221,3 +224,151 @@ class PromptTemplateLoader:
             "prompts_directory": str(self.prompts_directory),
             "cache_hit_ratio": len(self.template_cache) / len(self.template_files) if self.template_files else 0
         }
+    
+    async def load_prompt_version(self, content_type: str, version: str = "latest") -> str:
+        """
+        Load a specific version of a prompt template
+        
+        Args:
+            content_type: The content type to load
+            version: Version to load ("latest", "v2", "v1", etc.)
+            
+        Returns:
+            Template content for the specified version
+        """
+        # Convert string to enum if needed
+        if isinstance(content_type, str):
+            try:
+                content_type_enum = LaFactoriaContentType(content_type)
+            except ValueError:
+                raise ValueError(f"Unsupported content type: {content_type}")
+        else:
+            content_type_enum = content_type
+            
+        base_filename = self.template_files.get(content_type_enum)
+        if not base_filename:
+            raise ValueError(f"No template file mapping for content type: {content_type_enum.value}")
+            
+        base_name = base_filename.replace('.md', '')
+        
+        if version == "latest":
+            # Try v2 first, then fall back to original
+            v2_path = self.prompts_directory / f"{base_name}_v2.md"
+            if v2_path.exists():
+                template_path = v2_path
+            else:
+                template_path = self.prompts_directory / base_filename
+        elif version.startswith("v"):
+            # Load specific version
+            template_path = self.prompts_directory / f"{base_name}_{version}.md"
+        else:
+            # Load original version
+            template_path = self.prompts_directory / base_filename
+            
+        if not template_path.exists():
+            raise FileNotFoundError(f"Template version not found: {template_path}")
+            
+        try:
+            with open(template_path, 'r', encoding='utf-8') as f:
+                template_content = f.read()
+                
+            logger.info(f"Loaded template version {version} for {content_type_enum.value}")
+            return template_content
+            
+        except Exception as e:
+            logger.error(f"Failed to load template version {version}: {e}")
+            raise
+    
+    def get_prompt_versions(self, content_type: str) -> List[str]:
+        """
+        Get available versions for a prompt template
+        
+        Args:
+            content_type: The content type to check
+            
+        Returns:
+            List of available versions
+        """
+        # Convert string to enum if needed
+        if isinstance(content_type, str):
+            try:
+                content_type_enum = LaFactoriaContentType(content_type)
+            except ValueError:
+                return []
+        else:
+            content_type_enum = content_type
+            
+        base_filename = self.template_files.get(content_type_enum)
+        if not base_filename:
+            return []
+            
+        base_name = base_filename.replace('.md', '')
+        
+        # Check cache first
+        if base_name in self.version_cache:
+            return self.version_cache[base_name]
+        
+        versions = []
+        
+        # Check for original version
+        if (self.prompts_directory / base_filename).exists():
+            versions.append("v1")
+            
+        # Check for versioned files
+        for file_path in self.prompts_directory.glob(f"{base_name}_v*.md"):
+            version_match = re.search(r'_v(\d+)\.md$', str(file_path))
+            if version_match:
+                versions.append(f"v{version_match.group(1)}")
+                
+        # Cache the results
+        self.version_cache[base_name] = sorted(versions)
+        
+        return sorted(versions)
+    
+    def extract_prompt_metadata(self, template_content: str) -> Dict[str, Any]:
+        """
+        Extract metadata from prompt template comments
+        
+        Args:
+            template_content: The template content
+            
+        Returns:
+            Dictionary of metadata
+        """
+        metadata = {}
+        
+        # Extract version
+        version_match = re.search(r'<!--\s*version:\s*([^\s]+)\s*-->', template_content)
+        if version_match:
+            metadata['version'] = version_match.group(1)
+            
+        # Extract updated date
+        updated_match = re.search(r'<!--\s*updated:\s*([^\s]+)\s*-->', template_content)
+        if updated_match:
+            metadata['updated'] = updated_match.group(1)
+            
+        # Extract author
+        author_match = re.search(r'<!--\s*author:\s*([^-]+)\s*-->', template_content)
+        if author_match:
+            metadata['author'] = author_match.group(1).strip()
+            
+        # Extract description
+        desc_match = re.search(r'<!--\s*description:\s*([^-]+)\s*-->', template_content)
+        if desc_match:
+            metadata['description'] = desc_match.group(1).strip()
+            
+        # Check for XML tags (indicates v2 format)
+        xml_tags = re.findall(r'<([a-zA-Z_]+)>', template_content)
+        metadata['uses_xml'] = len(xml_tags) > 0
+        metadata['xml_tags'] = list(set(xml_tags)) if xml_tags else []
+        
+        # Check for thinking steps
+        metadata['has_thinking'] = bool(re.search(r'<thinking>|step.?by.?step', template_content, re.IGNORECASE))
+        
+        return metadata
+
+
+# Create an alias for backward compatibility with tests
+class PromptLoader(PromptTemplateLoader):
+    """Alias for PromptTemplateLoader to support test compatibility"""
+    pass
