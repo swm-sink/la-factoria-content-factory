@@ -29,6 +29,7 @@ from datetime import datetime, timedelta
 # FastAPI testing
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
+import httpx
 
 # La Factoria imports
 from src.main import app
@@ -103,7 +104,7 @@ def client() -> Generator[TestClient, None, None]:
 @pytest_asyncio.fixture
 async def async_client() -> AsyncGenerator[AsyncClient, None]:
     """Create async HTTP client for testing"""
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    async with AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
 
 @pytest.fixture

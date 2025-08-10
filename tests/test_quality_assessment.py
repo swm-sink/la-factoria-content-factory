@@ -9,6 +9,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
+import pytest_asyncio
 from unittest.mock import AsyncMock, Mock
 from typing import Dict, Any
 

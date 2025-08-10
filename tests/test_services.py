@@ -17,6 +17,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
+import pytest_asyncio
 import asyncio
 import json
 import time
@@ -39,7 +40,7 @@ from src.models.educational import (
 class TestEducationalContentService:
     """Unit tests for EducationalContentService"""
 
-    @pytest.fixture
+    @pytest_asyncio.fixture
     async def content_service(self, mock_ai_providers):
         """Create content service with mocked dependencies"""
         service = EducationalContentService()
@@ -427,7 +428,7 @@ class TestAIProviderManager:
 class TestPromptTemplateLoader:
     """Unit tests for PromptTemplateLoader"""
 
-    @pytest.fixture
+    @pytest_asyncio.fixture
     async def prompt_loader(self):
         """Create prompt loader with mocked file system"""
         loader = PromptTemplateLoader()
