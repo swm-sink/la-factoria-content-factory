@@ -550,24 +550,70 @@ def performance_test_requests() -> List[ContentRequest]:
 
 # === Database Testing Fixtures ===
 
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def initialize_test_database():
+    """Initialize test database tables before any database tests run"""
+    from src.core.database import init_database
+    
+    # Initialize database to create all tables
+    await init_database()
+    
+    yield
+    
+    # Cleanup happens in setup_test_environment fixture
+
+@pytest.fixture(scope="function", autouse=True)
+def clean_database():
+    """Clean database tables between tests to avoid conflicts"""
+    from src.core.database import SessionLocal, engine
+    from sqlalchemy import text
+    
+    def _clean_tables():
+        session = SessionLocal()
+        try:
+            # Delete all data from tables (but keep structure)
+            # Use DELETE instead of TRUNCATE for SQLite compatibility
+            if engine.dialect.name == 'sqlite':
+                session.execute(text("DELETE FROM educational_content"))
+                session.execute(text("DELETE FROM users"))
+                # Reset auto-increment counters for SQLite
+                session.execute(text("DELETE FROM sqlite_sequence WHERE name='educational_content'"))
+                session.execute(text("DELETE FROM sqlite_sequence WHERE name='users'"))
+            else:
+                # PostgreSQL
+                session.execute(text("TRUNCATE educational_content, users CASCADE"))
+            
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            # If tables don't exist yet, that's okay
+            pass
+        finally:
+            session.close()
+    
+    # Clean before test
+    _clean_tables()
+    
+    yield  # Run test
+    
+    # Clean after test
+    _clean_tables()
+
 @pytest_asyncio.fixture
 async def test_database():
     """Setup test database for integration testing"""
-    # In a full implementation, this would:
-    # 1. Create test database
-    # 2. Run migrations
-    # 3. Yield database connection
-    # 4. Cleanup after tests
-
-    # Placeholder for database setup
-    test_db_config = {
-        "url": "sqlite:///test_la_factoria.db",
-        "echo": False
-    }
-
-    yield test_db_config
-
-    # Cleanup would happen here
+    from src.core.database import SessionLocal, init_database
+    
+    # Ensure database is initialized
+    await init_database()
+    
+    # Create a test session
+    session = SessionLocal()
+    
+    try:
+        yield session
+    finally:
+        session.close()
 
 # === Mock External Services ===
 

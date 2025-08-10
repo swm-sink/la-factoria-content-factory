@@ -179,19 +179,45 @@ class EducationalContent(BaseModel):
     )
 
 # Database models (using SQLAlchemy patterns)
-from sqlalchemy import Column, String, DateTime, JSON, Numeric, Integer, Boolean, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, DateTime, JSON, Numeric, Integer, Boolean, Text, TypeDecorator
+from sqlalchemy.dialects.postgresql import UUID as PostgreSQL_UUID
 import sqlalchemy as sa
 
 # Import Base from database module to avoid duplicate declarations
 from ..core.database import Base
 
+# Database-agnostic UUID type
+class DatabaseUUID(TypeDecorator):
+    """Database-agnostic UUID type that works with both SQLite and PostgreSQL"""
+    impl = String(36)  # SQLite fallback
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            return dialect.type_descriptor(PostgreSQL_UUID(as_uuid=True))
+        else:
+            return dialect.type_descriptor(String(36))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, uuid.UUID):
+            return str(value) if dialect.name != 'postgresql' else value
+        return str(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        if dialect.name == 'postgresql' and isinstance(value, uuid.UUID):
+            return value
+        return uuid.UUID(str(value))
+
 class EducationalContentDB(Base):
     """SQLAlchemy model for educational content storage"""
     __tablename__ = "educational_content"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), nullable=True)  # Optional user tracking
+    id = Column(DatabaseUUID(), primary_key=True, default=uuid.uuid4)
+    user_id = Column(DatabaseUUID(), nullable=True)  # Optional user tracking
     content_type = Column(String(50), nullable=False)
     topic = Column(String(500), nullable=False)
     age_group = Column(String(50), nullable=False)
@@ -215,7 +241,7 @@ class UserModel(Base):
     """User model for La Factoria platform"""
     __tablename__ = "users"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(DatabaseUUID(), primary_key=True, default=uuid.uuid4)
     username = Column(String(255), unique=True, nullable=False)
     email = Column(String(255), unique=True, nullable=False)
     api_key_hash = Column(String(255), nullable=True)  # Hashed API key
