@@ -30,6 +30,8 @@ else:
         settings.database_url,
         pool_size=settings.DB_POOL_SIZE,
         max_overflow=settings.DB_MAX_OVERFLOW,
+        pool_timeout=settings.DB_POOL_TIMEOUT,
+        pool_recycle=settings.DB_POOL_RECYCLE,
         pool_pre_ping=True,  # Validate connections before use
         echo=settings.DEBUG  # Log SQL queries in debug mode
     )
@@ -41,6 +43,19 @@ def get_database():
     """
     Database dependency for FastAPI endpoints
 
+    Yields a database session and ensures proper cleanup
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# Async version for async endpoints
+async def get_db():
+    """
+    Async database dependency for FastAPI async endpoints
+    
     Yields a database session and ensures proper cleanup
     """
     db = SessionLocal()

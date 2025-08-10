@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     DATABASE_URL: Optional[str] = Field(default=None)
     DB_POOL_SIZE: int = Field(default=10)
     DB_MAX_OVERFLOW: int = Field(default=20)
+    DB_POOL_TIMEOUT: int = Field(default=30)  # Seconds to wait for connection
+    DB_POOL_RECYCLE: int = Field(default=3600)  # Recycle connections after 1 hour
     # Development database fallback (configurable via env)
     DEV_DATABASE_URL: str = Field(default="sqlite:///./la_factoria_dev.db")
 
