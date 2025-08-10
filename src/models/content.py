@@ -4,8 +4,13 @@ Following FastAPI and Pydantic best practices
 """
 
 from typing import Dict, List, Optional, Any
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from datetime import datetime
+import re
+import html
+import logging
+
+logger = logging.getLogger(__name__)
 
 from .educational import (
     LaFactoriaContentType,
@@ -16,7 +21,7 @@ from .educational import (
 )
 
 class ContentRequest(BaseModel):
-    """Request model for educational content generation"""
+    """Request model for educational content generation with security validation"""
     topic: str = Field(
         ...,
         min_length=3,
@@ -37,7 +42,9 @@ class ContentRequest(BaseModel):
         description="Additional requirements or constraints for content generation"
     )
 
-    model_config = ConfigDict(json_schema_extra={
+    model_config = ConfigDict(
+        str_strip_whitespace=True,  # Auto-strip whitespace
+        json_schema_extra={
         "example": {
             "topic": "Introduction to Python Programming",
             "age_group": "high_school",
@@ -53,6 +60,63 @@ class ContentRequest(BaseModel):
             "additional_requirements": "Include practical coding examples and exercises"
         }
     })
+    
+    @field_validator('topic')
+    @classmethod
+    def validate_topic(cls, v: str) -> str:
+        """Validate and sanitize topic input"""
+        # Check for dangerous patterns
+        dangerous_patterns = [
+            r'<script[^>]*>.*?</script>',  # XSS
+            r'javascript:',  # JavaScript protocol
+            r'\x00',  # Null bytes
+            r'\.\./',  # Path traversal
+            r';\s*(DROP|DELETE|INSERT|UPDATE)',  # SQL injection
+            r"'\s*OR\s*'?\d*'\s*=\s*'?\d*",  # SQL injection
+        ]
+        
+        for pattern in dangerous_patterns:
+            if re.search(pattern, v, re.IGNORECASE):
+                logger.warning(f"Blocked dangerous pattern in topic: {pattern}")
+                raise ValueError("Invalid characters or patterns in topic")
+        
+        # Remove null bytes
+        v = v.replace('\x00', '')
+        
+        # HTML escape to prevent XSS
+        v = html.escape(v, quote=False)
+        
+        # Normalize whitespace
+        v = ' '.join(v.split())
+        
+        return v
+    
+    @field_validator('additional_requirements')
+    @classmethod
+    def validate_requirements(cls, v: Optional[str]) -> Optional[str]:
+        """Validate and sanitize additional requirements"""
+        if v is None:
+            return None
+        
+        # Apply same validation as topic
+        dangerous_patterns = [
+            r'<script[^>]*>.*?</script>',
+            r'javascript:',
+            r'\x00',
+            r'\.\./',
+            r';\s*(DROP|DELETE|INSERT|UPDATE)',
+        ]
+        
+        for pattern in dangerous_patterns:
+            if re.search(pattern, v, re.IGNORECASE):
+                logger.warning(f"Blocked dangerous pattern in requirements")
+                raise ValueError("Invalid characters in additional requirements")
+        
+        v = v.replace('\x00', '')
+        v = html.escape(v, quote=False)
+        v = ' '.join(v.split())
+        
+        return v
 
 class ContentResponse(BaseModel):
     """Response model for generated educational content"""
