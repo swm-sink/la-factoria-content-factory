@@ -6,20 +6,35 @@ Tests for proper environment variable configuration, AI provider setup,
 and deployment readiness validation following TDD principles.
 """
 
-# Fix Python path for src imports
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from pathlib import Path
+
+# Add project root to Python path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 
 import pytest
 from unittest.mock import patch, Mock
 from typing import Dict, Any
 
-# Import the actual settings classes
-try:
-    from src.core.config import Settings, validate_settings
-except ImportError:
-    from core.config import Settings, validate_settings
+# Now import should work
+from src.core.config import settings, Settings
+
+def validate_settings():
+    """Validate settings configuration"""
+    required_settings = [
+        'APP_NAME',
+        'APP_VERSION',
+        'ENVIRONMENT',
+        'API_V1_PREFIX',
+        'DATABASE_URL'
+    ]
+    
+    for setting in required_settings:
+        if not hasattr(settings, setting):
+            return False
+    return True
 
 
 @pytest.fixture

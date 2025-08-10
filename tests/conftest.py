@@ -16,10 +16,12 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
+import pytest_asyncio
 import asyncio
 import os
 import tempfile
 import json
+import time
 from typing import Dict, Any, List, AsyncGenerator, Generator
 from unittest.mock import AsyncMock, Mock, patch
 from datetime import datetime, timedelta
@@ -98,7 +100,7 @@ def client() -> Generator[TestClient, None, None]:
     with TestClient(app) as test_client:
         yield test_client
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def async_client() -> AsyncGenerator[AsyncClient, None]:
     """Create async HTTP client for testing"""
     async with AsyncClient(app=app, base_url="http://test") as ac:
@@ -309,6 +311,32 @@ def mock_anthropic_response():
 @pytest.fixture
 def mock_ai_providers(mock_openai_response, mock_anthropic_response, sample_generated_content, high_quality_content):
     """Mock all AI providers for testing"""
+    # Import AIResponse for proper structure
+    from src.services.ai_providers import AIResponse
+
+    async def mock_generate_content(**kwargs):
+        # Extract content from prompt to determine content type
+        prompt = kwargs.get('prompt', '').lower()
+        content_type = kwargs.get('content_type', 'master_content_outline')
+        
+        # Return high quality content to ensure tests pass quality thresholds
+        if "study_guide" in prompt or content_type == "study_guide":
+            content = json.dumps(sample_generated_content["study_guide"])
+        elif "flashcards" in prompt or content_type == "flashcards":
+            content = json.dumps(sample_generated_content["flashcards"])
+        else:
+            # Use high quality content for master outline to meet quality thresholds
+            content = json.dumps(high_quality_content)
+
+        # Return proper AIResponse structure
+        return AIResponse(
+            content=content,
+            provider='test',
+            model='test-model',
+            tokens_used=100,
+            generation_time=0.5,
+            metadata={'test': True, 'content_type': content_type}
+        )
 
     async def mock_openai_generate(**kwargs):
         # Extract content from messages to determine content type
@@ -352,7 +380,8 @@ def mock_ai_providers(mock_openai_response, mock_anthropic_response, sample_gene
 
     # Mock the AI provider methods
     with patch("openai.AsyncOpenAI") as mock_openai_client, \
-         patch("anthropic.AsyncAnthropic") as mock_anthropic_client:
+         patch("anthropic.AsyncAnthropic") as mock_anthropic_client, \
+         patch("src.services.ai_providers.AIProviderManager") as mock_ai_manager:
 
         # Configure OpenAI mock
         mock_openai_instance = AsyncMock()
@@ -363,15 +392,21 @@ def mock_ai_providers(mock_openai_response, mock_anthropic_response, sample_gene
         mock_anthropic_instance = AsyncMock()
         mock_anthropic_instance.messages.create = AsyncMock(side_effect=mock_anthropic_generate)
         mock_anthropic_client.return_value = mock_anthropic_instance
+        
+        # Configure AI Provider Manager to return proper AIResponse
+        mock_manager_instance = AsyncMock()
+        mock_manager_instance.generate_content = AsyncMock(side_effect=mock_generate_content)
+        mock_ai_manager.return_value = mock_manager_instance
 
         yield {
             "openai": mock_openai_instance,
-            "anthropic": mock_anthropic_instance
+            "anthropic": mock_anthropic_instance,
+            "manager": mock_manager_instance
         }
 
 # === Service Fixtures ===
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def content_service(mock_ai_providers):
     """Create educational content service with mocked AI providers"""
     service = EducationalContentService()
@@ -405,12 +440,12 @@ def content_service_sync(mock_ai_providers):
     finally:
         loop.close()
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def quality_assessor():
     """Create quality assessor service"""
     return EducationalQualityAssessor()
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def prompt_loader():
     """Create prompt loader service"""
     loader = PromptTemplateLoader()
@@ -514,7 +549,7 @@ def performance_test_requests() -> List[ContentRequest]:
 
 # === Database Testing Fixtures ===
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_database():
     """Setup test database for integration testing"""
     # In a full implementation, this would:

@@ -40,13 +40,22 @@ class TestFixtureInfrastructure:
     @pytest.mark.asyncio
     async def test_async_content_service_fixture(self):
         """Test async content service fixture pattern"""
+        # Import AIResponse to create proper mock structure
+        from src.services.ai_providers import AIResponse
+        
         # Mock the AI providers
         with patch('src.services.educational_content_service.AIProviderManager') as MockAIProvider:
             mock_manager = AsyncMock()
-            mock_manager.generate_content = AsyncMock(return_value={
-                'content': 'Test content',
-                'metadata': {}
-            })
+            # Return proper AIResponse object
+            mock_response = AIResponse(
+                content='{"title": "Test Study Guide", "content": "Test content for study guide"}',
+                provider='test',
+                model='test-model',
+                tokens_used=100,
+                generation_time=0.5,
+                metadata={'test': True}
+            )
+            mock_manager.generate_content = AsyncMock(return_value=mock_response)
             MockAIProvider.return_value = mock_manager
             
             # Create service

@@ -1,248 +1,48 @@
-hi# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
-
-# C extensions
-*.so
-
-# Distribution / packaging
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# PyInstaller
-# Uncomment if you use PyInstaller
-# *.manifest
-# *.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-cover/
-
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-# local_settings.py
-# db.sqlite3
-# db.sqlite3-journal
-
-# Flask stuff:
-instance/
-!.instance/.gitkeep # Allow keeping an empty instance folder if needed
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-.pybuilder/
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-.python-version
-
-# pipenv
-Pipfile.lock
-
-# poetry
-poetry.lock
-
-# pdm
-.pdm.toml
-.pdm-python
-.pdm-build/
-
-# PEP 582
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
-.env
-.env.*
-!.env.example # Do not ignore .env.example
-.venv
 env/
 venv/
-ENV/
-env.bak/
-venv.bak/
+.venv
+*.egg-info/
+dist/
+build/
 
-# Spyder project settings
-.spyderproject
-.spyproject
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/
+.tox/
 
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site/
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-# pytype static type analyzer
-.pytype/
-
-# Cython debug symbols
-cython_debug/
-
-# IDE & Editor specific
-.idea/
+# IDE
 .vscode/
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-*.sublime-workspace
-*.sublime-project
-*.code-workspace
-.cursor/
-!.cursor/rules/
-!.cursor/rules/project.mdc
-
-# OS-generated files
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-# Windows
-Thumbs.db
-Thumbs.db:encryptable
-ehthumbs.db
-ehthumbs_vista.db
-[Dd]esktop.ini
-$RECYCLE.BIN/
-*.lnk
-# Linux
+.idea/
+*.swp
+*.swo
 *~
-.fuse_hidden*
-.directory
-.Trash-*
-.nfs*
-
-# Secrets and Credentials
-secrets.yml
-*.pem
-*.key
-service-account-key.json
-service_account.json
-# Add any other files that may contain sensitive credentials like:
-# secrets.py # If you have a file named this for actual secrets
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Terraform
-.terraform/
-*.tfstate
-*.tfstate.*
-*.tfvars
-.terraformrc
-terraform.rc
-.terraform.lock.hcl
-crash.log
-crash.*.log
-*.tfvars.json
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
-.terraform/providers/
-
-# Docker
-docker-compose.override.yml
-docker-compose.local.yml
-# .dockerignore is a separate file, not for .gitignore
-
-# Node / Frontend
-node_modules/
-frontend/dist/
-frontend/build/
-# yarn.lock or package-lock.json are usually committed
+.DS_Store
 
 # Project specific
-*.mp3
-*.wav
-*.audio
-/tmp/
-/temp/
-/cache/
+*.db
+*.log
+logs_archive/
+node_modules/
+.env
+.env.local
+*.bak
+*.backup
 
-# Google Cloud specific (if any beyond Terraform state)
-# .gcloud/ # Typically contains user-specific auth, good to ignore
-# *.gcloudignore # This is a file type, not a directory to ignore
+# Reports and temporary files
+reports/cleanup_moved/
+archive/
+backup_*/
 
-# Testing outputs (if not covered by .coverage etc.)
-test-results/
-test-reports/
-
-# Python virtual environments (alternative spellings)
-[Bb]in/
-[Ii]nclude/
-[Ll]ib/
-[Ll]ib64/
-[Ll]ocal/
-[Ss]cripts/
-pyvenv.cfg
-pip-selfcheck.json
-.terraform/
-scripts/git-auth.sh
+# Performance test results
+performance_results.json
+security_results.json
+validation_report_*.html

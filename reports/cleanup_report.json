@@ -1,0 +1,16 @@
+{
+  "timestamp": "2025-08-10T00:24:25.319603",
+  "statistics": {
+    "files_moved": 38,
+    "files_deleted": 0,
+    "directories_removed": 2,
+    "space_freed_mb": 10.148612022399902
+  },
+  "actions_taken": [
+    "Organized report files into reports/cleanup_moved/",
+    "Archived log files to logs_archive/",
+    "Removed duplicate backup directories",
+    "Moved scripts to scripts/ directory",
+    "Updated .gitignore file"
+  ]
+}
