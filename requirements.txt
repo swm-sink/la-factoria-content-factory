@@ -21,7 +21,7 @@ anthropic==0.58.2
 google-cloud-aiplatform==1.38.1
 
 # Prompt Management and Observability
-langfuse==2.6.3
+langfuse==3.2.3
 
 # Educational Content Processing
 textstat==0.7.3
