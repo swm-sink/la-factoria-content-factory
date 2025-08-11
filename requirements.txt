@@ -16,7 +16,7 @@ sqlalchemy==2.0.23
 alembic==1.16.4
 
 # AI Provider Integrations (latest compatible versions)
-openai==1.97.1
+openai==1.99.6
 anthropic==0.58.2
 google-cloud-aiplatform==1.38.1
 
