@@ -17,7 +17,7 @@ alembic==1.16.4
 
 # AI Provider Integrations (latest compatible versions)
 openai==1.97.1
-anthropic==0.58.2
+anthropic==0.62.0
 google-cloud-aiplatform==1.38.1
 
 # Prompt Management and Observability
