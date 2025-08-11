@@ -42,7 +42,7 @@ pytest-mock==3.14.1
 pytest-timeout==2.4.0
 
 # Enhanced caching for AI cost reduction
-redis==6.3.0
+redis==6.4.0
 
 # Rate limiting for AI cost protection
 slowapi==0.1.9
