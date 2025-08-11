@@ -52,4 +52,4 @@ httpx==0.28.3  # For async HTTP client
 aiofiles==24.1.0  # For async file operations
 python-jose[cryptography]==3.5.0  # For JWT tokens
 passlib[bcrypt]==1.7.4  # For password hashing
-email-validator==2.1.1  # For email validation
+email-validator==2.2.0  # For email validation
